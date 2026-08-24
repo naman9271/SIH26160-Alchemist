@@ -1,0 +1,33 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test files
+*_test.go
+*.test
+coverage.out
+
+# Documentation
+*.md
+!README.md
+
+# Local config (use env vars in production)
+config.yaml
+config.local.yaml
+
+# OS files
+.DS_Store
+Thumbs.db
