@@ -1,0 +1,100 @@
+# Label mappings are intentionally dataset-specific.  IGNORE is a fail-closed
+# outcome: it means the label must not be used as a canonical application class.
+version: 1
+canonical_classes:
+  - web
+  - video
+  - voip
+  - email
+  - file_transfer
+  - messaging
+  - icmp
+ignore_label: IGNORE
+
+datasets:
+  cicdarknet2020.parquet:
+    label_source: Label
+    labels:
+      # These identify privacy-network status, not the inner application type.
+      Non-Tor: IGNORE
+      NonVPN: IGNORE
+      Tor: IGNORE
+      VPN: IGNORE
+
+  consolidated_traffic_data.csv:
+    label_source: traffic_type
+    labels:
+      BROWSING: web
+      CHAT: messaging
+      FT: file_transfer
+      MAIL: email
+      VOIP: voip
+      # STREAMING can be audio or video, so it is not safely a video label.
+      STREAMING: IGNORE
+      # P2P describes a delivery pattern, not necessarily file transfer.
+      P2P: IGNORE
+      # The VPN prefix describes transport status. The explicit inner traffic
+      # type remains usable when it is otherwise supported.
+      VPN-BROWSING: web
+      VPN-CHAT: messaging
+      VPN-FT: file_transfer
+      VPN-MAIL: email
+      VPN-VOIP: voip
+      VPN-STREAMING: IGNORE
+      VPN-P2P: IGNORE
+
+  Network-Traffic-Dataset:
+    label_source: capture_path_label
+    labels:
+      Amazon Prime Video: video
+      Dropbox: file_transfer
+      Microsoft Teams: voip
+      Skype: voip
+      Slack: messaging
+      Telegram: messaging
+      WhatsApp: messaging
+      Zoom: voip
+      # Discord combines voice and messaging; do not assign either class.
+      Discord: IGNORE
+      # Facebook is too broad to guarantee a single web/messaging class.
+      Facebook: IGNORE
+      # VPN products identify VPN use, not an application traffic class.
+      CyberGhost: IGNORE
+      Hotspot Shield: IGNORE
+      ProtonVPN: IGNORE
+      TunnelBear: IGNORE
+      Ultrasurf: IGNORE
+      # Music, gaming, and P2P software are outside the initial taxonomy.
+      Deezer: IGNORE
+      Epic Games: IGNORE
+      iTunes: IGNORE
+      SoulseekQt: IGNORE
+      Spotify: IGNORE
+      Steam: IGNORE
+      TuneIn: IGNORE
+
+  USTC-TFC2016:
+    label_source: capture_path_label
+    labels:
+      Facetime: voip
+      FTP: file_transfer
+      Gmail: email
+      Outlook: email
+      Skype: voip
+      SMB: file_transfer
+      # These are malware families, never application-traffic classes.
+      Cridex: IGNORE
+      Geodo: IGNORE
+      Htbot: IGNORE
+      Miuref: IGNORE
+      Neris: IGNORE
+      Nsis-ay: IGNORE
+      Shifu: IGNORE
+      Tinba: IGNORE
+      Virut: IGNORE
+      Zeus: IGNORE
+      # The remaining labels are non-target or too broad to map safely.
+      BitTorrent: IGNORE
+      MySQL: IGNORE
+      WorldOfWarcraft: IGNORE
+      Weibo: IGNORE

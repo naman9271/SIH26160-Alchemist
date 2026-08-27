@@ -1,0 +1,870 @@
+{
+  "datasets": [
+    {
+      "approximate_dataset_size_bytes": 12827439,
+      "approximate_dataset_size_human": "12.2 MiB",
+      "available_label_columns": [
+        "Label"
+      ],
+      "class_counts": {
+        "Label": {
+          "Non-Tor": 64804,
+          "NonVPN": 20216,
+          "Tor": 1179,
+          "VPN": 16922
+        }
+      },
+      "csv_or_parquet_column_names": [
+        "ACK Flag Count",
+        "Active Max",
+        "Active Mean",
+        "Active Min",
+        "Active Std",
+        "Avg Packet Size",
+        "Bwd Bulk Rate Avg",
+        "Bwd Bytes/Bulk Avg",
+        "Bwd Header Length",
+        "Bwd IAT Max",
+        "Bwd IAT Mean",
+        "Bwd IAT Min",
+        "Bwd IAT Std",
+        "Bwd IAT Total",
+        "Bwd Init Win Bytes",
+        "Bwd PSH Flags",
+        "Bwd Packet Length Max",
+        "Bwd Packet Length Mean",
+        "Bwd Packet Length Min",
+        "Bwd Packet Length Std",
+        "Bwd Packet/Bulk Avg",
+        "Bwd Packets/s",
+        "Bwd Segment Size Avg",
+        "Bwd URG Flags",
+        "CWE Flag Count",
+        "Down/Up Ratio",
+        "ECE Flag Count",
+        "FIN Flag Count",
+        "FWD Init Win Bytes",
+        "Flow Bytes/s",
+        "Flow Duration",
+        "Flow IAT Max",
+        "Flow IAT Mean",
+        "Flow IAT Min",
+        "Flow IAT Std",
+        "Flow Packets/s",
+        "Fwd Act Data Packets",
+        "Fwd Bulk Rate Avg",
+        "Fwd Bytes/Bulk Avg",
+        "Fwd Header Length",
+        "Fwd IAT Max",
+        "Fwd IAT Mean",
+        "Fwd IAT Min",
+        "Fwd IAT Std",
+        "Fwd IAT Total",
+        "Fwd PSH Flags",
+        "Fwd Packet Length Max",
+        "Fwd Packet Length Mean",
+        "Fwd Packet Length Min",
+        "Fwd Packet Length Std",
+        "Fwd Packet/Bulk Avg",
+        "Fwd Packets/s",
+        "Fwd Seg Size Min",
+        "Fwd Segment Size Avg",
+        "Fwd URG Flags",
+        "Idle Max",
+        "Idle Mean",
+        "Idle Min",
+        "Idle Std",
+        "Label",
+        "Label.1",
+        "PSH Flag Count",
+        "Packet Length Max",
+        "Packet Length Mean",
+        "Packet Length Min",
+        "Packet Length Std",
+        "Packet Length Variance",
+        "Protocol",
+        "RST Flag Count",
+        "SYN Flag Count",
+        "Subflow Bwd Bytes",
+        "Subflow Bwd Packets",
+        "Subflow Fwd Bytes",
+        "Subflow Fwd Packets",
+        "Total Bwd packets",
+        "Total Fwd Packet",
+        "Total Length of Bwd Packet",
+        "Total Length of Fwd Packet",
+        "URG Flag Count"
+      ],
+      "dataset_name": "cicdarknet2020.parquet",
+      "file_formats_found": [
+        "parquet"
+      ],
+      "flow_features_overlap": {
+        "duration": [
+          "Flow Duration"
+        ],
+        "mean_packet_size": [
+          "Avg Packet Size"
+        ]
+      },
+      "inferred_dataset_types": [
+        "VPN",
+        "Tor"
+      ],
+      "labels_not_to_map": [
+        "Non-Tor",
+        "NonVPN",
+        "Tor",
+        "VPN"
+      ],
+      "missing_values": {
+        "ACK Flag Count": 0,
+        "Active Max": 0,
+        "Active Mean": 0,
+        "Active Min": 0,
+        "Active Std": 0,
+        "Avg Packet Size": 0,
+        "Bwd Bulk Rate Avg": 0,
+        "Bwd Bytes/Bulk Avg": 0,
+        "Bwd Header Length": 0,
+        "Bwd IAT Max": 0,
+        "Bwd IAT Mean": 0,
+        "Bwd IAT Min": 0,
+        "Bwd IAT Std": 0,
+        "Bwd IAT Total": 0,
+        "Bwd Init Win Bytes": 0,
+        "Bwd PSH Flags": 0,
+        "Bwd Packet Length Max": 0,
+        "Bwd Packet Length Mean": 0,
+        "Bwd Packet Length Min": 0,
+        "Bwd Packet Length Std": 0,
+        "Bwd Packet/Bulk Avg": 0,
+        "Bwd Packets/s": 0,
+        "Bwd Segment Size Avg": 0,
+        "Bwd URG Flags": 0,
+        "CWE Flag Count": 0,
+        "Down/Up Ratio": 0,
+        "ECE Flag Count": 0,
+        "FIN Flag Count": 0,
+        "FWD Init Win Bytes": 0,
+        "Flow Bytes/s": 0,
+        "Flow Duration": 0,
+        "Flow IAT Max": 0,
+        "Flow IAT Mean": 0,
+        "Flow IAT Min": 0,
+        "Flow IAT Std": 0,
+        "Flow Packets/s": 0,
+        "Fwd Act Data Packets": 0,
+        "Fwd Bulk Rate Avg": 0,
+        "Fwd Bytes/Bulk Avg": 0,
+        "Fwd Header Length": 0,
+        "Fwd IAT Max": 0,
+        "Fwd IAT Mean": 0,
+        "Fwd IAT Min": 0,
+        "Fwd IAT Std": 0,
+        "Fwd IAT Total": 0,
+        "Fwd PSH Flags": 0,
+        "Fwd Packet Length Max": 0,
+        "Fwd Packet Length Mean": 0,
+        "Fwd Packet Length Min": 0,
+        "Fwd Packet Length Std": 0,
+        "Fwd Packet/Bulk Avg": 0,
+        "Fwd Packets/s": 0,
+        "Fwd Seg Size Min": 0,
+        "Fwd Segment Size Avg": 0,
+        "Fwd URG Flags": 0,
+        "Idle Max": 0,
+        "Idle Mean": 0,
+        "Idle Min": 0,
+        "Idle Std": 0,
+        "Label": 0,
+        "Label.1": 0,
+        "PSH Flag Count": 0,
+        "Packet Length Max": 0,
+        "Packet Length Mean": 0,
+        "Packet Length Min": 0,
+        "Packet Length Std": 0,
+        "Packet Length Variance": 0,
+        "Protocol": 0,
+        "RST Flag Count": 0,
+        "SYN Flag Count": 0,
+        "Subflow Bwd Bytes": 0,
+        "Subflow Bwd Packets": 0,
+        "Subflow Fwd Bytes": 0,
+        "Subflow Fwd Packets": 0,
+        "Total Bwd packets": 0,
+        "Total Fwd Packet": 0,
+        "Total Length of Bwd Packet": 0,
+        "Total Length of Fwd Packet": 0,
+        "URG Flag Count": 0
+      },
+      "notes": [
+        "No files were modified, and this report does not combine datasets.",
+        "Filename/path-derived labels are provenance only and must not become model features."
+      ],
+      "number_of_files": 1,
+      "possible_leakage_columns": [
+        "Label"
+      ],
+      "raw_pcap_or_pcapng_present": false,
+      "relative_path": "cicdarknet2020.parquet",
+      "tabular_files": [
+        {
+          "class_counts": {
+            "Label": {
+              "Non-Tor": 64804,
+              "NonVPN": 20216,
+              "Tor": 1179,
+              "VPN": 16922
+            }
+          },
+          "columns": [
+            "Protocol",
+            "Flow Duration",
+            "Total Fwd Packet",
+            "Total Bwd packets",
+            "Total Length of Fwd Packet",
+            "Total Length of Bwd Packet",
+            "Fwd Packet Length Max",
+            "Fwd Packet Length Min",
+            "Fwd Packet Length Mean",
+            "Fwd Packet Length Std",
+            "Bwd Packet Length Max",
+            "Bwd Packet Length Min",
+            "Bwd Packet Length Mean",
+            "Bwd Packet Length Std",
+            "Flow Bytes/s",
+            "Flow Packets/s",
+            "Flow IAT Mean",
+            "Flow IAT Std",
+            "Flow IAT Max",
+            "Flow IAT Min",
+            "Fwd IAT Total",
+            "Fwd IAT Mean",
+            "Fwd IAT Std",
+            "Fwd IAT Max",
+            "Fwd IAT Min",
+            "Bwd IAT Total",
+            "Bwd IAT Mean",
+            "Bwd IAT Std",
+            "Bwd IAT Max",
+            "Bwd IAT Min",
+            "Fwd PSH Flags",
+            "Bwd PSH Flags",
+            "Fwd URG Flags",
+            "Bwd URG Flags",
+            "Fwd Header Length",
+            "Bwd Header Length",
+            "Fwd Packets/s",
+            "Bwd Packets/s",
+            "Packet Length Min",
+            "Packet Length Max",
+            "Packet Length Mean",
+            "Packet Length Std",
+            "Packet Length Variance",
+            "FIN Flag Count",
+            "SYN Flag Count",
+            "RST Flag Count",
+            "PSH Flag Count",
+            "ACK Flag Count",
+            "URG Flag Count",
+            "CWE Flag Count",
+            "ECE Flag Count",
+            "Down/Up Ratio",
+            "Avg Packet Size",
+            "Fwd Segment Size Avg",
+            "Bwd Segment Size Avg",
+            "Fwd Bytes/Bulk Avg",
+            "Fwd Packet/Bulk Avg",
+            "Fwd Bulk Rate Avg",
+            "Bwd Bytes/Bulk Avg",
+            "Bwd Packet/Bulk Avg",
+            "Bwd Bulk Rate Avg",
+            "Subflow Fwd Packets",
+            "Subflow Fwd Bytes",
+            "Subflow Bwd Packets",
+            "Subflow Bwd Bytes",
+            "FWD Init Win Bytes",
+            "Bwd Init Win Bytes",
+            "Fwd Act Data Packets",
+            "Fwd Seg Size Min",
+            "Active Mean",
+            "Active Std",
+            "Active Max",
+            "Active Min",
+            "Idle Mean",
+            "Idle Std",
+            "Idle Max",
+            "Idle Min",
+            "Label",
+            "Label.1"
+          ],
+          "format": "parquet",
+          "label_columns": [
+            "Label"
+          ],
+          "missing_values": {
+            "ACK Flag Count": 0,
+            "Active Max": 0,
+            "Active Mean": 0,
+            "Active Min": 0,
+            "Active Std": 0,
+            "Avg Packet Size": 0,
+            "Bwd Bulk Rate Avg": 0,
+            "Bwd Bytes/Bulk Avg": 0,
+            "Bwd Header Length": 0,
+            "Bwd IAT Max": 0,
+            "Bwd IAT Mean": 0,
+            "Bwd IAT Min": 0,
+            "Bwd IAT Std": 0,
+            "Bwd IAT Total": 0,
+            "Bwd Init Win Bytes": 0,
+            "Bwd PSH Flags": 0,
+            "Bwd Packet Length Max": 0,
+            "Bwd Packet Length Mean": 0,
+            "Bwd Packet Length Min": 0,
+            "Bwd Packet Length Std": 0,
+            "Bwd Packet/Bulk Avg": 0,
+            "Bwd Packets/s": 0,
+            "Bwd Segment Size Avg": 0,
+            "Bwd URG Flags": 0,
+            "CWE Flag Count": 0,
+            "Down/Up Ratio": 0,
+            "ECE Flag Count": 0,
+            "FIN Flag Count": 0,
+            "FWD Init Win Bytes": 0,
+            "Flow Bytes/s": 0,
+            "Flow Duration": 0,
+            "Flow IAT Max": 0,
+            "Flow IAT Mean": 0,
+            "Flow IAT Min": 0,
+            "Flow IAT Std": 0,
+            "Flow Packets/s": 0,
+            "Fwd Act Data Packets": 0,
+            "Fwd Bulk Rate Avg": 0,
+            "Fwd Bytes/Bulk Avg": 0,
+            "Fwd Header Length": 0,
+            "Fwd IAT Max": 0,
+            "Fwd IAT Mean": 0,
+            "Fwd IAT Min": 0,
+            "Fwd IAT Std": 0,
+            "Fwd IAT Total": 0,
+            "Fwd PSH Flags": 0,
+            "Fwd Packet Length Max": 0,
+            "Fwd Packet Length Mean": 0,
+            "Fwd Packet Length Min": 0,
+            "Fwd Packet Length Std": 0,
+            "Fwd Packet/Bulk Avg": 0,
+            "Fwd Packets/s": 0,
+            "Fwd Seg Size Min": 0,
+            "Fwd Segment Size Avg": 0,
+            "Fwd URG Flags": 0,
+            "Idle Max": 0,
+            "Idle Mean": 0,
+            "Idle Min": 0,
+            "Idle Std": 0,
+            "Label": 0,
+            "Label.1": 0,
+            "PSH Flag Count": 0,
+            "Packet Length Max": 0,
+            "Packet Length Mean": 0,
+            "Packet Length Min": 0,
+            "Packet Length Std": 0,
+            "Packet Length Variance": 0,
+            "Protocol": 0,
+            "RST Flag Count": 0,
+            "SYN Flag Count": 0,
+            "Subflow Bwd Bytes": 0,
+            "Subflow Bwd Packets": 0,
+            "Subflow Fwd Bytes": 0,
+            "Subflow Fwd Packets": 0,
+            "Total Bwd packets": 0,
+            "Total Fwd Packet": 0,
+            "Total Length of Bwd Packet": 0,
+            "Total Length of Fwd Packet": 0,
+            "URG Flag Count": 0
+          },
+          "path": "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/ml-service/data/external/cicdarknet2020.parquet",
+          "row_count": 103121,
+          "unique_labels": {
+            "Label": [
+              "Non-Tor",
+              "NonVPN",
+              "Tor",
+              "VPN"
+            ]
+          }
+        }
+      ],
+      "target_class_mappings": [],
+      "unique_labels": {
+        "Label": [
+          "Non-Tor",
+          "NonVPN",
+          "Tor",
+          "VPN"
+        ]
+      },
+      "unresolved_labels": []
+    },
+    {
+      "approximate_dataset_size_bytes": 13121464,
+      "approximate_dataset_size_human": "12.5 MiB",
+      "available_label_columns": [
+        "traffic_type"
+      ],
+      "class_counts": {
+        "traffic_type": {
+          "BROWSING": 10000,
+          "CHAT": 2505,
+          "FT": 3975,
+          "MAIL": 1364,
+          "P2P": 4000,
+          "STREAMING": 1284,
+          "VOIP": 6485,
+          "VPN-BROWSING": 10000,
+          "VPN-CHAT": 2839,
+          "VPN-FT": 4704,
+          "VPN-MAIL": 2444,
+          "VPN-P2P": 3415,
+          "VPN-STREAMING": 1115,
+          "VPN-VOIP": 5576
+        }
+      },
+      "csv_or_parquet_column_names": [
+        "duration",
+        "flowBytesPerSecond",
+        "flowPktsPerSecond",
+        "max_active",
+        "max_biat",
+        "max_fiat",
+        "max_flowiat",
+        "max_idle",
+        "mean_active",
+        "mean_biat",
+        "mean_fiat",
+        "mean_flowiat",
+        "mean_idle",
+        "min_active",
+        "min_biat",
+        "min_fiat",
+        "min_flowiat",
+        "min_idle",
+        "std_active",
+        "std_flowiat",
+        "std_idle",
+        "total_biat",
+        "total_fiat",
+        "traffic_type"
+      ],
+      "dataset_name": "consolidated_traffic_data.csv",
+      "file_formats_found": [
+        "csv"
+      ],
+      "flow_features_overlap": {
+        "bytes_per_second": [
+          "flowBytesPerSecond"
+        ],
+        "duration": [
+          "duration"
+        ],
+        "mean_interarrival_time": [
+          "mean_flowiat"
+        ],
+        "std_interarrival_time": [
+          "std_flowiat"
+        ]
+      },
+      "inferred_dataset_types": [
+        "VPN",
+        "application traffic"
+      ],
+      "labels_not_to_map": [
+        "P2P"
+      ],
+      "missing_values": {
+        "duration": 0,
+        "flowBytesPerSecond": 0,
+        "flowPktsPerSecond": 0,
+        "max_active": 0,
+        "max_biat": 0,
+        "max_fiat": 0,
+        "max_flowiat": 0,
+        "max_idle": 0,
+        "mean_active": 0,
+        "mean_biat": 0,
+        "mean_fiat": 0,
+        "mean_flowiat": 0,
+        "mean_idle": 0,
+        "min_active": 0,
+        "min_biat": 0,
+        "min_fiat": 0,
+        "min_flowiat": 0,
+        "min_idle": 0,
+        "std_active": 0,
+        "std_flowiat": 0,
+        "std_idle": 0,
+        "total_biat": 0,
+        "total_fiat": 0,
+        "traffic_type": 0
+      },
+      "notes": [
+        "No files were modified, and this report does not combine datasets.",
+        "Filename/path-derived labels are provenance only and must not become model features."
+      ],
+      "number_of_files": 1,
+      "possible_leakage_columns": [
+        "traffic_type"
+      ],
+      "raw_pcap_or_pcapng_present": false,
+      "relative_path": "consolidated_traffic_data.csv",
+      "tabular_files": [
+        {
+          "class_counts": {
+            "traffic_type": {
+              "BROWSING": 10000,
+              "CHAT": 2505,
+              "FT": 3975,
+              "MAIL": 1364,
+              "P2P": 4000,
+              "STREAMING": 1284,
+              "VOIP": 6485,
+              "VPN-BROWSING": 10000,
+              "VPN-CHAT": 2839,
+              "VPN-FT": 4704,
+              "VPN-MAIL": 2444,
+              "VPN-P2P": 3415,
+              "VPN-STREAMING": 1115,
+              "VPN-VOIP": 5576
+            }
+          },
+          "columns": [
+            "duration",
+            "total_fiat",
+            "total_biat",
+            "min_fiat",
+            "min_biat",
+            "max_fiat",
+            "max_biat",
+            "mean_fiat",
+            "mean_biat",
+            "flowPktsPerSecond",
+            "flowBytesPerSecond",
+            "min_flowiat",
+            "max_flowiat",
+            "mean_flowiat",
+            "std_flowiat",
+            "min_active",
+            "mean_active",
+            "max_active",
+            "std_active",
+            "min_idle",
+            "mean_idle",
+            "max_idle",
+            "std_idle",
+            "traffic_type"
+          ],
+          "format": "csv",
+          "label_columns": [
+            "traffic_type"
+          ],
+          "missing_values": {
+            "duration": 0,
+            "flowBytesPerSecond": 0,
+            "flowPktsPerSecond": 0,
+            "max_active": 0,
+            "max_biat": 0,
+            "max_fiat": 0,
+            "max_flowiat": 0,
+            "max_idle": 0,
+            "mean_active": 0,
+            "mean_biat": 0,
+            "mean_fiat": 0,
+            "mean_flowiat": 0,
+            "mean_idle": 0,
+            "min_active": 0,
+            "min_biat": 0,
+            "min_fiat": 0,
+            "min_flowiat": 0,
+            "min_idle": 0,
+            "std_active": 0,
+            "std_flowiat": 0,
+            "std_idle": 0,
+            "total_biat": 0,
+            "total_fiat": 0,
+            "traffic_type": 0
+          },
+          "path": "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/ml-service/data/external/consolidated_traffic_data.csv",
+          "row_count": 59706,
+          "unique_labels": {
+            "traffic_type": [
+              "BROWSING",
+              "CHAT",
+              "FT",
+              "MAIL",
+              "P2P",
+              "STREAMING",
+              "VOIP",
+              "VPN-BROWSING",
+              "VPN-CHAT",
+              "VPN-FT",
+              "VPN-MAIL",
+              "VPN-P2P",
+              "VPN-STREAMING",
+              "VPN-VOIP"
+            ]
+          }
+        }
+      ],
+      "target_class_mappings": [
+        {
+          "basis": "explicit dataset label or filename",
+          "source_label": "BROWSING",
+          "target_class": "web"
+        },
+        {
+          "basis": "explicit dataset label or filename",
+          "source_label": "CHAT",
+          "target_class": "messaging"
+        },
+        {
+          "basis": "explicit dataset label or filename",
+          "source_label": "FT",
+          "target_class": "file_transfer"
+        },
+        {
+          "basis": "explicit dataset label or filename",
+          "source_label": "MAIL",
+          "target_class": "email"
+        },
+        {
+          "basis": "explicit dataset label or filename",
+          "source_label": "VOIP",
+          "target_class": "voip"
+        },
+        {
+          "basis": "explicit traffic label with a VPN transport prefix",
+          "source_label": "VPN-BROWSING",
+          "target_class": "web"
+        },
+        {
+          "basis": "explicit traffic label with a VPN transport prefix",
+          "source_label": "VPN-CHAT",
+          "target_class": "messaging"
+        },
+        {
+          "basis": "explicit traffic label with a VPN transport prefix",
+          "source_label": "VPN-FT",
+          "target_class": "file_transfer"
+        },
+        {
+          "basis": "explicit traffic label with a VPN transport prefix",
+          "source_label": "VPN-MAIL",
+          "target_class": "email"
+        },
+        {
+          "basis": "explicit traffic label with a VPN transport prefix",
+          "source_label": "VPN-VOIP",
+          "target_class": "voip"
+        }
+      ],
+      "unique_labels": {
+        "traffic_type": [
+          "BROWSING",
+          "CHAT",
+          "FT",
+          "MAIL",
+          "P2P",
+          "STREAMING",
+          "VOIP",
+          "VPN-BROWSING",
+          "VPN-CHAT",
+          "VPN-FT",
+          "VPN-MAIL",
+          "VPN-P2P",
+          "VPN-STREAMING",
+          "VPN-VOIP"
+        ]
+      },
+      "unresolved_labels": [
+        "STREAMING",
+        "VPN-P2P",
+        "VPN-STREAMING"
+      ]
+    },
+    {
+      "approximate_dataset_size_bytes": 6960755018,
+      "approximate_dataset_size_human": "6.5 GiB",
+      "available_label_columns": [],
+      "class_counts": {},
+      "csv_or_parquet_column_names": [],
+      "dataset_name": "Network-Traffic-Dataset",
+      "file_formats_found": [
+        "pcap",
+        "pcapng"
+      ],
+      "flow_features_overlap": {},
+      "inferred_dataset_types": [
+        "VPN",
+        "application traffic"
+      ],
+      "labels_not_to_map": [
+        "CyberGhost",
+        "Deezer",
+        "Epic Games",
+        "Hotspot Shield",
+        "iTunes",
+        "ProtonVPN",
+        "SoulseekQt",
+        "Spotify",
+        "Steam",
+        "TuneIn",
+        "TunnelBear",
+        "Ultrasurf"
+      ],
+      "missing_values": {},
+      "notes": [
+        "No files were modified, and this report does not combine datasets.",
+        "Filename/path-derived labels are provenance only and must not become model features."
+      ],
+      "number_of_files": 84,
+      "possible_leakage_columns": [
+        "filename/path-derived labels (capture provenance; never use as a feature)"
+      ],
+      "raw_pcap_or_pcapng_present": true,
+      "relative_path": "Network-Traffic-Dataset",
+      "tabular_files": [],
+      "target_class_mappings": [
+        {
+          "basis": "explicit dataset label or filename",
+          "source_label": "Amazon Prime Video",
+          "target_class": "video"
+        },
+        {
+          "basis": "explicit dataset label or filename",
+          "source_label": "Dropbox",
+          "target_class": "file_transfer"
+        },
+        {
+          "basis": "explicit dataset label or filename",
+          "source_label": "Microsoft Teams",
+          "target_class": "voip"
+        },
+        {
+          "basis": "explicit dataset label or filename",
+          "source_label": "Skype",
+          "target_class": "voip"
+        },
+        {
+          "basis": "explicit dataset label or filename",
+          "source_label": "Slack",
+          "target_class": "messaging"
+        },
+        {
+          "basis": "explicit dataset label or filename",
+          "source_label": "Telegram",
+          "target_class": "messaging"
+        },
+        {
+          "basis": "explicit dataset label or filename",
+          "source_label": "WhatsApp",
+          "target_class": "messaging"
+        },
+        {
+          "basis": "explicit dataset label or filename",
+          "source_label": "Zoom",
+          "target_class": "voip"
+        }
+      ],
+      "unique_labels": {},
+      "unresolved_labels": [
+        "Discord",
+        "Facebook"
+      ]
+    },
+    {
+      "approximate_dataset_size_bytes": 3989594748,
+      "approximate_dataset_size_human": "3.7 GiB",
+      "available_label_columns": [],
+      "class_counts": {},
+      "csv_or_parquet_column_names": [],
+      "dataset_name": "USTC-TFC2016",
+      "file_formats_found": [
+        "md",
+        "no_extension",
+        "pcap"
+      ],
+      "flow_features_overlap": {},
+      "inferred_dataset_types": [
+        "malware",
+        "benign",
+        "application traffic"
+      ],
+      "labels_not_to_map": [
+        "BitTorrent",
+        "MySQL",
+        "WorldOfWarcraft"
+      ],
+      "missing_values": {},
+      "notes": [
+        "No files were modified, and this report does not combine datasets.",
+        "Filename/path-derived labels are provenance only and must not become model features."
+      ],
+      "number_of_files": 26,
+      "possible_leakage_columns": [
+        "filename/path-derived labels (capture provenance; never use as a feature)"
+      ],
+      "raw_pcap_or_pcapng_present": true,
+      "relative_path": "USTC-TFC2016",
+      "tabular_files": [],
+      "target_class_mappings": [
+        {
+          "basis": "explicit dataset label or filename",
+          "source_label": "Facetime",
+          "target_class": "voip"
+        },
+        {
+          "basis": "explicit dataset label or filename",
+          "source_label": "FTP",
+          "target_class": "file_transfer"
+        },
+        {
+          "basis": "explicit dataset label or filename",
+          "source_label": "Gmail",
+          "target_class": "email"
+        },
+        {
+          "basis": "explicit dataset label or filename",
+          "source_label": "Outlook",
+          "target_class": "email"
+        },
+        {
+          "basis": "explicit dataset label or filename",
+          "source_label": "Skype",
+          "target_class": "voip"
+        },
+        {
+          "basis": "explicit dataset label or filename",
+          "source_label": "SMB",
+          "target_class": "file_transfer"
+        }
+      ],
+      "unique_labels": {},
+      "unresolved_labels": [
+        "Cridex",
+        "Geodo",
+        "Htbot",
+        "Miuref",
+        "Neris",
+        "Nsis-ay",
+        "Shifu",
+        "Tinba",
+        "Virut",
+        "Weibo",
+        "Zeus"
+      ]
+    }
+  ],
+  "external_data_root": "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/ml-service/data/external",
+  "generated_at": "2026-08-27T11:05:14.705716+00:00"
+}

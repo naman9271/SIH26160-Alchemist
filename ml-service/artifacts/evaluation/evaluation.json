@@ -1,0 +1,10 @@
+{
+  "generated_at": "2026-08-27T11:45:00.694990+00:00",
+  "missing_required_artifacts": [
+    "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/ml-service/data/processed/training_dataset.parquet",
+    "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/ml-service/models/model_metadata.json",
+    "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/ml-service/artifacts/training_metrics.json"
+  ],
+  "reason": "Required trained-model artifacts are unavailable; evaluation was not run.",
+  "status": "blocked"
+}

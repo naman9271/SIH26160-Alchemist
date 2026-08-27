@@ -4,10 +4,15 @@ protobuf>=5.27,<6
 
 # Configuration and initial tabular ML workflow
 pydantic-settings>=2.4,<3
+PyYAML>=6.0,<7
+dpkt>=1.9.8,<2
 numpy>=2.0,<3
 pandas>=2.2,<3
+pyarrow>=17,<20
 scikit-learn>=1.5,<2
+xgboost>=2.1,<3
 joblib>=1.4,<2
+matplotlib>=3.9,<4
 
 # Development and testing
 pytest>=8.3,<9

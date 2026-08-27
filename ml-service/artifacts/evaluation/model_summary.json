@@ -1,0 +1,10 @@
+{
+  "macro_f1": null,
+  "model_version": null,
+  "overall_accuracy": null,
+  "reason": "Required trained-model artifacts are unavailable; evaluation was not run.",
+  "status": "blocked",
+  "supported_classes": [],
+  "test_samples": null,
+  "training_samples": null
+}

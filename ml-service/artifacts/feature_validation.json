@@ -1,0 +1,307 @@
+{
+  "correlation_threshold": 0.95,
+  "datasets": [],
+  "feature_availability": {
+    "burst_count": {
+      "constant_in": [],
+      "datasets_with_non_null_values": [],
+      "datasets_with_schema_column": [],
+      "has_nan_or_inf_in": [],
+      "suspicious_correlation_in": []
+    },
+    "bytes_per_second": {
+      "constant_in": [],
+      "datasets_with_non_null_values": [],
+      "datasets_with_schema_column": [],
+      "has_nan_or_inf_in": [],
+      "suspicious_correlation_in": []
+    },
+    "download_bytes": {
+      "constant_in": [],
+      "datasets_with_non_null_values": [],
+      "datasets_with_schema_column": [],
+      "has_nan_or_inf_in": [],
+      "suspicious_correlation_in": []
+    },
+    "download_packets": {
+      "constant_in": [],
+      "datasets_with_non_null_values": [],
+      "datasets_with_schema_column": [],
+      "has_nan_or_inf_in": [],
+      "suspicious_correlation_in": []
+    },
+    "duration": {
+      "constant_in": [],
+      "datasets_with_non_null_values": [],
+      "datasets_with_schema_column": [],
+      "has_nan_or_inf_in": [],
+      "suspicious_correlation_in": []
+    },
+    "idle_time_ratio": {
+      "constant_in": [],
+      "datasets_with_non_null_values": [],
+      "datasets_with_schema_column": [],
+      "has_nan_or_inf_in": [],
+      "suspicious_correlation_in": []
+    },
+    "max_packet_size": {
+      "constant_in": [],
+      "datasets_with_non_null_values": [],
+      "datasets_with_schema_column": [],
+      "has_nan_or_inf_in": [],
+      "suspicious_correlation_in": []
+    },
+    "mean_burst_size": {
+      "constant_in": [],
+      "datasets_with_non_null_values": [],
+      "datasets_with_schema_column": [],
+      "has_nan_or_inf_in": [],
+      "suspicious_correlation_in": []
+    },
+    "mean_interarrival_time": {
+      "constant_in": [],
+      "datasets_with_non_null_values": [],
+      "datasets_with_schema_column": [],
+      "has_nan_or_inf_in": [],
+      "suspicious_correlation_in": []
+    },
+    "mean_packet_size": {
+      "constant_in": [],
+      "datasets_with_non_null_values": [],
+      "datasets_with_schema_column": [],
+      "has_nan_or_inf_in": [],
+      "suspicious_correlation_in": []
+    },
+    "median_packet_size": {
+      "constant_in": [],
+      "datasets_with_non_null_values": [],
+      "datasets_with_schema_column": [],
+      "has_nan_or_inf_in": [],
+      "suspicious_correlation_in": []
+    },
+    "min_packet_size": {
+      "constant_in": [],
+      "datasets_with_non_null_values": [],
+      "datasets_with_schema_column": [],
+      "has_nan_or_inf_in": [],
+      "suspicious_correlation_in": []
+    },
+    "p25_packet_size": {
+      "constant_in": [],
+      "datasets_with_non_null_values": [],
+      "datasets_with_schema_column": [],
+      "has_nan_or_inf_in": [],
+      "suspicious_correlation_in": []
+    },
+    "p75_packet_size": {
+      "constant_in": [],
+      "datasets_with_non_null_values": [],
+      "datasets_with_schema_column": [],
+      "has_nan_or_inf_in": [],
+      "suspicious_correlation_in": []
+    },
+    "p95_packet_size": {
+      "constant_in": [],
+      "datasets_with_non_null_values": [],
+      "datasets_with_schema_column": [],
+      "has_nan_or_inf_in": [],
+      "suspicious_correlation_in": []
+    },
+    "packet_count": {
+      "constant_in": [],
+      "datasets_with_non_null_values": [],
+      "datasets_with_schema_column": [],
+      "has_nan_or_inf_in": [],
+      "suspicious_correlation_in": []
+    },
+    "packets_per_second": {
+      "constant_in": [],
+      "datasets_with_non_null_values": [],
+      "datasets_with_schema_column": [],
+      "has_nan_or_inf_in": [],
+      "suspicious_correlation_in": []
+    },
+    "std_interarrival_time": {
+      "constant_in": [],
+      "datasets_with_non_null_values": [],
+      "datasets_with_schema_column": [],
+      "has_nan_or_inf_in": [],
+      "suspicious_correlation_in": []
+    },
+    "std_packet_size": {
+      "constant_in": [],
+      "datasets_with_non_null_values": [],
+      "datasets_with_schema_column": [],
+      "has_nan_or_inf_in": [],
+      "suspicious_correlation_in": []
+    },
+    "total_bytes": {
+      "constant_in": [],
+      "datasets_with_non_null_values": [],
+      "datasets_with_schema_column": [],
+      "has_nan_or_inf_in": [],
+      "suspicious_correlation_in": []
+    },
+    "upload_bytes": {
+      "constant_in": [],
+      "datasets_with_non_null_values": [],
+      "datasets_with_schema_column": [],
+      "has_nan_or_inf_in": [],
+      "suspicious_correlation_in": []
+    },
+    "upload_download_ratio": {
+      "constant_in": [],
+      "datasets_with_non_null_values": [],
+      "datasets_with_schema_column": [],
+      "has_nan_or_inf_in": [],
+      "suspicious_correlation_in": []
+    },
+    "upload_packets": {
+      "constant_in": [],
+      "datasets_with_non_null_values": [],
+      "datasets_with_schema_column": [],
+      "has_nan_or_inf_in": [],
+      "suspicious_correlation_in": []
+    }
+  },
+  "features_present_in_only_one_dataset": {},
+  "generated_at": "2026-08-27T11:20:14.766236+00:00",
+  "processed_directory": "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/ml-service/data/processed",
+  "processed_parquet_file_count": 0,
+  "recommendations": {
+    "drop": [
+      "canonical_label",
+      "capture_id",
+      "dataset_source",
+      "excluded_leakage_columns",
+      "flow_id",
+      "original_label",
+      "source_record_id",
+      "split_group_id"
+    ],
+    "note": "No processed Parquet files were found; no numeric feature is empirically approved.",
+    "safe_across_public_datasets": [],
+    "usable_only_for_our_ipsec_dataset": [
+      "burst_count",
+      "idle_time_ratio",
+      "mean_burst_size"
+    ]
+  },
+  "unit_compatibility": {
+    "burst_count": {
+      "compatibility": "no processed values available for unit validation",
+      "datasets_with_values": [],
+      "expected_unit": "bursts"
+    },
+    "bytes_per_second": {
+      "compatibility": "no processed values available for unit validation",
+      "datasets_with_values": [],
+      "expected_unit": "bytes/second"
+    },
+    "download_bytes": {
+      "compatibility": "no processed values available for unit validation",
+      "datasets_with_values": [],
+      "expected_unit": "bytes"
+    },
+    "download_packets": {
+      "compatibility": "no processed values available for unit validation",
+      "datasets_with_values": [],
+      "expected_unit": "packets"
+    },
+    "duration": {
+      "compatibility": "no processed values available for unit validation",
+      "datasets_with_values": [],
+      "expected_unit": "seconds"
+    },
+    "idle_time_ratio": {
+      "compatibility": "no processed values available for unit validation",
+      "datasets_with_values": [],
+      "expected_unit": "ratio"
+    },
+    "max_packet_size": {
+      "compatibility": "no processed values available for unit validation",
+      "datasets_with_values": [],
+      "expected_unit": "bytes"
+    },
+    "mean_burst_size": {
+      "compatibility": "no processed values available for unit validation",
+      "datasets_with_values": [],
+      "expected_unit": "packets/burst"
+    },
+    "mean_interarrival_time": {
+      "compatibility": "no processed values available for unit validation",
+      "datasets_with_values": [],
+      "expected_unit": "seconds"
+    },
+    "mean_packet_size": {
+      "compatibility": "no processed values available for unit validation",
+      "datasets_with_values": [],
+      "expected_unit": "bytes"
+    },
+    "median_packet_size": {
+      "compatibility": "no processed values available for unit validation",
+      "datasets_with_values": [],
+      "expected_unit": "bytes"
+    },
+    "min_packet_size": {
+      "compatibility": "no processed values available for unit validation",
+      "datasets_with_values": [],
+      "expected_unit": "bytes"
+    },
+    "p25_packet_size": {
+      "compatibility": "no processed values available for unit validation",
+      "datasets_with_values": [],
+      "expected_unit": "bytes"
+    },
+    "p75_packet_size": {
+      "compatibility": "no processed values available for unit validation",
+      "datasets_with_values": [],
+      "expected_unit": "bytes"
+    },
+    "p95_packet_size": {
+      "compatibility": "no processed values available for unit validation",
+      "datasets_with_values": [],
+      "expected_unit": "bytes"
+    },
+    "packet_count": {
+      "compatibility": "no processed values available for unit validation",
+      "datasets_with_values": [],
+      "expected_unit": "packets"
+    },
+    "packets_per_second": {
+      "compatibility": "no processed values available for unit validation",
+      "datasets_with_values": [],
+      "expected_unit": "packets/second"
+    },
+    "std_interarrival_time": {
+      "compatibility": "no processed values available for unit validation",
+      "datasets_with_values": [],
+      "expected_unit": "seconds"
+    },
+    "std_packet_size": {
+      "compatibility": "no processed values available for unit validation",
+      "datasets_with_values": [],
+      "expected_unit": "bytes"
+    },
+    "total_bytes": {
+      "compatibility": "no processed values available for unit validation",
+      "datasets_with_values": [],
+      "expected_unit": "bytes"
+    },
+    "upload_bytes": {
+      "compatibility": "no processed values available for unit validation",
+      "datasets_with_values": [],
+      "expected_unit": "bytes"
+    },
+    "upload_download_ratio": {
+      "compatibility": "no processed values available for unit validation",
+      "datasets_with_values": [],
+      "expected_unit": "ratio"
+    },
+    "upload_packets": {
+      "compatibility": "no processed values available for unit validation",
+      "datasets_with_values": [],
+      "expected_unit": "packets"
+    }
+  }
+}
