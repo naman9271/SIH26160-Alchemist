@@ -24,13 +24,28 @@ const (
 const ipsecFilter = "udp port 500 or udp port 4500 or ip proto 50 or ip6 proto 50 or ip proto 51 or ip6 proto 51"
 
 type Config struct {
+	SessionID       string
 	InterfaceName   string
 	Filter          string
 	PromiscuousMode bool
 	SavePCAP        bool
 	MaxDuration     time.Duration
 	MaxCaptureBytes uint64
+	PacketObserver  PacketObserver
 }
+
+// PacketMetadata is a payload-free packet view emitted by capture engines.
+type PacketMetadata struct {
+	SessionID                         string
+	Protocol                          uint8
+	SourceAddress, DestinationAddress string
+	SourcePort, DestinationPort       uint16
+	SPI                               uint32
+	Length                            uint64
+	SeenAt                            time.Time
+}
+
+type PacketObserver func(context.Context, PacketMetadata) error
 
 type Counters struct {
 	PacketsTotal uint64
@@ -78,8 +93,15 @@ type Service struct {
 	sessions *session.Service
 	engine   Engine
 	metrics  FlowMetrics
+	observer PacketObserver
 	captures map[string]*captureRecord
 	activeID string
+}
+
+func (s *Service) SetPacketObserver(observer PacketObserver) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.observer = observer
 }
 
 func New(sessions *session.Service, engine Engine, metrics FlowMetrics) *Service {
@@ -125,7 +147,7 @@ func (s *Service) Start(ctx context.Context, sessionID, interfaceName string, mo
 		s.mu.Unlock()
 		return nil, err
 	}
-	config := Config{InterfaceName: interfaceName, Filter: filter, PromiscuousMode: promiscuous, SavePCAP: savePCAP, MaxCaptureBytes: maxBytes}
+	config := Config{SessionID: sessionID, InterfaceName: interfaceName, Filter: filter, PromiscuousMode: promiscuous, SavePCAP: savePCAP, MaxCaptureBytes: maxBytes, PacketObserver: s.observer}
 	if maxDurationSeconds > 0 {
 		config.MaxDuration = time.Duration(maxDurationSeconds) * time.Second
 	}

@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"io"
+	"net/netip"
 	"os"
 	"os/exec"
 	"regexp"
@@ -114,7 +115,7 @@ func (e *tcpdumpEngine) Start(_ context.Context, config Config) (Handle, error) 
 		}
 	}
 	go func() {
-		err := readPCAP(stdout, writer, h, config.MaxCaptureBytes)
+		err := readPCAP(stdout, writer, h, config)
 		if closer, ok := writer.(io.Closer); ok {
 			_ = closer.Close()
 		}
@@ -154,7 +155,7 @@ func (e *tcpdumpEngine) Start(_ context.Context, config Config) (Handle, error) 
 	}
 }
 
-func readPCAP(reader io.Reader, writer io.Writer, h *tcpdumpHandle, maximum uint64) error {
+func readPCAP(reader io.Reader, writer io.Writer, h *tcpdumpHandle, config Config) error {
 	header := make([]byte, 24)
 	if _, err := io.ReadFull(reader, header); err != nil {
 		return err
@@ -187,16 +188,81 @@ func readPCAP(reader io.Reader, writer io.Writer, h *tcpdumpHandle, maximum uint
 			_, _ = writer.Write(recordHeader)
 			_, _ = writer.Write(packet)
 		}
+		seenAt := time.Unix(int64(order.Uint32(recordHeader[:4])), int64(order.Uint32(recordHeader[4:8]))*1_000).UTC()
+		if config.PacketObserver != nil {
+			if metadata, ok := decodePacketMetadata(packet, uint64(length), seenAt); ok {
+				metadata.SessionID = config.SessionID
+				// A telemetry failure must not interrupt packet capture; the flow store
+				// owns its bounded-memory/backpressure policy.
+				_ = config.PacketObserver(context.Background(), metadata)
+			}
+		}
 		h.mu.Lock()
 		h.counters.PacketsTotal++
 		h.counters.BytesTotal += uint64(length)
 		classify(packet, &h.counters)
-		maximumReached := maximum > 0 && h.counters.BytesTotal >= maximum
+		maximumReached := config.MaxCaptureBytes > 0 && h.counters.BytesTotal >= config.MaxCaptureBytes
 		h.mu.Unlock()
 		if maximumReached {
 			h.once.Do(h.cancel)
 		}
 	}
+}
+
+func decodePacketMetadata(packet []byte, length uint64, seenAt time.Time) (PacketMetadata, bool) {
+	if len(packet) < 14 {
+		return PacketMetadata{}, false
+	}
+	offset, etherType := 14, binary.BigEndian.Uint16(packet[12:14])
+	for etherType == 0x8100 || etherType == 0x88a8 {
+		if len(packet) < offset+4 {
+			return PacketMetadata{}, false
+		}
+		etherType = binary.BigEndian.Uint16(packet[offset+2 : offset+4])
+		offset += 4
+	}
+	var protocol uint8
+	var source, destination string
+	var payload []byte
+	switch etherType {
+	case 0x0800:
+		if len(packet) < offset+20 {
+			return PacketMetadata{}, false
+		}
+		ihl := int(packet[offset]&15) * 4
+		if ihl < 20 || len(packet) < offset+ihl {
+			return PacketMetadata{}, false
+		}
+		protocol = packet[offset+9]
+		source = netip.AddrFrom4([4]byte(packet[offset+12 : offset+16])).String()
+		destination = netip.AddrFrom4([4]byte(packet[offset+16 : offset+20])).String()
+		payload = packet[offset+ihl:]
+	case 0x86dd:
+		if len(packet) < offset+40 {
+			return PacketMetadata{}, false
+		}
+		protocol = packet[offset+6]
+		source = netip.AddrFrom16([16]byte(packet[offset+8 : offset+24])).String()
+		destination = netip.AddrFrom16([16]byte(packet[offset+24 : offset+40])).String()
+		payload = packet[offset+40:]
+	default:
+		return PacketMetadata{}, false
+	}
+	m := PacketMetadata{Protocol: protocol, SourceAddress: source, DestinationAddress: destination, Length: length, SeenAt: seenAt}
+	if protocol == 17 && len(payload) >= 4 {
+		m.SourcePort = binary.BigEndian.Uint16(payload[:2])
+		m.DestinationPort = binary.BigEndian.Uint16(payload[2:4])
+		if (m.SourcePort == 500 || m.DestinationPort == 500 || m.SourcePort == 4500 || m.DestinationPort == 4500) && len(payload) >= 12 && !(m.SourcePort == 4500 || m.DestinationPort == 4500) && len(payload) >= 12 {
+			m.SPI = binary.BigEndian.Uint32(payload[8:12])
+		}
+	}
+	if protocol == 50 && len(payload) >= 4 {
+		m.SPI = binary.BigEndian.Uint32(payload[:4])
+	}
+	if protocol == 51 && len(payload) >= 8 {
+		m.SPI = binary.BigEndian.Uint32(payload[4:8])
+	}
+	return m, true
 }
 func pcapByteOrder(magic []byte) (binary.ByteOrder, bool) {
 	switch string(magic) {
