@@ -108,15 +108,17 @@ class ClassPrediction(BaseModel):
 class FeatureExplanation(BaseModel):
     """A feature's contribution to one prediction.
 
-    Contribution is intentionally signed: positive and negative values can
+    Impact is intentionally signed: positive and negative values can
     respectively support or oppose the predicted class.
     """
 
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
     feature: str = Field(min_length=1)
-    contribution: float
-    description: str | None = None
+    display_name: str = Field(min_length=1)
+    value: float
+    impact: float
+    direction: str = Field(pattern="^(supports_prediction|opposes_prediction|neutral)$")
 
     @field_validator("feature")
     @classmethod
@@ -125,11 +127,11 @@ class FeatureExplanation(BaseModel):
             raise ValueError("feature must not be blank")
         return value
 
-    @field_validator("contribution")
+    @field_validator("value", "impact")
     @classmethod
-    def contribution_must_be_finite(cls, value: float) -> float:
+    def explanation_numbers_must_be_finite(cls, value: float) -> float:
         if not isfinite(value):
-            raise ValueError("contribution must be finite")
+            raise ValueError("explanation values must be finite")
         return value
 
 

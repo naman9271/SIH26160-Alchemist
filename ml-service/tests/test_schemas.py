@@ -55,7 +55,13 @@ def valid_prediction_result() -> dict[str, object]:
         ],
         "model_version": "0.1.0",
         "top_explanations": [
-            FeatureExplanation(feature="bytes_per_second", contribution=0.42),
+            FeatureExplanation(
+                feature="bytes_per_second",
+                display_name="Bytes per Second",
+                value=600.0,
+                impact=0.42,
+                direction="supports_prediction",
+            ),
         ],
         "inference_time_ms": 3.4,
     }
