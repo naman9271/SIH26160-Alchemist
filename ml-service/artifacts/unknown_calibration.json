@@ -1,0 +1,13 @@
+{
+  "chosen_threshold": null,
+  "generated_at": "2026-08-27T11:53:53.592393+00:00",
+  "limitation": "Confidence-threshold rejection is a baseline open-set method and cannot perfectly detect every unknown or out-of-distribution traffic type.",
+  "method": "max_class_probability_threshold",
+  "missing_required_artifacts": [
+    "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/ml-service/data/processed/training_dataset.parquet",
+    "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/ml-service/models/model_metadata.json",
+    "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/ml-service/artifacts/training_metrics.json"
+  ],
+  "reason": "Required trained-model artifacts are unavailable; UNKNOWN calibration was not run.",
+  "status": "blocked"
+}

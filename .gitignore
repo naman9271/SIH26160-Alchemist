@@ -1,0 +1,10 @@
+.DS_Store
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Public datasets and generated ML products stay local.
+ml-service/data/external/
+ml-service/data/processed/*.parquet
+ml-service/models/*.joblib
+ml-service/models/*.json

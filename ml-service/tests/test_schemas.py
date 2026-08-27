@@ -115,14 +115,29 @@ def test_prediction_result_accepts_unknown_prediction() -> None:
         confidence=0.35,
         is_unknown=True,
         top_predictions=[
-            ClassPrediction(traffic_class=TrafficClass.UNKNOWN, confidence=0.35),
-            ClassPrediction(traffic_class=TrafficClass.WEB, confidence=0.3),
+            ClassPrediction(traffic_class=TrafficClass.WEB, confidence=0.35),
+            ClassPrediction(traffic_class=TrafficClass.VIDEO, confidence=0.3),
         ],
     )
 
     result = PredictionResult(**values)
 
     assert result.predicted_class is TrafficClass.UNKNOWN
+
+
+def test_prediction_result_rejects_unknown_as_fitted_probability() -> None:
+    values = valid_prediction_result()
+    values.update(
+        predicted_class=TrafficClass.UNKNOWN,
+        confidence=0.35,
+        is_unknown=True,
+        top_predictions=[
+            ClassPrediction(traffic_class=TrafficClass.UNKNOWN, confidence=0.35),
+        ],
+    )
+
+    with pytest.raises(ValidationError, match="rejection outcome"):
+        PredictionResult(**values)
 
 
 def test_prediction_result_rejects_inconsistent_unknown_state() -> None:

@@ -165,8 +165,13 @@ class PredictionResult(BaseModel):
     def validate_unknown_state_and_ranking(self) -> "PredictionResult":
         if self.is_unknown != (self.predicted_class is TrafficClass.UNKNOWN):
             raise ValueError("is_unknown must match whether predicted_class is UNKNOWN")
-        if self.top_predictions[0].traffic_class is not self.predicted_class:
+        if not self.is_unknown and self.top_predictions[0].traffic_class is not self.predicted_class:
             raise ValueError("first top prediction must match predicted_class")
+        if self.is_unknown and any(
+            prediction.traffic_class is TrafficClass.UNKNOWN
+            for prediction in self.top_predictions
+        ):
+            raise ValueError("UNKNOWN is a rejection outcome, not a model class probability")
         if any(
             later.confidence > earlier.confidence
             for earlier, later in zip(self.top_predictions, self.top_predictions[1:])

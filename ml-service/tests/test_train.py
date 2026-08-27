@@ -99,7 +99,11 @@ def test_train_models_persists_models_metrics_and_feature_order(tmp_path: Path) 
     assert (models_dir / "xgboost.joblib").is_file()
     assert metrics_path.is_file()
     assert metadata["feature_order"] == ["duration", "idle_time_ratio"]
-    assert metadata["unknown_detection"] == "not implemented"
+    assert metadata["unknown_detection"] == {
+        "status": "not_calibrated",
+        "method": "max_class_probability_threshold",
+        "confidence_threshold": None,
+    }
     assert metrics["selection_metric"] == "macro_f1"
     for model in metrics["models"].values():
         test_metrics = model["test_metrics"]

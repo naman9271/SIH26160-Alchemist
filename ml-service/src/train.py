@@ -1,7 +1,7 @@
 """Train group-safe Random Forest and XGBoost traffic classifiers.
 
 The input is ``data/processed/training_dataset.parquet`` created by
-``src.build_dataset``. UNKNOWN detection is intentionally out of scope.
+``src.build_dataset``. UNKNOWN threshold calibration remains a separate step.
 """
 
 from __future__ import annotations
@@ -569,7 +569,11 @@ def train_models(config: TrainingConfig) -> dict[str, Any]:
             "xgboost": str(xgb_path),
             "metrics": str(config.metrics_path),
         },
-        "unknown_detection": "not implemented",
+        "unknown_detection": {
+            "status": "not_calibrated",
+            "method": "max_class_probability_threshold",
+            "confidence_threshold": None,
+        },
         "metadata_excluded_from_features": sorted(NON_FEATURE_COLUMNS),
     }
     _atomic_json_dump(metrics, config.metrics_path)
