@@ -1,0 +1,77 @@
+syntax = "proto3";
+
+package core.workspace.v1;
+
+import "api/proto/sensor/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/workspace;workspacev1";
+
+service WorkspaceService {
+  rpc Create(CreateWorkspaceRequest) returns (Workspace);
+  rpc Get(GetWorkspaceRequest) returns (Workspace);
+  rpc GetState(GetWorkspaceStateRequest) returns (WorkspaceStateResponse);
+  rpc Reset(ResetWorkspaceRequest) returns (ResetWorkspaceResponse);
+}
+
+enum WorkspaceState {
+  WORKSPACE_STATE_UNSPECIFIED = 0;
+  WORKSPACE_STATE_EMPTY = 1;
+  WORKSPACE_STATE_READY = 2;
+  WORKSPACE_STATE_ACQUIRING = 3;
+  WORKSPACE_STATE_ANALYZING = 4;
+  WORKSPACE_STATE_COMPLETED = 5;
+  WORKSPACE_STATE_FAILED = 6;
+  WORKSPACE_STATE_RESETTING = 7;
+}
+
+message CreateWorkspaceRequest {
+  string display_name = 1;
+}
+
+message GetWorkspaceRequest {
+  // Empty retrieves the singleton current workspace.
+  string workspace_id = 1;
+}
+
+message GetWorkspaceStateRequest {
+  // Empty retrieves state for the singleton current workspace.
+  string workspace_id = 1;
+}
+
+message ResetWorkspaceRequest {
+  bool force = 1;
+  bool delete_temporary_files = 2;
+}
+
+message Workspace {
+  string workspace_id = 1;
+  string display_name = 2;
+  WorkspaceState state = 3;
+  sensor.v1.SensorMode mode = 4;
+  string sensor_session_id = 5;
+  string source_id = 6;
+  string capture_id = 7;
+  string analysis_id = 8;
+  string assessment_id = 9;
+  string fusion_run_id = 10;
+  bool has_report = 11;
+  string report_status = 12;
+  google.protobuf.Timestamp created_at = 13;
+  google.protobuf.Timestamp updated_at = 14;
+}
+
+message WorkspaceStateResponse {
+  WorkspaceState state = 1;
+  sensor.v1.SensorMode mode = 2;
+  bool has_source = 3;
+  bool has_analysis = 4;
+  bool has_ml_result = 5;
+  bool has_fused_result = 6;
+  bool has_report = 7;
+}
+
+message ResetWorkspaceResponse {
+  string workspace_id = 1;
+  WorkspaceState state = 2;
+}

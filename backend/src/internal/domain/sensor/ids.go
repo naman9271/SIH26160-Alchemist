@@ -12,6 +12,7 @@ import (
 // in future Sensor services while keeping their wire representation a string.
 type (
 	SensorSessionID string
+	WorkspaceID     string
 	CaptureID       string
 	PCAPID          string
 	FlowID          string
@@ -21,6 +22,7 @@ type (
 )
 
 func NewSensorSessionID() (SensorSessionID, error) { return newID[SensorSessionID]() }
+func NewWorkspaceID() (WorkspaceID, error)         { return newID[WorkspaceID]() }
 func NewCaptureID() (CaptureID, error)             { return newID[CaptureID]() }
 func NewPCAPID() (PCAPID, error)                   { return newID[PCAPID]() }
 func NewFlowID() (FlowID, error)                   { return newID[FlowID]() }

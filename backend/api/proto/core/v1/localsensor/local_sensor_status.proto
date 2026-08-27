@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package core.localsensor.v1;
+
+option go_package = "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/localsensor;localsensorv1";
+
+service LocalSensorStatusService {
+  rpc GetStatus(GetLocalSensorStatusRequest) returns (LocalSensorStatus);
+  rpc GetCapabilities(GetLocalSensorCapabilitiesRequest) returns (LocalSensorCapabilities);
+  rpc ProbeModes(ProbeModesRequest) returns (ProbeModesResponse);
+  rpc GetDeepAssessmentAvailability(GetDeepAssessmentAvailabilityRequest) returns (GetDeepAssessmentAvailabilityResponse);
+}
+
+message GetLocalSensorStatusRequest {}
+message GetLocalSensorCapabilitiesRequest {}
+message ProbeModesRequest {}
+message GetDeepAssessmentAvailabilityRequest {}
+
+message LocalSensorStatus { bool ready = 1; string sensor_version = 2; bool session_active = 3; bool capture_active = 4; uint64 packet_queue_depth = 5; uint64 feature_queue_depth = 6; string last_error = 7; }
+message LocalSensorCapabilities { bool passive_live = 1; bool passive_pcap = 2; bool ipv4 = 3; bool ipv6 = 4; bool ikev1 = 5; bool ikev2 = 6; bool esp = 7; bool ah = 8; bool nat_t = 9; bool feature_windows = 10; bool sequence_sketches = 11; bool vici = 12; bool xfrm = 13; }
+message ModeAvailability { bool available = 1; string reason = 2; }
+message DeepModeAvailability { bool available = 1; bool vici = 2; bool xfrm = 3; string reason = 4; }
+message ProbeModesResponse { ModeAvailability passive_live = 1; ModeAvailability passive_pcap = 2; DeepModeAvailability deep_assessment = 3; }
+message DependencyAvailability { bool available = 1; string reason = 2; }
+message GetDeepAssessmentAvailabilityResponse { bool available = 1; DependencyAvailability vici = 2; DependencyAvailability xfrm = 3; }

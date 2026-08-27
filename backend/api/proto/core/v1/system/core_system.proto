@@ -1,0 +1,88 @@
+syntax = "proto3";
+
+package core.system.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/system;coresystemv1";
+
+service CoreSystemService {
+  rpc Health(HealthRequest) returns (HealthResponse);
+  rpc Readiness(ReadinessRequest) returns (ReadinessResponse);
+  rpc GetVersion(GetVersionRequest) returns (GetVersionResponse);
+  rpc GetCapabilities(GetCapabilitiesRequest) returns (GetCapabilitiesResponse);
+  rpc GetRuntimeStats(GetRuntimeStatsRequest) returns (GetRuntimeStatsResponse);
+}
+
+message HealthRequest {}
+
+enum HealthStatus {
+  HEALTH_STATUS_UNSPECIFIED = 0;
+  HEALTHY = 1;
+  DEGRADED = 2;
+  UNHEALTHY = 3;
+}
+
+message HealthResponse {
+  HealthStatus status = 1;
+  google.protobuf.Timestamp time = 2;
+}
+
+message ReadinessRequest {}
+
+enum DependencyState {
+  DEPENDENCY_STATE_UNSPECIFIED = 0;
+  READY = 1;
+  DEPENDENCY_DEGRADED = 2;
+  UNAVAILABLE = 3;
+}
+
+message ReadinessResponse {
+  bool ready = 1;
+  DependencyState in_memory_store = 2;
+  DependencyState temp_storage = 3;
+  DependencyState sensor = 4;
+  DependencyState ml_worker = 5;
+  DependencyState fusion_engine = 6;
+}
+
+message GetVersionRequest {}
+
+message GetVersionResponse {
+  string core_version = 1;
+  string api_version = 2;
+  string sensor_contract = 3;
+  string ml_contract = 4;
+  string fusion_contract = 5;
+  string build_commit = 6;
+}
+
+message GetCapabilitiesRequest {}
+
+message GetCapabilitiesResponse {
+  bool passive_live = 1;
+  bool passive_pcap = 2;
+  bool deep_assessment = 3;
+  bool security_assessment = 4;
+  bool risk_scoring = 5;
+  bool threat_matrix = 6;
+  bool ml_classification = 7;
+  bool shap = 8;
+  bool metadata_exposure = 9;
+  bool executive_report = 10;
+  bool technical_report = 11;
+}
+
+message GetRuntimeStatsRequest {}
+
+message GetRuntimeStatsResponse {
+  uint64 uptime_seconds = 1;
+  double cpu_percent = 2;
+  uint64 rss_bytes = 3;
+  uint32 goroutines = 4;
+  uint64 event_subscribers = 5;
+  string current_workspace_state = 6;
+  uint64 sensor_queue_depth = 7;
+  double ml_round_trip_ms = 8;
+  double fusion_recompute_ms = 9;
+}
