@@ -45,7 +45,7 @@ conclusions.
 Fusion does not modify VPN state, enforce policy, or perform remediation. It
 produces fused conclusions for downstream security assessment.
 
-Security-security finding references must not create a circular dependency. The primary
+Security finding references must not create a circular dependency. The primary
 fusion pass consumes Sensor, VICI, XFRM, ML, and SHAP evidence to produce
 protocol, configuration, traffic, and metadata conclusions. The Security
 Engine then consumes those conclusions to create findings. Security-rule

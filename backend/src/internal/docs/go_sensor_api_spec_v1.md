@@ -260,6 +260,16 @@ SESSION_NOT_ACTIVE
 
 Purpose: system lifecycle, health and capabilities.
 
+```protobuf
+service SensorSystemService {
+  rpc Health(HealthRequest) returns (HealthResponse);
+  rpc Readiness(ReadinessRequest) returns (ReadinessResponse);
+  rpc GetVersion(GetVersionRequest) returns (GetVersionResponse);
+  rpc GetCapabilities(GetCapabilitiesRequest) returns (GetCapabilitiesResponse);
+  rpc GetRuntimeStats(GetRuntimeStatsRequest) returns (GetRuntimeStatsResponse);
+}
+```
+
 ---
 
 ## API 1.1 — Health
@@ -361,7 +371,7 @@ Checks whether the Sensor can actually accept a new acquisition session.
 
 ### What it does
 
-Lets Go Backend discover what this Sensor installation can do.
+Lets Go Core discover what this Sensor installation can do.
 
 ### Request
 
@@ -427,6 +437,15 @@ Returns Sensor resource usage and pipeline pressure.
 # SERVICE 2 — SensorSessionService
 
 Purpose: defines which mode the Sensor is currently operating in and owns the lifecycle of one sensor run.
+
+```protobuf
+service SensorSessionService {
+  rpc CreateSession(CreateSensorSessionRequest) returns (SensorSession);
+  rpc GetSession(GetSensorSessionRequest) returns (SensorSession);
+  rpc StopSession(StopSensorSessionRequest) returns (StopSensorSessionResponse);
+  rpc ResetSession(ResetSensorSessionRequest) returns (ResetSensorSessionResponse);
+}
+```
 
 ---
 
@@ -597,6 +616,14 @@ event buffers
 
 Purpose: live-capture interface discovery.
 
+```protobuf
+service NetworkInterfaceService {
+  rpc ListInterfaces(ListInterfacesRequest) returns (ListInterfacesResponse);
+  rpc GetInterface(GetInterfaceRequest) returns (NetworkInterface);
+  rpc GetInterfaceStats(GetInterfaceStatsRequest) returns (InterfaceStats);
+}
+```
+
 ---
 
 ## API 3.1 — ListInterfaces
@@ -680,6 +707,17 @@ Full interface metadata.
 # SERVICE 4 — PassiveCaptureService
 
 Purpose: live passive acquisition.
+
+```protobuf
+service PassiveCaptureService {
+  rpc StartCapture(StartCaptureRequest) returns (StartCaptureResponse);
+  rpc StopCapture(StopCaptureRequest) returns (StopCaptureResponse);
+  rpc GetCaptureStatus(GetCaptureStatusRequest) returns (CaptureStatus);
+  rpc GetCaptureStats(GetCaptureStatsRequest) returns (CaptureStats);
+  rpc StreamCaptureStats(StreamCaptureStatsRequest) returns (stream CaptureStats);
+  rpc UpdateCaptureFilter(UpdateCaptureFilterRequest) returns (UpdateCaptureFilterResponse);
+}
+```
 
 ---
 
@@ -863,6 +901,20 @@ If the capture backend cannot safely change filters while running, return `FAILE
 # SERVICE 5 — PcapIngestService
 
 Purpose: offline Passive Analysis from `.pcap` / `.pcapng`.
+
+```protobuf
+service PcapIngestService {
+  rpc BeginUpload(BeginPcapUploadRequest) returns (BeginPcapUploadResponse);
+  rpc UploadChunk(UploadPcapChunkRequest) returns (UploadPcapChunkResponse);
+  rpc CompleteUpload(CompletePcapUploadRequest) returns (PcapSource);
+  rpc ValidatePcap(ValidatePcapRequest) returns (ValidatePcapResponse);
+  rpc GetPcapInfo(GetPcapInfoRequest) returns (PcapSource);
+  rpc StartOfflineProcessing(StartOfflineProcessingRequest) returns (StartOfflineProcessingResponse);
+  rpc GetOfflineProcessingStatus(GetOfflineProcessingStatusRequest) returns (OfflineProcessingStatus);
+  rpc CancelOfflineProcessing(CancelOfflineProcessingRequest) returns (CancelOfflineProcessingResponse);
+  rpc RemovePcap(RemovePcapRequest) returns (RemovePcapResponse);
+}
+```
 
 ---
 
@@ -1137,6 +1189,23 @@ diagnostic state until reset.
 # SERVICE 6 — ProtocolObservationService
 
 Purpose: passive network/protocol intelligence.
+
+```protobuf
+service ProtocolObservationService {
+  rpc GetProtocolSummary(GetProtocolSummaryRequest) returns (ProtocolSummary);
+  rpc ListVpnSessions(ListVpnSessionsRequest) returns (ListVpnSessionsResponse);
+  rpc GetVpnSession(GetVpnSessionRequest) returns (VpnSession);
+  rpc ListIkeExchanges(ListIkeExchangesRequest) returns (ListIkeExchangesResponse);
+  rpc ListCryptoProposals(ListCryptoProposalsRequest) returns (ListCryptoProposalsResponse);
+  rpc ListEspStreams(ListEspStreamsRequest) returns (ListEspStreamsResponse);
+  rpc GetEspStream(GetEspStreamRequest) returns (EspStream);
+  rpc ListAhStreams(ListAhStreamsRequest) returns (ListAhStreamsResponse);
+  rpc ListSpis(ListSpisRequest) returns (ListSpisResponse);
+  rpc GetNatTraversal(GetNatTraversalRequest) returns (NatTraversalSummary);
+  rpc ListProtocolEvents(ListProtocolEventsRequest) returns (ListProtocolEventsResponse);
+  rpc StreamProtocolEvents(StreamProtocolEventsRequest) returns (stream ProtocolEvent);
+}
+```
 
 ---
 
@@ -1431,6 +1500,18 @@ POSSIBLE_REPLAY_OBSERVED
 
 Purpose: network-flow aggregation and future ML input.
 
+```protobuf
+service FlowTelemetryService {
+  rpc ListFlows(ListFlowsRequest) returns (ListFlowsResponse);
+  rpc GetFlow(GetFlowRequest) returns (Flow);
+  rpc GetFlowStats(GetFlowStatsRequest) returns (FlowStats);
+  rpc ListFeatureWindows(ListFeatureWindowsRequest) returns (ListFeatureWindowsResponse);
+  rpc GetFeatureWindow(GetFeatureWindowRequest) returns (FeatureWindow);
+  rpc GetSequenceSketch(GetSequenceSketchRequest) returns (SequenceSketch);
+  rpc StreamFeatureWindows(StreamFeatureWindowsRequest) returns (stream FeatureWindow);
+}
+```
+
 ---
 
 ## API 7.1 — ListFlows
@@ -1621,6 +1702,27 @@ Purpose: **Deep Assessment** of a StrongSwan gateway through VICI.
 
 > VICI should be accessed locally through the StrongSwan UNIX socket where possible.  
 > VICI itself does not provide authentication/security, so the raw VICI socket should not be exposed over an untrusted network.
+
+```protobuf
+service StrongSwanViciService {
+  rpc Probe(ProbeViciRequest) returns (ProbeViciResponse);
+  rpc GetCapabilities(GetViciCapabilitiesRequest) returns (ViciCapabilities);
+  rpc GetDaemonStats(GetDaemonStatsRequest) returns (ViciDaemonStats);
+  rpc ListIkeSas(ListIkeSasRequest) returns (ListIkeSasResponse);
+  rpc GetIkeSa(GetIkeSaRequest) returns (IkeSa);
+  rpc ListChildSas(ListChildSasRequest) returns (ListChildSasResponse);
+  rpc GetChildSa(GetChildSaRequest) returns (ChildSa);
+  rpc ListConnections(ListConnectionsRequest) returns (ListConnectionsResponse);
+  rpc GetConnection(GetConnectionRequest) returns (StrongSwanConnection);
+  rpc ListPolicies(ListViciPoliciesRequest) returns (ListViciPoliciesResponse);
+  rpc ListAlgorithms(ListAlgorithmsRequest) returns (ListAlgorithmsResponse);
+  rpc GetCounters(GetCountersRequest) returns (ViciCounters);
+  rpc ListCertificates(ListCertificatesRequest) returns (ListCertificatesResponse);
+  rpc ListAuthorities(ListAuthoritiesRequest) returns (ListAuthoritiesResponse);
+  rpc GetGatewaySnapshot(GetGatewaySnapshotRequest) returns (GatewaySnapshot);
+  rpc StreamEvents(StreamViciEventsRequest) returns (stream ViciEvent);
+}
+```
 
 ---
 
@@ -1939,7 +2041,7 @@ Returns loaded authority metadata when available.
 
 ### Purpose
 
-Creates one atomic-ish normalized Deep Assessment snapshot for the Go Backend/Fusion layer.
+Creates one atomic-ish normalized Deep Assessment snapshot for the Go Core/Fusion layer.
 
 ### Response contains
 
@@ -1991,6 +2093,17 @@ Do not expose raw VICI protocol messages directly to the frontend.
 Purpose: Deep Assessment of the Linux kernel IPsec Security Association Database / Security Policy Database.
 
 The implementation should preferably use **netlink**, not parse shell command text.
+
+```protobuf
+service KernelXfrmService {
+  rpc GetCapabilities(GetXfrmCapabilitiesRequest) returns (XfrmCapabilities);
+  rpc ListStates(ListXfrmStatesRequest) returns (ListXfrmStatesResponse);
+  rpc GetState(GetXfrmStateRequest) returns (XfrmState);
+  rpc ListPolicies(ListXfrmPoliciesRequest) returns (ListXfrmPoliciesResponse);
+  rpc GetReplayProtection(GetReplayProtectionRequest) returns (ReplayProtection);
+  rpc GetKernelSnapshot(GetKernelSnapshotRequest) returns (KernelSnapshot);
+}
+```
 
 ---
 
@@ -2140,9 +2253,18 @@ This is the kernel-side counterpart to `StrongSwanViciService.GetGatewaySnapshot
 
 # SERVICE 10 — SensorTelemetryService
 
-Purpose: provides the **single normalized Sensor → Go Backend interface**.
+Purpose: provides the **single normalized Sensor -> Go Core interface**.
 
-The Go Backend should not have to individually poll 30 Sensor methods during live analysis.
+The Go Core module should not have to individually poll 30 Sensor methods during live analysis.
+
+```protobuf
+service SensorTelemetryService {
+  rpc GetSnapshot(GetSensorSnapshotRequest) returns (SensorSnapshot);
+  rpc StreamObservations(StreamObservationsRequest) returns (stream SensorObservation);
+  rpc StreamFeatureWindows(StreamSensorFeatureWindowsRequest) returns (stream FeatureWindow);
+  rpc AcknowledgeCheckpoint(AcknowledgeCheckpointRequest) returns (AcknowledgeCheckpointResponse);
+}
+```
 
 ---
 
@@ -2195,7 +2317,7 @@ Large detailed lists should remain paginated in their specific services.
 
 ### Purpose
 
-Main low-latency live stream to Go Backend.
+Main low-latency live stream to Go Core.
 
 ### Request
 
@@ -2248,7 +2370,7 @@ SENSOR_ERROR
 
 Dedicated fast path for finalized ML feature windows.
 
-This allows the Go Backend to:
+This allows Go Core to:
 
 ```text
 Sensor
@@ -2280,7 +2402,7 @@ window start/end
 
 ### Purpose
 
-Allows Go Backend to acknowledge the latest processed telemetry sequence number.
+Allows Go Core to acknowledge the latest processed telemetry sequence number.
 
 Useful for future reconnect/resume support.
 
