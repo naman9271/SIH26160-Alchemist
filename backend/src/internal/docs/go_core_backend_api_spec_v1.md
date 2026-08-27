@@ -2494,28 +2494,28 @@ Do not allow every package to mutate maps independently.
 # 9. Internal package recommendation
 
 ```text
-go-core/
-├── cmd/core/main.go
+backend/
 ├── api/proto/core/v1/
-├── internal/
+├── api/proto/mlworker/v1/
+├── src/cmd/server/main.go
+├── src/internal/
 │   ├── transport/grpc/
-│   ├── workspace/
+│   ├── core/
 │   ├── sensor/
-│   ├── input/
-│   ├── analysis/
-│   ├── protocol/
-│   ├── security/
-│   ├── risk/
-│   ├── policy/
-│   ├── mlclient/
 │   ├── fusion/
+│   ├── mlclient/
+│   ├── state/
+│   ├── domain/
+│   ├── policy/
 │   ├── reports/
 │   ├── events/
-│   ├── state/
 │   ├── artifacts/
 │   └── config/
 └── tests/
 ```
+
+`api/proto/mlworker/v1` is the shared gRPC contract for the external Python ML
+Worker. It is used by Go only to generate the ML client.
 
 ---
 

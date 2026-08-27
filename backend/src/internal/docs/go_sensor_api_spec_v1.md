@@ -2686,7 +2686,7 @@ VICI VERIFIED STATE
 XFRM VERIFIED STATE
 ```
 
-which the later **Fusion Engine** can reconcile.
+which the internal **Fusion Engine** module can reconcile.
 
 ---
 
@@ -2769,51 +2769,57 @@ It provides high-quality **network and gateway evidence**.
 # 10. Recommended Go package structure
 
 ```text
-go-sensor/
-│
-├── cmd/
-│   └── sensor/
-│       └── main.go
-│
-├── api/
-│   └── proto/
-│       └── sensor/v1/
-│
-├── internal/
-│
-│   ├── grpc/
-│   │   ├── system/
-│   │   ├── session/
-│   │   ├── network/
-│   │   ├── capture/
-│   │   ├── pcap/
-│   │   ├── protocol/
-│   │   ├── flow/
-│   │   ├── vici/
-│   │   ├── xfrm/
-│   │   └── telemetry/
-│   │
-│   ├── capture/
-│   │   ├── live/
-│   │   └── offline/
-│   │
-│   ├── protocol/
-│   │   ├── ike/
-│   │   ├── esp/
-│   │   ├── ah/
-│   │   └── natt/
-│   │
+backend/src/internal/sensor/
+├── contract/
+│   ├── system.go
+│   ├── session.go
+│   ├── network.go
+│   ├── capture.go
+│   ├── pcap.go
+│   ├── protocol.go
+│   ├── flow.go
+│   ├── vici.go
+│   ├── xfrm.go
+│   └── telemetry.go
+├── system/
+├── session/
+├── network/
+├── capture/
+│   ├── live/
+│   ├── offline/
+│   ├── filters/
+│   └── stats/
+├── pcap/
+│   ├── upload/
+│   ├── validate/
+│   ├── process/
+│   └── cleanup/
+├── protocol/
+│   ├── ike/
+│   ├── esp/
+│   ├── ah/
+│   ├── natt/
+│   ├── spi/
 │   ├── sessions/
-│   ├── flows/
-│   ├── features/
+│   └── timeline/
+├── flow/
+│   ├── tracker/
+│   ├── stats/
+│   ├── windows/
+│   ├── sequence/
+│   └── eviction/
+├── deep/
 │   ├── vici/
-│   ├── xfrm/
-│   ├── state/
-│   ├── events/
-│   └── tempstorage/
-│
-└── tests/
+│   └── xfrm/
+├── telemetry/
+├── store/
+├── events/
+└── tempstorage/
 ```
+
+The `contract` package contains Go interfaces matching the service blocks in
+this document. There is no `api/proto/sensor` or `sensor/grpc` package in v1
+because Sensor is not a process-boundary service.
 
 ---
 
