@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package sensor.v1;
+
+option go_package = "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/sensor/v1;sensorv1";
+
+enum SensorMode {
+  SENSOR_MODE_UNSPECIFIED = 0;
+  PASSIVE_LIVE = 1;
+  PASSIVE_PCAP = 2;
+  DEEP_ASSESSMENT = 3;
+}

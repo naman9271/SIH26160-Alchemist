@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package sensor.network.v1;
+
+option go_package = "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/sensor/v1/network;networkv1";
+
+service NetworkInterfaceService {
+  rpc ListInterfaces(ListInterfacesRequest) returns (ListInterfacesResponse);
+  rpc GetInterface(GetInterfaceRequest) returns (NetworkInterface);
+  rpc GetInterfaceStats(GetInterfaceStatsRequest) returns (InterfaceStats);
+}
+
+message ListInterfacesRequest {}
+
+message ListInterfacesResponse {
+  repeated NetworkInterface interfaces = 1;
+}
+
+message NetworkInterface {
+  string name = 1;
+  int32 index = 2;
+  string mac_address = 3;
+  repeated string addresses = 4;
+  bool up = 5;
+  bool loopback = 6;
+  bool capture_supported = 7;
+}
+
+message GetInterfaceRequest {
+  string interface_name = 1;
+}
+
+message GetInterfaceStatsRequest {
+  string interface_name = 1;
+}
+
+message InterfaceStats {
+  uint64 rx_packets = 1;
+  uint64 tx_packets = 2;
+  uint64 rx_bytes = 3;
+  uint64 tx_bytes = 4;
+  double rx_bytes_per_second = 5;
+  double tx_bytes_per_second = 6;
+}

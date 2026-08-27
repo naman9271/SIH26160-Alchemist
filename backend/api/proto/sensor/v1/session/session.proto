@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+package sensor.session.v1;
+
+import "api/proto/sensor/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/sensor/v1/session;sessionv1";
+
+service SensorSessionService {
+  rpc CreateSession(CreateSensorSessionRequest) returns (SensorSession);
+  rpc GetSession(GetSensorSessionRequest) returns (SensorSession);
+  rpc StopSession(StopSensorSessionRequest) returns (StopSensorSessionResponse);
+  rpc ResetSession(ResetSensorSessionRequest) returns (ResetSensorSessionResponse);
+}
+
+message DeepAssessmentOptions {
+  bool enable_vici = 1;
+  bool enable_xfrm = 2;
+}
+
+message CreateSensorSessionRequest {
+  sensor.v1.SensorMode mode = 1;
+  string name = 2;
+  DeepAssessmentOptions deep_options = 3;
+}
+
+message SensorSession {
+  string sensor_session_id = 1;
+  string name = 2;
+  sensor.v1.SensorMode mode = 3;
+  string state = 4;
+  string capture_id = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp started_at = 7;
+  google.protobuf.Timestamp last_activity_at = 8;
+  google.protobuf.Timestamp ended_at = 9;
+}
+
+message GetSensorSessionRequest {
+  string sensor_session_id = 1;
+}
+
+message StopSensorSessionRequest {
+  string sensor_session_id = 1;
+}
+
+message StopSensorSessionResponse {
+  string sensor_session_id = 1;
+  string state = 2;
+  google.protobuf.Timestamp ended_at = 3;
+}
+
+message ResetSensorSessionRequest {
+  string sensor_session_id = 1;
+  bool delete_temporary_files = 2;
+}
+
+message ResetSensorSessionResponse {
+  bool reset = 1;
+  string state = 2;
+}

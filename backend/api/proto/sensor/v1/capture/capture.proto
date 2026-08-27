@@ -1,0 +1,98 @@
+syntax = "proto3";
+
+package sensor.capture.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/sensor/v1/capture;capturev1";
+
+service PassiveCaptureService {
+  rpc StartCapture(StartCaptureRequest) returns (StartCaptureResponse);
+  rpc StopCapture(StopCaptureRequest) returns (StopCaptureResponse);
+  rpc GetCaptureStatus(GetCaptureStatusRequest) returns (CaptureStatus);
+  rpc GetCaptureStats(GetCaptureStatsRequest) returns (CaptureStats);
+  rpc StreamCaptureStats(StreamCaptureStatsRequest) returns (stream CaptureStats);
+  rpc UpdateCaptureFilter(UpdateCaptureFilterRequest) returns (UpdateCaptureFilterResponse);
+}
+
+enum CaptureFilterMode {
+  CAPTURE_FILTER_MODE_UNSPECIFIED = 0;
+  IPSEC_ONLY = 1;
+  ALL_TRAFFIC = 2;
+  CUSTOM_BPF = 3;
+}
+
+message StartCaptureRequest {
+  string sensor_session_id = 1;
+  string interface_name = 2;
+  CaptureFilterMode filter_mode = 3;
+  string custom_bpf = 4;
+  bool promiscuous_mode = 5;
+  bool save_pcap = 6;
+  uint64 max_duration_seconds = 7;
+  uint64 max_capture_bytes = 8;
+}
+
+message StartCaptureResponse {
+  string capture_id = 1;
+  string state = 2;
+  google.protobuf.Timestamp started_at = 3;
+}
+
+message StopCaptureRequest {
+  string capture_id = 1;
+}
+
+message StopCaptureResponse {
+  string capture_id = 1;
+  string state = 2;
+  uint64 packets_total = 3;
+  uint64 bytes_total = 4;
+  google.protobuf.Timestamp ended_at = 5;
+}
+
+message GetCaptureStatusRequest {
+  string capture_id = 1;
+}
+
+message CaptureStatus {
+  string state = 1;
+  string interface_name = 2;
+  google.protobuf.Timestamp started_at = 3;
+  uint64 duration_seconds = 4;
+  uint64 packet_drops = 5;
+}
+
+message GetCaptureStatsRequest {
+  string capture_id = 1;
+}
+
+message CaptureStats {
+  uint64 packets_total = 1;
+  uint64 bytes_total = 2;
+  double packets_per_second = 3;
+  double bytes_per_second = 4;
+  uint64 ike_packets = 5;
+  uint64 esp_packets = 6;
+  uint64 ah_packets = 7;
+  uint64 nat_t_packets = 8;
+  uint64 active_flows = 9;
+  uint64 active_vpn_sessions = 10;
+  uint64 packet_drops = 11;
+}
+
+message StreamCaptureStatsRequest {
+  string capture_id = 1;
+  uint32 interval_ms = 2;
+}
+
+message UpdateCaptureFilterRequest {
+  string capture_id = 1;
+  CaptureFilterMode filter_mode = 2;
+  string custom_bpf = 3;
+}
+
+message UpdateCaptureFilterResponse {
+  bool updated = 1;
+  string active_filter = 2;
+}

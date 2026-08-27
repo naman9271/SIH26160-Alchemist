@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package ipsec.common.v1;
+
+option go_package = "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/common/v1;commonv1";
+
+// LogicalResourceID is an opaque, externally safe identifier for a Sensor
+// resource. Values are generated as UUIDv7 by the Sensor domain package.
+message LogicalResourceID {
+  string value = 1;
+}

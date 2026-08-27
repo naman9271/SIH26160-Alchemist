@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package ipsec.common.v1;
+
+option go_package = "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/common/v1;commonv1";
+
+// EvidenceStatus describes how a security-relevant value was obtained.
+enum EvidenceStatus {
+  EVIDENCE_STATUS_UNSPECIFIED = 0;
+  OBSERVED = 1;
+  DERIVED = 2;
+  VERIFIED_GATEWAY = 3;
+  UNKNOWN = 4;
+}

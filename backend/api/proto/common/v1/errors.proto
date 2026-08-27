@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package ipsec.common.v1;
+
+option go_package = "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/common/v1;commonv1";
+
+// ErrorCategory is the Sensor's transport-neutral error taxonomy. The Go Core
+// boundary maps these values to the corresponding gRPC status codes.
+enum ErrorCategory {
+  ERROR_CATEGORY_UNSPECIFIED = 0;
+  INVALID_ARGUMENT = 1;
+  NOT_FOUND = 2;
+  ALREADY_EXISTS = 3;
+  FAILED_PRECONDITION = 4;
+  RESOURCE_EXHAUSTED = 5;
+  UNAVAILABLE = 6;
+  DEADLINE_EXCEEDED = 7;
+  INTERNAL = 8;
+}
+
+// SensorErrorCode supplies stable, machine-readable detail without coupling
+// callers to an implementation error message.
+enum SensorErrorCode {
+  SENSOR_ERROR_CODE_UNSPECIFIED = 0;
+  CAPTURE_ALREADY_RUNNING = 1;
+  INTERFACE_NOT_FOUND = 2;
+  INVALID_PCAP = 3;
+  VICI_UNAVAILABLE = 4;
+  VICI_PLUGIN_DISABLED = 5;
+  XFRM_UNAVAILABLE = 6;
+  SESSION_NOT_ACTIVE = 7;
+}
+
+message SensorErrorDetail {
+  ErrorCategory category = 1;
+  SensorErrorCode code = 2;
+  string message = 3;
+}

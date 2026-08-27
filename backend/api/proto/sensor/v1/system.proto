@@ -1,0 +1,92 @@
+syntax = "proto3";
+
+package sensor.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/sensor/v1;sensorv1";
+
+// SensorSystemService exposes lifecycle and installation information for the
+// logical Sensor module. All methods are unary.
+service SensorSystemService {
+  rpc Health(HealthRequest) returns (HealthResponse);
+  rpc Readiness(ReadinessRequest) returns (ReadinessResponse);
+  rpc GetVersion(GetVersionRequest) returns (GetVersionResponse);
+  rpc GetCapabilities(GetCapabilitiesRequest) returns (GetCapabilitiesResponse);
+  rpc GetRuntimeStats(GetRuntimeStatsRequest) returns (GetRuntimeStatsResponse);
+}
+
+message HealthRequest {}
+
+enum HealthStatus {
+  HEALTH_STATUS_UNSPECIFIED = 0;
+  HEALTHY = 1;
+  DEGRADED = 2;
+  UNHEALTHY = 3;
+}
+
+message HealthResponse {
+  HealthStatus status = 1;
+  google.protobuf.Timestamp time = 2;
+}
+
+message ReadinessRequest {}
+
+enum ReadinessComponentState {
+  READINESS_COMPONENT_STATE_UNSPECIFIED = 0;
+  READY = 1;
+  READINESS_DEGRADED = 2;
+  UNAVAILABLE = 3;
+}
+
+message ReadinessResponse {
+  bool ready = 1;
+  ReadinessComponentState capture_engine = 2;
+  ReadinessComponentState temp_storage = 3;
+  ReadinessComponentState protocol_engine = 4;
+  ReadinessComponentState vici = 5;
+  ReadinessComponentState xfrm = 6;
+}
+
+message GetVersionRequest {}
+
+message GetVersionResponse {
+  string sensor_version = 1;
+  string api_version = 2;
+  string build_commit = 3;
+  string go_version = 4;
+  string os = 5;
+  string architecture = 6;
+}
+
+message GetCapabilitiesRequest {}
+
+message GetCapabilitiesResponse {
+  bool passive_live = 1;
+  bool passive_pcap = 2;
+  bool deep_assessment = 3;
+  bool ipv4 = 4;
+  bool ipv6 = 5;
+  bool ikev1 = 6;
+  bool ikev2 = 7;
+  bool esp = 8;
+  bool ah = 9;
+  bool nat_t = 10;
+  bool vici = 11;
+  bool xfrm = 12;
+  bool feature_windows = 13;
+  bool sequence_sketches = 14;
+}
+
+message GetRuntimeStatsRequest {}
+
+message GetRuntimeStatsResponse {
+  uint64 uptime_seconds = 1;
+  double cpu_percent = 2;
+  uint64 rss_bytes = 3;
+  uint32 goroutines = 4;
+  uint64 active_flows = 5;
+  uint64 packet_queue_depth = 6;
+  uint64 feature_queue_depth = 7;
+  uint64 temporary_disk_bytes = 8;
+}
