@@ -1,0 +1,29 @@
+# Never send datasets, captures, generated datasets, or local development data
+# to the Docker build context.
+.git/
+.pytest_cache/
+__pycache__/
+*.py[cod]
+.DS_Store
+
+data/
+notebooks/
+tests/
+docs/
+
+# Only the model-selection metadata is needed by Predictor at runtime.
+artifacts/*
+!artifacts/training_metrics.json
+
+# Keep the image source minimal even if the build context contains more code.
+src/analyze_pcap.py
+src/build_dataset.py
+src/calibrate_unknown.py
+src/dataset_audit.py
+src/features.py
+src/label_mapping.py
+src/leakage_audit.py
+src/preprocess.py
+src/train.py
+src/validate_features.py
+src/datasets/

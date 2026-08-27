@@ -152,6 +152,18 @@ class Predictor:
             )
         )
 
+    @property
+    def model_version(self) -> str:
+        """Version of the selected model loaded by this process."""
+
+        return self._model_version
+
+    @property
+    def selected_model(self) -> str:
+        """Selected persisted model family name."""
+
+        return self._selected_model
+
     @staticmethod
     def _validate_feature_order(value: object) -> tuple[str, ...]:
         if not isinstance(value, list) or not value or not all(isinstance(item, str) for item in value):

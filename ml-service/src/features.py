@@ -12,12 +12,36 @@ import socket
 import statistics
 from collections.abc import Iterator
 from dataclasses import dataclass, field
+from math import floor, isfinite
 from pathlib import Path
 from typing import BinaryIO, Hashable
 
 import dpkt
 
 LOGGER = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class FeatureExtractionConfig:
+    """Configured timing policy for inference-ready flow windows."""
+
+    window_duration_seconds: float
+    burst_gap_seconds: float
+    idle_gap_seconds: float
+
+    def validate(self) -> None:
+        values = {
+            "window_duration_seconds": self.window_duration_seconds,
+            "burst_gap_seconds": self.burst_gap_seconds,
+            "idle_gap_seconds": self.idle_gap_seconds,
+        }
+        for name, value in values.items():
+            if not isfinite(value) or value <= 0:
+                raise ValueError(f"{name} must be a finite positive number")
+        if self.burst_gap_seconds >= self.idle_gap_seconds:
+            raise ValueError("burst_gap_seconds must be below idle_gap_seconds")
+        if self.idle_gap_seconds > self.window_duration_seconds:
+            raise ValueError("idle_gap_seconds must not exceed window_duration_seconds")
 
 
 @dataclass
@@ -27,11 +51,25 @@ class _FlowAccumulator:
     packet_sizes: list[int] = field(default_factory=list)
     upload_sizes: list[int] = field(default_factory=list)
     download_sizes: list[int] = field(default_factory=list)
+    upload_flags: list[bool] = field(default_factory=list)
 
     def add(self, timestamp: float, packet_size: int, source: tuple[str, int]) -> None:
+        is_upload = source == self.initiator
         self.timestamps.append(timestamp)
         self.packet_sizes.append(packet_size)
-        if source == self.initiator:
+        self.upload_flags.append(is_upload)
+        if is_upload:
+            self.upload_sizes.append(packet_size)
+        else:
+            self.download_sizes.append(packet_size)
+
+    def add_direction(self, timestamp: float, packet_size: int, is_upload: bool) -> None:
+        """Add a packet to a derived window without retaining endpoint metadata."""
+
+        self.timestamps.append(timestamp)
+        self.packet_sizes.append(packet_size)
+        self.upload_flags.append(is_upload)
+        if is_upload:
             self.upload_sizes.append(packet_size)
         else:
             self.download_sizes.append(packet_size)
@@ -91,7 +129,15 @@ def _flow_identifier(capture_id: str, key: Hashable) -> str:
     return f"{capture_id}:{digest}"
 
 
-def _finalize_flow(capture_id: str, key: Hashable, flow: _FlowAccumulator) -> dict[str, object] | None:
+def _finalize_flow(
+    capture_id: str,
+    key: Hashable,
+    flow: _FlowAccumulator,
+    *,
+    burst_gap_seconds: float | None = None,
+    idle_gap_seconds: float | None = None,
+    require_complete_features: bool = False,
+) -> dict[str, object] | None:
     if len(flow.timestamps) < 2:
         return None
     ordered_timestamps = sorted(flow.timestamps)
@@ -105,6 +151,14 @@ def _finalize_flow(capture_id: str, key: Hashable, flow: _FlowAccumulator) -> di
     total_bytes = sum(flow.packet_sizes)
     upload_bytes = sum(flow.upload_sizes)
     download_bytes = sum(flow.download_sizes)
+    burst_count: int | None = None
+    mean_burst_size: float | None = None
+    idle_time_ratio: float | None = None
+    if burst_gap_seconds is not None and idle_gap_seconds is not None:
+        burst_count = 1 + sum(gap > burst_gap_seconds for gap in interarrivals)
+        mean_burst_size = len(flow.packet_sizes) / burst_count
+        idle_time = sum(gap for gap in interarrivals if gap >= idle_gap_seconds)
+        idle_time_ratio = min(1.0, idle_time / duration)
     return {
         "flow_id": _flow_identifier(capture_id, key),
         "duration": duration,
@@ -126,18 +180,18 @@ def _finalize_flow(capture_id: str, key: Hashable, flow: _FlowAccumulator) -> di
         "download_packets": len(flow.download_sizes),
         "upload_bytes": upload_bytes,
         "download_bytes": download_bytes,
-        "upload_download_ratio": upload_bytes / download_bytes if download_bytes else None,
-        # These need an agreed burst/idle threshold and remain unavailable until
-        # that threshold is supplied through configuration.
-        "burst_count": None,
-        "mean_burst_size": None,
-        "idle_time_ratio": None,
+        "upload_download_ratio": (
+            upload_bytes / download_bytes
+            if download_bytes
+            else float(upload_bytes) if require_complete_features else None
+        ),
+        "burst_count": burst_count,
+        "mean_burst_size": mean_burst_size,
+        "idle_time_ratio": idle_time_ratio,
     }
 
 
-def extract_flow_features(path: Path, capture_id: str) -> Iterator[dict[str, object]]:
-    """Yield bidirectional flow metadata from one PCAP or PCAPNG capture."""
-
+def _read_capture_flows(path: Path) -> tuple[dict[Hashable, _FlowAccumulator], int]:
     flows: dict[Hashable, _FlowAccumulator] = {}
     malformed_frames = 0
     with path.open("rb") as file:
@@ -150,6 +204,13 @@ def extract_flow_features(path: Path, capture_id: str) -> Iterator[dict[str, obj
             key, source, _ = _flow_key(ip_packet)
             flow = flows.setdefault(key, _FlowAccumulator(initiator=source))
             flow.add(float(timestamp), len(frame), source)
+    return flows, malformed_frames
+
+
+def extract_flow_features(path: Path, capture_id: str) -> Iterator[dict[str, object]]:
+    """Yield bidirectional flow metadata from one PCAP or PCAPNG capture."""
+
+    flows, malformed_frames = _read_capture_flows(path)
 
     if malformed_frames:
         LOGGER.info("%s ignored %d non-IP or malformed frames", path, malformed_frames)
@@ -159,3 +220,44 @@ def extract_flow_features(path: Path, capture_id: str) -> Iterator[dict[str, obj
             yield features
         else:
             LOGGER.debug("%s skipped a flow with fewer than two timed packets", path)
+
+
+def extract_window_features(
+    path: Path,
+    capture_id: str,
+    config: FeatureExtractionConfig,
+) -> Iterator[dict[str, object]]:
+    """Yield complete, inference-ready metadata for fixed per-flow windows."""
+
+    config.validate()
+    flows, malformed_frames = _read_capture_flows(path)
+    if malformed_frames:
+        LOGGER.info("%s ignored %d non-IP or malformed frames", path, malformed_frames)
+    for key, flow in flows.items():
+        first_timestamp = min(flow.timestamps, default=0.0)
+        windows: dict[int, _FlowAccumulator] = {}
+        packets = zip(flow.timestamps, flow.packet_sizes, flow.upload_flags)
+        for timestamp, packet_size, is_upload in packets:
+            window_index = floor((timestamp - first_timestamp) / config.window_duration_seconds)
+            window = windows.setdefault(
+                window_index, _FlowAccumulator(initiator=flow.initiator)
+            )
+            window.add_direction(timestamp, packet_size, is_upload)
+        for window_index, window in sorted(windows.items()):
+            window_key = (key, "window", window_index)
+            features = _finalize_flow(
+                capture_id,
+                window_key,
+                window,
+                burst_gap_seconds=config.burst_gap_seconds,
+                idle_gap_seconds=config.idle_gap_seconds,
+                require_complete_features=True,
+            )
+            if features is not None:
+                yield features
+            else:
+                LOGGER.debug(
+                    "%s skipped flow window %d with fewer than two timed packets",
+                    path,
+                    window_index,
+                )

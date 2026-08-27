@@ -12,7 +12,7 @@ The first classifier may predict:
 
 `web`, `video`, `voip`, `email`, `file_transfer`, `messaging`, and `icmp`.
 
-It must also support `UNKNOWN` when confidence is insufficient. A future phase may add anomaly detection. The eventual service boundary is gRPC: Go sends flow-level features to Python, and Python returns the predicted class, confidence, unknown status, top predictions, and explainability information.
+It must also support `UNKNOWN` when confidence is insufficient. Experimental anomaly detection is a separate component and must not alter or replace classifier output. The eventual service boundary is gRPC: Go sends flow-level features to Python, and Python returns the predicted class, confidence, unknown status, top predictions, and explainability information.
 
 For the MVP, each training capture/window is assumed to contain one dominant known application traffic type. Do not claim that opaque site-to-site ESP metadata can perfectly separate multiple simultaneous inner applications.
 

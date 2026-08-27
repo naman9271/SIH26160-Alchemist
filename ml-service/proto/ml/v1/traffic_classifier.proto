@@ -1,0 +1,94 @@
+syntax = "proto3";
+
+package sih.ipsec.ml.v1;
+
+import "google/protobuf/empty.proto";
+
+option go_package = "github.com/naman9271/SIH26160---Team-Alchemist/backend/gen/ml/v1;mlv1";
+
+service TrafficClassifier {
+  rpc PredictTraffic(FlowFeatures) returns (PredictionResult);
+  rpc HealthCheck(google.protobuf.Empty) returns (HealthStatus);
+}
+
+enum TrafficClass {
+  TRAFFIC_CLASS_UNSPECIFIED = 0;
+  TRAFFIC_CLASS_WEB = 1;
+  TRAFFIC_CLASS_VIDEO = 2;
+  TRAFFIC_CLASS_VOIP = 3;
+  TRAFFIC_CLASS_EMAIL = 4;
+  TRAFFIC_CLASS_FILE_TRANSFER = 5;
+  TRAFFIC_CLASS_MESSAGING = 6;
+  TRAFFIC_CLASS_ICMP = 7;
+  TRAFFIC_CLASS_UNKNOWN = 8;
+}
+
+enum ServingStatus {
+  SERVING_STATUS_UNSPECIFIED = 0;
+  SERVING_STATUS_SERVING = 1;
+  SERVING_STATUS_NOT_SERVING = 2;
+}
+
+enum ExplanationDirection {
+  EXPLANATION_DIRECTION_UNSPECIFIED = 0;
+  EXPLANATION_DIRECTION_SUPPORTS_PREDICTION = 1;
+  EXPLANATION_DIRECTION_OPPOSES_PREDICTION = 2;
+  EXPLANATION_DIRECTION_NEUTRAL = 3;
+}
+
+message FlowFeatures {
+  optional string flow_id = 1;
+  optional double duration = 2;
+  optional int64 packet_count = 3;
+  optional int64 total_bytes = 4;
+  optional double packets_per_second = 5;
+  optional double bytes_per_second = 6;
+  optional double mean_packet_size = 7;
+  optional double std_packet_size = 8;
+  optional double min_packet_size = 9;
+  optional double max_packet_size = 10;
+  optional double p25_packet_size = 11;
+  optional double median_packet_size = 12;
+  optional double p75_packet_size = 13;
+  optional double p95_packet_size = 14;
+  optional double mean_interarrival_time = 15;
+  optional double std_interarrival_time = 16;
+  optional int64 upload_packets = 17;
+  optional int64 download_packets = 18;
+  optional int64 upload_bytes = 19;
+  optional int64 download_bytes = 20;
+  optional double upload_download_ratio = 21;
+  optional int64 burst_count = 22;
+  optional double mean_burst_size = 23;
+  optional double idle_time_ratio = 24;
+}
+
+message ClassPrediction {
+  TrafficClass traffic_class = 1;
+  double confidence = 2;
+}
+
+message FeatureExplanation {
+  string feature = 1;
+  string display_name = 2;
+  double value = 3;
+  double impact = 4;
+  ExplanationDirection direction = 5;
+}
+
+message PredictionResult {
+  string flow_id = 1;
+  TrafficClass predicted_class = 2;
+  double confidence = 3;
+  bool is_unknown = 4;
+  repeated ClassPrediction top_predictions = 5;
+  string model_version = 6;
+  repeated FeatureExplanation top_explanations = 7;
+  double inference_time_ms = 8;
+}
+
+message HealthStatus {
+  ServingStatus status = 1;
+  bool model_loaded = 2;
+  string model_version = 3;
+}
