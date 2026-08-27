@@ -7,7 +7,7 @@ model:
   training_metrics_path: ../artifacts/training_metrics.json
 
 feature_extraction:
-  window_duration_seconds: 30.0
+  window_duration_seconds: 10.0
   burst_gap_seconds: 0.1
   idle_gap_seconds: 1.0
 

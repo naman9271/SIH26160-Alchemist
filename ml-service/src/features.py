@@ -6,6 +6,8 @@ to group packets and are never returned as model features.
 
 from __future__ import annotations
 
+import argparse
+import csv
 import hashlib
 import logging
 import socket
@@ -19,6 +21,36 @@ from typing import BinaryIO, Hashable
 import dpkt
 
 LOGGER = logging.getLogger(__name__)
+
+DEFAULT_WINDOW_DURATION_SECONDS = 10.0
+DEFAULT_BURST_GAP_SECONDS = 0.1
+DEFAULT_IDLE_GAP_SECONDS = 1.0
+CSV_FIELDNAMES = (
+    "flow_id",
+    "duration",
+    "packet_count",
+    "total_bytes",
+    "packets_per_second",
+    "bytes_per_second",
+    "mean_packet_size",
+    "std_packet_size",
+    "min_packet_size",
+    "max_packet_size",
+    "p25_packet_size",
+    "median_packet_size",
+    "p75_packet_size",
+    "p95_packet_size",
+    "mean_interarrival_time",
+    "std_interarrival_time",
+    "upload_packets",
+    "download_packets",
+    "upload_bytes",
+    "download_bytes",
+    "upload_download_ratio",
+    "burst_count",
+    "mean_burst_size",
+    "idle_time_ratio",
+)
 
 
 @dataclass(frozen=True)
@@ -261,3 +293,70 @@ def extract_window_features(
                     path,
                     window_index,
                 )
+
+
+def write_window_features_csv(
+    pcap_path: Path,
+    output_path: Path,
+    config: FeatureExtractionConfig,
+) -> int:
+    """Extract fixed-window metadata and write a stable CSV without payload data."""
+
+    if not pcap_path.is_file():
+        raise ValueError(f"Capture does not exist: {pcap_path}")
+    if pcap_path.suffix.casefold() not in {".pcap", ".pcapng"}:
+        raise ValueError("Capture must use a .pcap or .pcapng extension")
+    config.validate()
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    temporary_path = output_path.with_name(f".{output_path.name}.tmp")
+    written = 0
+    try:
+        with temporary_path.open("w", encoding="utf-8", newline="") as file:
+            writer = csv.DictWriter(file, fieldnames=CSV_FIELDNAMES)
+            writer.writeheader()
+            for features in extract_window_features(pcap_path, pcap_path.name, config):
+                writer.writerow({name: features.get(name) for name in CSV_FIELDNAMES})
+                written += 1
+        temporary_path.replace(output_path)
+    except Exception:
+        temporary_path.unlink(missing_ok=True)
+        raise
+    LOGGER.info("Wrote %d flow windows to %s", written, output_path)
+    return written
+
+
+def parse_args() -> argparse.Namespace:
+    """Parse the metadata-only feature-extraction CLI arguments."""
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--pcap", type=Path, required=True)
+    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--window-seconds", type=float, default=DEFAULT_WINDOW_DURATION_SECONDS)
+    parser.add_argument("--burst-gap-seconds", type=float, default=DEFAULT_BURST_GAP_SECONDS)
+    parser.add_argument("--idle-gap-seconds", type=float, default=DEFAULT_IDLE_GAP_SECONDS)
+    return parser.parse_args()
+
+
+def main() -> None:
+    """Write metadata-only fixed-window features for one PCAP or PCAPNG file."""
+
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+    args = parse_args()
+    try:
+        write_window_features_csv(
+            args.pcap,
+            args.output,
+            FeatureExtractionConfig(
+                window_duration_seconds=args.window_seconds,
+                burst_gap_seconds=args.burst_gap_seconds,
+                idle_gap_seconds=args.idle_gap_seconds,
+            ),
+        )
+    except (OSError, ValueError) as error:
+        LOGGER.error("Feature extraction failed: %s", error)
+        raise SystemExit(2) from error
+
+
+if __name__ == "__main__":
+    main()

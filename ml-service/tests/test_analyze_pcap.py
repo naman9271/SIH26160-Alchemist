@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import json
 from pathlib import Path
 
@@ -9,7 +10,11 @@ import pytest
 import yaml
 
 from src.analyze_pcap import analyze_capture, load_feature_extraction_config, main
-from src.features import FeatureExtractionConfig, extract_window_features
+from src.features import (
+    FeatureExtractionConfig,
+    extract_window_features,
+    main as features_main,
+)
 from src.predict import Predictor
 from src.schemas import FlowFeatures
 from tests.test_predict import prepare_predictor_config
@@ -106,3 +111,23 @@ def test_feature_extraction_config_rejects_overlapping_timing_thresholds(
 
     with pytest.raises(ValueError, match="burst_gap_seconds"):
         load_feature_extraction_config(config_path)
+
+
+def test_features_cli_writes_metadata_only_csv(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    capture = tmp_path / "features.pcap"
+    output = tmp_path / "features.csv"
+    write_two_packet_capture(capture)
+    monkeypatch.setattr(
+        "sys.argv",
+        ["features", "--pcap", str(capture), "--output", str(output)],
+    )
+
+    features_main()
+
+    with output.open(encoding="utf-8", newline="") as file:
+        rows = list(csv.DictReader(file))
+    assert len(rows) == 1
+    assert set(rows[0]) >= {"flow_id", "packet_count", "idle_time_ratio"}
+    assert rows[0]["packet_count"] == "2"

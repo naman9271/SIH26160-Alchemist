@@ -94,7 +94,13 @@ docker run --rm -p 60051:60051 \
   sih-ml-service:local
 ```
 
-The planned integration is gRPC: Go will send flow-level features to Python. The ML pipeline and gRPC server are intentionally not implemented yet.
+Go sends validated flow-level features to the Python gRPC service. The service is inference-only and never trains a model while serving requests.
+
+## Public-data and IPsec limitation
+
+Public datasets are supplementary training material; VPN-labeled public traffic is not automatically equivalent to traffic observed around an IPsec ESP tunnel. Final model selection, UNKNOWN calibration, anomaly evaluation, and leakage checks require team-generated strongSwan/IPsec captures with known dominant application traffic.
+
+The model classifies only metadata and traffic patterns. It never decrypts or inspects encrypted payload contents. Mixed inner applications inside one opaque site-to-site tunnel are a harder unresolved case and must not be presented as perfectly separable by this MVP.
 
 ## MVP limitation
 
