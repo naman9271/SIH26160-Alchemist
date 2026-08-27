@@ -1,0 +1,37 @@
+#############################################
+#  IPv6
+#############################################
+
+"IPv6","3ffe::1","3ffe::2","10","AES-CBC [RFC3602]","aescbcencryption","HMAC-SHA-1-96 [RFC2404]","hmacsha1authenticati"
+"IPv6","3ffe::1","3ffe::3","11","TripleDES-CBC [RFC2451]","3descbcencryptiontesting","HMAC-SHA-1-96 [RFC2404]","hmacsha1authenticati"
+"IPv6","3ffe::1","3ffe::4","12","DES-CBC [RFC2405]","descbcte","HMAC-SHA-1-96 [RFC2404]","hmacsha1authenticati"
+"IPv6","3ffe::1","3ffe::5","13","NULL","","HMAC-SHA-1-96 [RFC2404]","hmacsha1authenticati"
+
+"IPv6","3ffe::1","3ffe::12","10","AES-CBC [RFC3602]","aescbcencryption","HMAC-MD5-96 [RFC2403]","hmacmd5authentic"
+"IPv6","3ffe::1","3ffe::13","11","TripleDES-CBC [RFC2451]","3descbcencryptiontesting","HMAC-MD5-96 [RFC2403]","hmacmd5authentic"
+"IPv6","3ffe::1","3ffe::14","12","DES-CBC [RFC2405]","descbcte","HMAC-MD5-96 [RFC2403]","hmacmd5authentic"
+"IPv6","3ffe::1","3ffe::15","13","NULL","","HMAC-MD5-96 [RFC2403]","hmacmd5authentic"
+
+"IPv6","3ffe::1","3ffe::22","20","AES-CBC [RFC3602]","aescbcencryption","NULL",""
+"IPv6","3ffe::1","3ffe::23","21","TripleDES-CBC [RFC2451]","3descbcencryptiontesting","NULL",""
+"IPv6","3ffe::1","3ffe::24","22","DES-CBC [RFC2405]","descbcte","NULL",""
+"IPv6","3ffe::1","3ffe::25","23","NULL","","NULL",""
+
+#############################################
+#  IPv4
+#############################################
+
+"IPv4","190.0.0.1","190.0.0.2","110","AES-CBC [RFC3602]","aescbcencryption","HMAC-SHA-1-96 [RFC2404]","hmacsha1authenticati"
+"IPv4","190.0.0.1","190.0.0.3","111","TripleDES-CBC [RFC2451]","3descbcencryptiontesting","HMAC-SHA-1-96 [RFC2404]","hmacsha1authenticati"
+"IPv4","190.0.0.1","190.0.0.4","112","DES-CBC [RFC2405]","descbcte","HMAC-SHA-1-96 [RFC2404]","hmacsha1authenticati"
+"IPv4","190.0.0.1","190.0.0.5","113","NULL","","HMAC-SHA-1-96 [RFC2404]","hmacsha1authenticati"
+
+"IPv4","190.0.0.1","190.0.0.12","110","AES-CBC [RFC3602]","aescbcencryption","HMAC-MD5-96 [RFC2403]","hmacmd5authentic"
+"IPv4","190.0.0.1","190.0.0.13","111","TripleDES-CBC [RFC2451]","3descbcencryptiontesting","HMAC-MD5-96 [RFC2403]","hmacmd5authentic"
+"IPv4","190.0.0.1","190.0.0.14","112","DES-CBC [RFC2405]","descbcte","HMAC-MD5-96 [RFC2403]","hmacmd5authentic"
+"IPv4","190.0.0.1","190.0.0.15","113","NULL","","HMAC-MD5-96 [RFC2403]","hmacmd5authentic"
+
+"IPv4","190.0.0.1","190.0.0.22","120","AES-CBC [RFC3602]","aescbcencryption","NULL",""
+"IPv4","190.0.0.1","190.0.0.23","121","TripleDES-CBC [RFC2451]","3descbcencryptiontesting","NULL",""
+"IPv4","190.0.0.1","190.0.0.24","122","DES-CBC [RFC2405]","descbcte","NULL",""
+"IPv4","190.0.0.1","190.0.0.25","123","NULL","","NULL",""

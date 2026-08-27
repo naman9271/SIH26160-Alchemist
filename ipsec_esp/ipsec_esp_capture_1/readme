@@ -1,0 +1,50 @@
+
+CONTENTS OF THIS DIRECTORY
+==========================
+
+
+ Author: Frederic ROUDAUT (frederic.roudaut@free.fr)
+
+ Date : April 2006
+
+ Updated : June 2021 (matthias.st.pierre@ncp-e.com)
+
+
+* Example for simple transport mode in v4/v6
+--------------------------------------------
+
+with different combinations of Authentication and Encryption Algorithms 
+
+Encryption :
+------------
+TripleDES-CBC [RFC2451]
+AES-CBC with 128-bit keys [RFC3602]
+DES-CBC [RFC2405]
+NULL Encryption
+
+Authentication:
+---------------
+HMAC-MD5-96 [RFC2403]
+HMAC-SHA1-96 [RFC2404]
+Null Authentication
+
+It contains : 
+
+- a capture file : capture.pcap
+
+- Some preferences files with the configurations for v4 and v6
+  that you have to put in ~/.ethereal/preferences. 
+  Because you only may set 5 SAs, I had to get several configurations
+  files:
+
+        - preferences_v4_(i)
+        - preferences_v6_(i)
+
+- The sad has been run using : ipsec.conf (config file for setkey)
+
+Update:
+
+- The ESP SA settings are nowadays stored as user accessible table
+  in the file `esp_sa`. The settings from the original preferences
+  have been converted to the new format and are kept for historical
+  reasons only.

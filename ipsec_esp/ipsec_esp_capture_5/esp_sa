@@ -1,0 +1,2 @@
+"IPv6","3ffe::1","3ffe::2","*","BLOWFISH-CBC [RFC2451]","0xfecafecacafecafebbccbbccdadaffff","HMAC-SHA-1-96 [RFC2404]","0x00fdabceff00aabb55412364d003219fffabc000"
+"IPv6","3ffe::1","3ffe::3","*","BLOWFISH-CBC [RFC2451]","0xecafecacafecafebbccbbccdadaffff","HMAC-SHA-1-96 [RFC2404]","0x00fdabceff00aabb55412364d003219fffabc000"

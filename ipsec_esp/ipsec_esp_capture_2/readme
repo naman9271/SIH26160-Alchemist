@@ -1,0 +1,77 @@
+
+CONTENTS OF THIS DIRECTORY
+==========================
+
+
+ Author: Frederic ROUDAUT (frederic.roudaut@free.fr)
+
+ Date : April 2006
+
+ Updated : June 2021 (matthias.st.pierre@ncp-e.com)
+
+
+* Example for tunnel mode in v4 and authentication checking
+-----------------------------------------------------------
+
+The topology used was the following:
+
+                                             DUMP
+ N1                         SGW1               |        N2
+[192.168.0.3] -------[192.168.0.2][10.0.0.1]--------[10.0.0.2]
+
+default route for 192.168.0.3 is 192.168.0.2
+There is not default route on 10.0.0.2.
+it means that I will received destination unreachable ... Great  ;-) 
+
+In this case I have the following policies:
+
+########## For 192.168.0.2 (SGW1)
+spdadd  192.168.0.3 10.0.0.2 any -P out ipsec
+esp/tunnel/10.0.0.1-10.0.0.2/use;
+add 10.0.0.1 10.0.0.2 esp 10
+-m tunnel
+-E aes-cbc "aescbcencryption"
+-A hmac-sha1 "hmacsha1authenticati";
+
+########## For 192.168.0.3 (N1)
+spdadd  192.168.0.3 10.0.0.2 any -P out ipsec esp/transport//require;
+add 192.168.0.3 10.0.0.2 esp 15
+-E des-cbc "descbte"
+-A hmac-sha1 "hmacsha1authenticati";
+
+It means that packets coming from N1 to N2 will be encrypted with
+des-cbc and tunneled with ESP encryption aes-cbc to N2.
+If I have a look at the DUMP host, I have these two SAs to decrypt the entire packet.
+I will have something like
+
+[IP1][ESP1][ENCRYPTION1]
+
+with [ENCRYPTION1]=[IP2][ESP2][ENCRYPTION2]
+and [ENCRYPTION2]=ICMP
+
+IP1 is ip layer from SGW1 to N2
+ENCRYPTION2 is aes-cbc
+IP2 is ip layer from N1 to N2
+ENCRYPTION2 is des-cbc
+
+thus you have enough information to describe the whole packet.
+if you use the preference File in attachment it will do this.
+You only have two SAs :
+
+SA #1: IPV4|10.0.0.1|10.0.0.2|*
+Encrypt 1 : AES-CBC
+Auth 1 : HMAC-SHA1
+Encrypt Key 1 : aescbcencryption
+
+SA #2: IPV4|192.168.0.3|10.0.0.2|*
+Encrypt 2 : DES-CBC
+Auth 2 : HMAC-SHA1
+Encrypt Key 2 : descbcte
+
+
+Update:
+
+- The ESP SA settings are nowadays stored as user accessible table
+  in the file `esp_sa`. The settings from the original preferences
+  have been converted to the new format and are kept for historical
+  reasons only.

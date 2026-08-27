@@ -1,0 +1,35 @@
+
+CONTENTS OF THIS DIRECTORY
+==========================
+
+
+ Author: Frederic ROUDAUT (frederic.roudaut@free.fr)
+
+ Date : September 2006
+
+
+
+
+Hexadecimal keys 
+----------------
+
+Example of Authentication Checking and decryption using hexadecimal keys.
+
+It contains : 
+
+- a capture file : capture.pcap
+
+- A preference file with the configuration 
+  that you have to put in ~/.wireshark/preferences
+
+        - preferences    	
+
+- The sad has been run using : ipsec.conf (config file for setkey)
+
+
+Update:
+
+- The ESP SA settings are nowadays stored as user accessible table
+  in the file `esp_sa`. The settings from the original preferences
+  have been converted to the new format and are kept for historical
+  reasons only.

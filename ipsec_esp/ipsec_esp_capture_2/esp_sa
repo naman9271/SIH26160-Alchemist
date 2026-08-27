@@ -1,0 +1,2 @@
+"IPv4","10.0.0.1","10.0.0.2","*","AES-CBC [RFC3602]","aescbcencryption","HMAC-SHA-1-96 [RFC2404]","hmacsha1authenticati"
+"IPv4","192.168.0.3","10.0.0.2","*","DES-CBC [RFC2405]","descbcte","HMAC-SHA-1-96 [RFC2404]","hmacsha1authenticati"
