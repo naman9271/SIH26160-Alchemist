@@ -5,7 +5,9 @@ import (
 	flowv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/sensor/v1/flow"
 	networkv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/sensor/v1/network"
 	sessionv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/sensor/v1/session"
+	telemetryv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/sensor/v1/telemetry"
 	viciv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/sensor/v1/vici"
+	xfrmv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/sensor/v1/xfrm"
 	"google.golang.org/grpc"
 )
 
@@ -15,6 +17,14 @@ func RegisterAcquisitionServices(server grpc.ServiceRegistrar, sessions *Session
 	sessionv1.RegisterSensorSessionServiceServer(server, sessions)
 	networkv1.RegisterNetworkInterfaceServiceServer(server, interfaces)
 	capturev1.RegisterPassiveCaptureServiceServer(server, captures)
+}
+func RegisterDeepAndTelemetryServices(server grpc.ServiceRegistrar, xfrm *XfrmHandler, telemetry *TelemetryHandler) {
+	if xfrm != nil {
+		xfrmv1.RegisterKernelXfrmServiceServer(server, xfrm)
+	}
+	if telemetry != nil {
+		telemetryv1.RegisterSensorTelemetryServiceServer(server, telemetry)
+	}
 }
 
 // RegisterTelemetryServices registers payload-free flow telemetry and the
