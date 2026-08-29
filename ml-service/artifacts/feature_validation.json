@@ -1,173 +1,841 @@
 {
   "correlation_threshold": 0.95,
-  "datasets": [],
+  "datasets": [
+    {
+      "class_distribution": {
+        "file_transfer": 15,
+        "icmp": 15,
+        "video": 26,
+        "web": 8
+      },
+      "columns": [
+        "dataset_source",
+        "capture_id",
+        "source_record_id",
+        "original_label",
+        "canonical_label",
+        "split_group_id",
+        "excluded_leakage_columns",
+        "flow_id",
+        "duration",
+        "packet_count",
+        "total_bytes",
+        "packets_per_second",
+        "bytes_per_second",
+        "mean_packet_size",
+        "std_packet_size",
+        "min_packet_size",
+        "max_packet_size",
+        "p25_packet_size",
+        "median_packet_size",
+        "p75_packet_size",
+        "p95_packet_size",
+        "mean_interarrival_time",
+        "std_interarrival_time",
+        "upload_packets",
+        "download_packets",
+        "upload_bytes",
+        "download_bytes",
+        "upload_download_ratio",
+        "burst_count",
+        "mean_burst_size",
+        "idle_time_ratio"
+      ],
+      "dataset_source_distribution": {
+        "ipsec-pcap-lab": 64
+      },
+      "duplicate_records": {
+        "exact_duplicate_count": 0,
+        "feature_and_label_duplicate_count": 0
+      },
+      "feature_reports": {
+        "burst_count": {
+          "arrow_type": "int64",
+          "available": true,
+          "constant": false,
+          "infinity_count": 0,
+          "maximum": 49.0,
+          "minimum": 1.0,
+          "missing_count": 0,
+          "missing_percentage": 0.0,
+          "nan_count": 0,
+          "non_missing_count": 64,
+          "one_vs_rest_label_correlations": {
+            "file_transfer": 0.3592,
+            "icmp": 0.4657,
+            "video": -0.542534,
+            "web": -0.250902
+          },
+          "suspicious_label_correlations": []
+        },
+        "bytes_per_second": {
+          "arrow_type": "double",
+          "available": true,
+          "constant": false,
+          "infinity_count": 0,
+          "maximum": 11204759.617951691,
+          "minimum": 540.0001126528022,
+          "missing_count": 0,
+          "missing_percentage": 0.0,
+          "nan_count": 0,
+          "non_missing_count": 64,
+          "one_vs_rest_label_correlations": {
+            "file_transfer": 0.107449,
+            "icmp": -0.242179,
+            "video": -0.249369,
+            "web": 0.542897
+          },
+          "suspicious_label_correlations": []
+        },
+        "download_bytes": {
+          "arrow_type": "int64",
+          "available": true,
+          "constant": false,
+          "infinity_count": 0,
+          "maximum": 22701886.0,
+          "minimum": 130.0,
+          "missing_count": 0,
+          "missing_percentage": 0.0,
+          "nan_count": 0,
+          "non_missing_count": 64,
+          "one_vs_rest_label_correlations": {
+            "file_transfer": 0.716785,
+            "icmp": -0.353287,
+            "video": -0.242866,
+            "web": -0.104926
+          },
+          "suspicious_label_correlations": []
+        },
+        "download_packets": {
+          "arrow_type": "int64",
+          "available": true,
+          "constant": false,
+          "infinity_count": 0,
+          "maximum": 15053.0,
+          "minimum": 1.0,
+          "missing_count": 0,
+          "missing_percentage": 0.0,
+          "nan_count": 0,
+          "non_missing_count": 64,
+          "one_vs_rest_label_correlations": {
+            "file_transfer": 0.71468,
+            "icmp": -0.354201,
+            "video": -0.245133,
+            "web": -0.097692
+          },
+          "suspicious_label_correlations": []
+        },
+        "duration": {
+          "arrow_type": "double",
+          "available": true,
+          "constant": false,
+          "infinity_count": 0,
+          "maximum": 9.999422073364258,
+          "minimum": 0.00010800361633300781,
+          "missing_count": 0,
+          "missing_percentage": 0.0,
+          "nan_count": 0,
+          "non_missing_count": 64,
+          "one_vs_rest_label_correlations": {
+            "file_transfer": -0.021973,
+            "icmp": 0.131482,
+            "video": -0.001662,
+            "web": -0.137798
+          },
+          "suspicious_label_correlations": []
+        },
+        "idle_time_ratio": {
+          "arrow_type": "double",
+          "available": true,
+          "constant": false,
+          "infinity_count": 0,
+          "maximum": 0.9732885456204504,
+          "minimum": 0.0,
+          "missing_count": 0,
+          "missing_percentage": 0.0,
+          "nan_count": 0,
+          "non_missing_count": 64,
+          "one_vs_rest_label_correlations": {
+            "file_transfer": -0.459564,
+            "icmp": -0.54122,
+            "video": 0.763879,
+            "web": 0.147477
+          },
+          "suspicious_label_correlations": []
+        },
+        "max_packet_size": {
+          "arrow_type": "double",
+          "available": true,
+          "constant": false,
+          "infinity_count": 0,
+          "maximum": 1514.0,
+          "minimum": 130.0,
+          "missing_count": 0,
+          "missing_percentage": 0.0,
+          "nan_count": 0,
+          "non_missing_count": 64,
+          "one_vs_rest_label_correlations": {
+            "file_transfer": 0.093492,
+            "icmp": -0.87822,
+            "video": 0.517545,
+            "web": 0.236557
+          },
+          "suspicious_label_correlations": []
+        },
+        "mean_burst_size": {
+          "arrow_type": "double",
+          "available": true,
+          "constant": false,
+          "infinity_count": 0,
+          "maximum": 673.8333333333334,
+          "minimum": 2.0,
+          "missing_count": 0,
+          "missing_percentage": 0.0,
+          "nan_count": 0,
+          "non_missing_count": 64,
+          "one_vs_rest_label_correlations": {
+            "file_transfer": -0.135298,
+            "icmp": -0.752394,
+            "video": 0.41663,
+            "web": 0.518302
+          },
+          "suspicious_label_correlations": []
+        },
+        "mean_interarrival_time": {
+          "arrow_type": "double",
+          "available": true,
+          "constant": false,
+          "infinity_count": 0,
+          "maximum": 0.3096773547510947,
+          "minimum": 7.803719720722716e-05,
+          "missing_count": 0,
+          "missing_percentage": 0.0,
+          "nan_count": 0,
+          "non_missing_count": 64,
+          "one_vs_rest_label_correlations": {
+            "file_transfer": -0.288705,
+            "icmp": 0.917612,
+            "video": -0.409349,
+            "web": -0.197646
+          },
+          "suspicious_label_correlations": []
+        },
+        "mean_packet_size": {
+          "arrow_type": "double",
+          "available": true,
+          "constant": false,
+          "infinity_count": 0,
+          "maximum": 1486.3207157604954,
+          "minimum": 130.0,
+          "missing_count": 0,
+          "missing_percentage": 0.0,
+          "nan_count": 0,
+          "non_missing_count": 64,
+          "one_vs_rest_label_correlations": {
+            "file_transfer": 0.333267,
+            "icmp": -0.816136,
+            "video": 0.443069,
+            "web": -0.039486
+          },
+          "suspicious_label_correlations": []
+        },
+        "median_packet_size": {
+          "arrow_type": "double",
+          "available": true,
+          "constant": false,
+          "infinity_count": 0,
+          "maximum": 1514.0,
+          "minimum": 130.0,
+          "missing_count": 0,
+          "missing_percentage": 0.0,
+          "nan_count": 0,
+          "non_missing_count": 64,
+          "one_vs_rest_label_correlations": {
+            "file_transfer": 0.184088,
+            "icmp": -0.750147,
+            "video": 0.638418,
+            "web": -0.223033
+          },
+          "suspicious_label_correlations": []
+        },
+        "min_packet_size": {
+          "arrow_type": "double",
+          "available": true,
+          "constant": false,
+          "infinity_count": 0,
+          "maximum": 214.0,
+          "minimum": 130.0,
+          "missing_count": 0,
+          "missing_percentage": 0.0,
+          "nan_count": 0,
+          "non_missing_count": 64,
+          "one_vs_rest_label_correlations": {
+            "file_transfer": -0.105367,
+            "icmp": 0.558433,
+            "video": -0.27774,
+            "web": -0.167863
+          },
+          "suspicious_label_correlations": []
+        },
+        "p25_packet_size": {
+          "arrow_type": "double",
+          "available": true,
+          "constant": false,
+          "infinity_count": 0,
+          "maximum": 1514.0,
+          "minimum": 130.0,
+          "missing_count": 0,
+          "missing_percentage": 0.0,
+          "nan_count": 0,
+          "non_missing_count": 64,
+          "one_vs_rest_label_correlations": {
+            "file_transfer": 0.472563,
+            "icmp": -0.425931,
+            "video": 0.169182,
+            "web": -0.310972
+          },
+          "suspicious_label_correlations": []
+        },
+        "p75_packet_size": {
+          "arrow_type": "double",
+          "available": true,
+          "constant": false,
+          "infinity_count": 0,
+          "maximum": 1514.0,
+          "minimum": 130.0,
+          "missing_count": 0,
+          "missing_percentage": 0.0,
+          "nan_count": 0,
+          "non_missing_count": 64,
+          "one_vs_rest_label_correlations": {
+            "file_transfer": 0.093492,
+            "icmp": -0.87822,
+            "video": 0.517545,
+            "web": 0.236557
+          },
+          "suspicious_label_correlations": []
+        },
+        "p95_packet_size": {
+          "arrow_type": "double",
+          "available": true,
+          "constant": false,
+          "infinity_count": 0,
+          "maximum": 1514.0,
+          "minimum": 130.0,
+          "missing_count": 0,
+          "missing_percentage": 0.0,
+          "nan_count": 0,
+          "non_missing_count": 64,
+          "one_vs_rest_label_correlations": {
+            "file_transfer": 0.093492,
+            "icmp": -0.87822,
+            "video": 0.517545,
+            "web": 0.236557
+          },
+          "suspicious_label_correlations": []
+        },
+        "packet_count": {
+          "arrow_type": "int64",
+          "available": true,
+          "constant": false,
+          "infinity_count": 0,
+          "maximum": 15952.0,
+          "minimum": 2.0,
+          "missing_count": 0,
+          "missing_percentage": 0.0,
+          "nan_count": 0,
+          "non_missing_count": 64,
+          "one_vs_rest_label_correlations": {
+            "file_transfer": 0.674864,
+            "icmp": -0.396562,
+            "video": -0.227703,
+            "web": -0.018319
+          },
+          "suspicious_label_correlations": []
+        },
+        "packets_per_second": {
+          "arrow_type": "double",
+          "available": true,
+          "constant": false,
+          "infinity_count": 0,
+          "maximum": 18517.898454746137,
+          "minimum": 3.333334028721001,
+          "missing_count": 0,
+          "missing_percentage": 0.0,
+          "nan_count": 0,
+          "non_missing_count": 64,
+          "one_vs_rest_label_correlations": {
+            "file_transfer": 0.238685,
+            "icmp": -0.208101,
+            "video": -0.255727,
+            "web": 0.340592
+          },
+          "suspicious_label_correlations": []
+        },
+        "std_interarrival_time": {
+          "arrow_type": "double",
+          "available": true,
+          "constant": false,
+          "infinity_count": 0,
+          "maximum": 0.3196967281054168,
+          "minimum": 0.0,
+          "missing_count": 0,
+          "missing_percentage": 0.0,
+          "nan_count": 0,
+          "non_missing_count": 64,
+          "one_vs_rest_label_correlations": {
+            "file_transfer": -0.550797,
+            "icmp": 0.720564,
+            "video": 0.020929,
+            "web": -0.248528
+          },
+          "suspicious_label_correlations": []
+        },
+        "std_packet_size": {
+          "arrow_type": "double",
+          "available": true,
+          "constant": false,
+          "infinity_count": 0,
+          "maximum": 686.5617370223956,
+          "minimum": 0.0,
+          "missing_count": 0,
+          "missing_percentage": 0.0,
+          "nan_count": 0,
+          "non_missing_count": 64,
+          "one_vs_rest_label_correlations": {
+            "file_transfer": -0.34938,
+            "icmp": -0.751114,
+            "video": 0.660452,
+            "web": 0.428786
+          },
+          "suspicious_label_correlations": []
+        },
+        "total_bytes": {
+          "arrow_type": "int64",
+          "available": true,
+          "constant": false,
+          "infinity_count": 0,
+          "maximum": 22866096.0,
+          "minimum": 260.0,
+          "missing_count": 0,
+          "missing_percentage": 0.0,
+          "nan_count": 0,
+          "non_missing_count": 64,
+          "one_vs_rest_label_correlations": {
+            "file_transfer": 0.71317,
+            "icmp": -0.357635,
+            "video": -0.241315,
+            "web": -0.09703
+          },
+          "suspicious_label_correlations": []
+        },
+        "upload_bytes": {
+          "arrow_type": "int64",
+          "available": true,
+          "constant": false,
+          "infinity_count": 0,
+          "maximum": 348796.0,
+          "minimum": 130.0,
+          "missing_count": 0,
+          "missing_percentage": 0.0,
+          "nan_count": 0,
+          "non_missing_count": 64,
+          "one_vs_rest_label_correlations": {
+            "file_transfer": -0.12602,
+            "icmp": -0.418911,
+            "video": 0.068306,
+            "web": 0.596547
+          },
+          "suspicious_label_correlations": []
+        },
+        "upload_download_ratio": {
+          "arrow_type": "double",
+          "available": true,
+          "constant": false,
+          "infinity_count": 0,
+          "maximum": 1.0,
+          "minimum": 0.001203967720094102,
+          "missing_count": 0,
+          "missing_percentage": 0.0,
+          "nan_count": 0,
+          "non_missing_count": 64,
+          "one_vs_rest_label_correlations": {
+            "file_transfer": -0.130272,
+            "icmp": 0.883166,
+            "video": -0.51867,
+            "web": -0.194111
+          },
+          "suspicious_label_correlations": []
+        },
+        "upload_packets": {
+          "arrow_type": "int64",
+          "available": true,
+          "constant": false,
+          "infinity_count": 0,
+          "maximum": 1898.0,
+          "minimum": 1.0,
+          "missing_count": 0,
+          "missing_percentage": 0.0,
+          "nan_count": 0,
+          "non_missing_count": 64,
+          "one_vs_rest_label_correlations": {
+            "file_transfer": -0.136995,
+            "icmp": -0.442755,
+            "video": 0.078018,
+            "web": 0.626724
+          },
+          "suspicious_label_correlations": []
+        }
+      },
+      "file": "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/ml-service/data/processed/ipsec-pcap-lab.parquet",
+      "flagged_source_leakage_columns": {
+        "IPsec/IKE configuration ground truth": 64,
+        "capture checksum": 64,
+        "flow_id": 64,
+        "outer source/destination addresses": 64,
+        "sample_id and capture filename": 64,
+        "traffic generator name": 64,
+        "traffic_class label": 64
+      },
+      "mixed_dataset_sources": false,
+      "potential_data_leakage": [
+        "Metadata columns are excluded from model features: canonical_label, capture_id, dataset_source, excluded_leakage_columns, flow_id, original_label, source_record_id, split_group_id",
+        "Adapters flagged possible source leakage: IPsec/IKE configuration ground truth, capture checksum, flow_id, outer source/destination addresses, sample_id and capture filename, traffic generator name, traffic_class label"
+      ],
+      "row_count": 64,
+      "suspicious_label_correlations": [],
+      "unexpected_columns": []
+    }
+  ],
   "feature_availability": {
     "burst_count": {
       "constant_in": [],
-      "datasets_with_non_null_values": [],
-      "datasets_with_schema_column": [],
+      "datasets_with_non_null_values": [
+        "ipsec-pcap-lab"
+      ],
+      "datasets_with_schema_column": [
+        "ipsec-pcap-lab"
+      ],
       "has_nan_or_inf_in": [],
       "suspicious_correlation_in": []
     },
     "bytes_per_second": {
       "constant_in": [],
-      "datasets_with_non_null_values": [],
-      "datasets_with_schema_column": [],
+      "datasets_with_non_null_values": [
+        "ipsec-pcap-lab"
+      ],
+      "datasets_with_schema_column": [
+        "ipsec-pcap-lab"
+      ],
       "has_nan_or_inf_in": [],
       "suspicious_correlation_in": []
     },
     "download_bytes": {
       "constant_in": [],
-      "datasets_with_non_null_values": [],
-      "datasets_with_schema_column": [],
+      "datasets_with_non_null_values": [
+        "ipsec-pcap-lab"
+      ],
+      "datasets_with_schema_column": [
+        "ipsec-pcap-lab"
+      ],
       "has_nan_or_inf_in": [],
       "suspicious_correlation_in": []
     },
     "download_packets": {
       "constant_in": [],
-      "datasets_with_non_null_values": [],
-      "datasets_with_schema_column": [],
+      "datasets_with_non_null_values": [
+        "ipsec-pcap-lab"
+      ],
+      "datasets_with_schema_column": [
+        "ipsec-pcap-lab"
+      ],
       "has_nan_or_inf_in": [],
       "suspicious_correlation_in": []
     },
     "duration": {
       "constant_in": [],
-      "datasets_with_non_null_values": [],
-      "datasets_with_schema_column": [],
+      "datasets_with_non_null_values": [
+        "ipsec-pcap-lab"
+      ],
+      "datasets_with_schema_column": [
+        "ipsec-pcap-lab"
+      ],
       "has_nan_or_inf_in": [],
       "suspicious_correlation_in": []
     },
     "idle_time_ratio": {
       "constant_in": [],
-      "datasets_with_non_null_values": [],
-      "datasets_with_schema_column": [],
+      "datasets_with_non_null_values": [
+        "ipsec-pcap-lab"
+      ],
+      "datasets_with_schema_column": [
+        "ipsec-pcap-lab"
+      ],
       "has_nan_or_inf_in": [],
       "suspicious_correlation_in": []
     },
     "max_packet_size": {
       "constant_in": [],
-      "datasets_with_non_null_values": [],
-      "datasets_with_schema_column": [],
+      "datasets_with_non_null_values": [
+        "ipsec-pcap-lab"
+      ],
+      "datasets_with_schema_column": [
+        "ipsec-pcap-lab"
+      ],
       "has_nan_or_inf_in": [],
       "suspicious_correlation_in": []
     },
     "mean_burst_size": {
       "constant_in": [],
-      "datasets_with_non_null_values": [],
-      "datasets_with_schema_column": [],
+      "datasets_with_non_null_values": [
+        "ipsec-pcap-lab"
+      ],
+      "datasets_with_schema_column": [
+        "ipsec-pcap-lab"
+      ],
       "has_nan_or_inf_in": [],
       "suspicious_correlation_in": []
     },
     "mean_interarrival_time": {
       "constant_in": [],
-      "datasets_with_non_null_values": [],
-      "datasets_with_schema_column": [],
+      "datasets_with_non_null_values": [
+        "ipsec-pcap-lab"
+      ],
+      "datasets_with_schema_column": [
+        "ipsec-pcap-lab"
+      ],
       "has_nan_or_inf_in": [],
       "suspicious_correlation_in": []
     },
     "mean_packet_size": {
       "constant_in": [],
-      "datasets_with_non_null_values": [],
-      "datasets_with_schema_column": [],
+      "datasets_with_non_null_values": [
+        "ipsec-pcap-lab"
+      ],
+      "datasets_with_schema_column": [
+        "ipsec-pcap-lab"
+      ],
       "has_nan_or_inf_in": [],
       "suspicious_correlation_in": []
     },
     "median_packet_size": {
       "constant_in": [],
-      "datasets_with_non_null_values": [],
-      "datasets_with_schema_column": [],
+      "datasets_with_non_null_values": [
+        "ipsec-pcap-lab"
+      ],
+      "datasets_with_schema_column": [
+        "ipsec-pcap-lab"
+      ],
       "has_nan_or_inf_in": [],
       "suspicious_correlation_in": []
     },
     "min_packet_size": {
       "constant_in": [],
-      "datasets_with_non_null_values": [],
-      "datasets_with_schema_column": [],
+      "datasets_with_non_null_values": [
+        "ipsec-pcap-lab"
+      ],
+      "datasets_with_schema_column": [
+        "ipsec-pcap-lab"
+      ],
       "has_nan_or_inf_in": [],
       "suspicious_correlation_in": []
     },
     "p25_packet_size": {
       "constant_in": [],
-      "datasets_with_non_null_values": [],
-      "datasets_with_schema_column": [],
+      "datasets_with_non_null_values": [
+        "ipsec-pcap-lab"
+      ],
+      "datasets_with_schema_column": [
+        "ipsec-pcap-lab"
+      ],
       "has_nan_or_inf_in": [],
       "suspicious_correlation_in": []
     },
     "p75_packet_size": {
       "constant_in": [],
-      "datasets_with_non_null_values": [],
-      "datasets_with_schema_column": [],
+      "datasets_with_non_null_values": [
+        "ipsec-pcap-lab"
+      ],
+      "datasets_with_schema_column": [
+        "ipsec-pcap-lab"
+      ],
       "has_nan_or_inf_in": [],
       "suspicious_correlation_in": []
     },
     "p95_packet_size": {
       "constant_in": [],
-      "datasets_with_non_null_values": [],
-      "datasets_with_schema_column": [],
+      "datasets_with_non_null_values": [
+        "ipsec-pcap-lab"
+      ],
+      "datasets_with_schema_column": [
+        "ipsec-pcap-lab"
+      ],
       "has_nan_or_inf_in": [],
       "suspicious_correlation_in": []
     },
     "packet_count": {
       "constant_in": [],
-      "datasets_with_non_null_values": [],
-      "datasets_with_schema_column": [],
+      "datasets_with_non_null_values": [
+        "ipsec-pcap-lab"
+      ],
+      "datasets_with_schema_column": [
+        "ipsec-pcap-lab"
+      ],
       "has_nan_or_inf_in": [],
       "suspicious_correlation_in": []
     },
     "packets_per_second": {
       "constant_in": [],
-      "datasets_with_non_null_values": [],
-      "datasets_with_schema_column": [],
+      "datasets_with_non_null_values": [
+        "ipsec-pcap-lab"
+      ],
+      "datasets_with_schema_column": [
+        "ipsec-pcap-lab"
+      ],
       "has_nan_or_inf_in": [],
       "suspicious_correlation_in": []
     },
     "std_interarrival_time": {
       "constant_in": [],
-      "datasets_with_non_null_values": [],
-      "datasets_with_schema_column": [],
+      "datasets_with_non_null_values": [
+        "ipsec-pcap-lab"
+      ],
+      "datasets_with_schema_column": [
+        "ipsec-pcap-lab"
+      ],
       "has_nan_or_inf_in": [],
       "suspicious_correlation_in": []
     },
     "std_packet_size": {
       "constant_in": [],
-      "datasets_with_non_null_values": [],
-      "datasets_with_schema_column": [],
+      "datasets_with_non_null_values": [
+        "ipsec-pcap-lab"
+      ],
+      "datasets_with_schema_column": [
+        "ipsec-pcap-lab"
+      ],
       "has_nan_or_inf_in": [],
       "suspicious_correlation_in": []
     },
     "total_bytes": {
       "constant_in": [],
-      "datasets_with_non_null_values": [],
-      "datasets_with_schema_column": [],
+      "datasets_with_non_null_values": [
+        "ipsec-pcap-lab"
+      ],
+      "datasets_with_schema_column": [
+        "ipsec-pcap-lab"
+      ],
       "has_nan_or_inf_in": [],
       "suspicious_correlation_in": []
     },
     "upload_bytes": {
       "constant_in": [],
-      "datasets_with_non_null_values": [],
-      "datasets_with_schema_column": [],
+      "datasets_with_non_null_values": [
+        "ipsec-pcap-lab"
+      ],
+      "datasets_with_schema_column": [
+        "ipsec-pcap-lab"
+      ],
       "has_nan_or_inf_in": [],
       "suspicious_correlation_in": []
     },
     "upload_download_ratio": {
       "constant_in": [],
-      "datasets_with_non_null_values": [],
-      "datasets_with_schema_column": [],
+      "datasets_with_non_null_values": [
+        "ipsec-pcap-lab"
+      ],
+      "datasets_with_schema_column": [
+        "ipsec-pcap-lab"
+      ],
       "has_nan_or_inf_in": [],
       "suspicious_correlation_in": []
     },
     "upload_packets": {
       "constant_in": [],
-      "datasets_with_non_null_values": [],
-      "datasets_with_schema_column": [],
+      "datasets_with_non_null_values": [
+        "ipsec-pcap-lab"
+      ],
+      "datasets_with_schema_column": [
+        "ipsec-pcap-lab"
+      ],
       "has_nan_or_inf_in": [],
       "suspicious_correlation_in": []
     }
   },
-  "features_present_in_only_one_dataset": {},
-  "generated_at": "2026-08-27T11:20:14.766236+00:00",
+  "features_present_in_only_one_dataset": {
+    "burst_count": [
+      "ipsec-pcap-lab"
+    ],
+    "bytes_per_second": [
+      "ipsec-pcap-lab"
+    ],
+    "download_bytes": [
+      "ipsec-pcap-lab"
+    ],
+    "download_packets": [
+      "ipsec-pcap-lab"
+    ],
+    "duration": [
+      "ipsec-pcap-lab"
+    ],
+    "idle_time_ratio": [
+      "ipsec-pcap-lab"
+    ],
+    "max_packet_size": [
+      "ipsec-pcap-lab"
+    ],
+    "mean_burst_size": [
+      "ipsec-pcap-lab"
+    ],
+    "mean_interarrival_time": [
+      "ipsec-pcap-lab"
+    ],
+    "mean_packet_size": [
+      "ipsec-pcap-lab"
+    ],
+    "median_packet_size": [
+      "ipsec-pcap-lab"
+    ],
+    "min_packet_size": [
+      "ipsec-pcap-lab"
+    ],
+    "p25_packet_size": [
+      "ipsec-pcap-lab"
+    ],
+    "p75_packet_size": [
+      "ipsec-pcap-lab"
+    ],
+    "p95_packet_size": [
+      "ipsec-pcap-lab"
+    ],
+    "packet_count": [
+      "ipsec-pcap-lab"
+    ],
+    "packets_per_second": [
+      "ipsec-pcap-lab"
+    ],
+    "std_interarrival_time": [
+      "ipsec-pcap-lab"
+    ],
+    "std_packet_size": [
+      "ipsec-pcap-lab"
+    ],
+    "total_bytes": [
+      "ipsec-pcap-lab"
+    ],
+    "upload_bytes": [
+      "ipsec-pcap-lab"
+    ],
+    "upload_download_ratio": [
+      "ipsec-pcap-lab"
+    ],
+    "upload_packets": [
+      "ipsec-pcap-lab"
+    ]
+  },
+  "generated_at": "2026-08-29T10:09:02.109741+00:00",
   "processed_directory": "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/ml-service/data/processed",
-  "processed_parquet_file_count": 0,
+  "processed_parquet_file_count": 1,
   "recommendations": {
     "drop": [
       "canonical_label",
@@ -179,128 +847,194 @@
       "source_record_id",
       "split_group_id"
     ],
-    "note": "No processed Parquet files were found; no numeric feature is empirically approved.",
+    "note": "Recommendations are audit gates, not training results. Apply group-aware splits and confirm source-unit provenance before combining any future datasets.",
     "safe_across_public_datasets": [],
     "usable_only_for_our_ipsec_dataset": [
       "burst_count",
+      "bytes_per_second",
+      "download_bytes",
+      "download_packets",
+      "duration",
       "idle_time_ratio",
-      "mean_burst_size"
+      "max_packet_size",
+      "mean_burst_size",
+      "mean_interarrival_time",
+      "mean_packet_size",
+      "median_packet_size",
+      "min_packet_size",
+      "p25_packet_size",
+      "p75_packet_size",
+      "p95_packet_size",
+      "packet_count",
+      "packets_per_second",
+      "std_interarrival_time",
+      "std_packet_size",
+      "total_bytes",
+      "upload_bytes",
+      "upload_download_ratio",
+      "upload_packets"
     ]
   },
   "unit_compatibility": {
     "burst_count": {
-      "compatibility": "no processed values available for unit validation",
-      "datasets_with_values": [],
+      "compatibility": "only one processed dataset has values; cross-dataset compatibility untested",
+      "datasets_with_values": [
+        "ipsec-pcap-lab"
+      ],
       "expected_unit": "bursts"
     },
     "bytes_per_second": {
-      "compatibility": "no processed values available for unit validation",
-      "datasets_with_values": [],
+      "compatibility": "only one processed dataset has values; cross-dataset compatibility untested",
+      "datasets_with_values": [
+        "ipsec-pcap-lab"
+      ],
       "expected_unit": "bytes/second"
     },
     "download_bytes": {
-      "compatibility": "no processed values available for unit validation",
-      "datasets_with_values": [],
+      "compatibility": "only one processed dataset has values; cross-dataset compatibility untested",
+      "datasets_with_values": [
+        "ipsec-pcap-lab"
+      ],
       "expected_unit": "bytes"
     },
     "download_packets": {
-      "compatibility": "no processed values available for unit validation",
-      "datasets_with_values": [],
+      "compatibility": "only one processed dataset has values; cross-dataset compatibility untested",
+      "datasets_with_values": [
+        "ipsec-pcap-lab"
+      ],
       "expected_unit": "packets"
     },
     "duration": {
-      "compatibility": "no processed values available for unit validation",
-      "datasets_with_values": [],
+      "compatibility": "only one processed dataset has values; cross-dataset compatibility untested",
+      "datasets_with_values": [
+        "ipsec-pcap-lab"
+      ],
       "expected_unit": "seconds"
     },
     "idle_time_ratio": {
-      "compatibility": "no processed values available for unit validation",
-      "datasets_with_values": [],
+      "compatibility": "only one processed dataset has values; cross-dataset compatibility untested",
+      "datasets_with_values": [
+        "ipsec-pcap-lab"
+      ],
       "expected_unit": "ratio"
     },
     "max_packet_size": {
-      "compatibility": "no processed values available for unit validation",
-      "datasets_with_values": [],
+      "compatibility": "only one processed dataset has values; cross-dataset compatibility untested",
+      "datasets_with_values": [
+        "ipsec-pcap-lab"
+      ],
       "expected_unit": "bytes"
     },
     "mean_burst_size": {
-      "compatibility": "no processed values available for unit validation",
-      "datasets_with_values": [],
+      "compatibility": "only one processed dataset has values; cross-dataset compatibility untested",
+      "datasets_with_values": [
+        "ipsec-pcap-lab"
+      ],
       "expected_unit": "packets/burst"
     },
     "mean_interarrival_time": {
-      "compatibility": "no processed values available for unit validation",
-      "datasets_with_values": [],
+      "compatibility": "only one processed dataset has values; cross-dataset compatibility untested",
+      "datasets_with_values": [
+        "ipsec-pcap-lab"
+      ],
       "expected_unit": "seconds"
     },
     "mean_packet_size": {
-      "compatibility": "no processed values available for unit validation",
-      "datasets_with_values": [],
+      "compatibility": "only one processed dataset has values; cross-dataset compatibility untested",
+      "datasets_with_values": [
+        "ipsec-pcap-lab"
+      ],
       "expected_unit": "bytes"
     },
     "median_packet_size": {
-      "compatibility": "no processed values available for unit validation",
-      "datasets_with_values": [],
+      "compatibility": "only one processed dataset has values; cross-dataset compatibility untested",
+      "datasets_with_values": [
+        "ipsec-pcap-lab"
+      ],
       "expected_unit": "bytes"
     },
     "min_packet_size": {
-      "compatibility": "no processed values available for unit validation",
-      "datasets_with_values": [],
+      "compatibility": "only one processed dataset has values; cross-dataset compatibility untested",
+      "datasets_with_values": [
+        "ipsec-pcap-lab"
+      ],
       "expected_unit": "bytes"
     },
     "p25_packet_size": {
-      "compatibility": "no processed values available for unit validation",
-      "datasets_with_values": [],
+      "compatibility": "only one processed dataset has values; cross-dataset compatibility untested",
+      "datasets_with_values": [
+        "ipsec-pcap-lab"
+      ],
       "expected_unit": "bytes"
     },
     "p75_packet_size": {
-      "compatibility": "no processed values available for unit validation",
-      "datasets_with_values": [],
+      "compatibility": "only one processed dataset has values; cross-dataset compatibility untested",
+      "datasets_with_values": [
+        "ipsec-pcap-lab"
+      ],
       "expected_unit": "bytes"
     },
     "p95_packet_size": {
-      "compatibility": "no processed values available for unit validation",
-      "datasets_with_values": [],
+      "compatibility": "only one processed dataset has values; cross-dataset compatibility untested",
+      "datasets_with_values": [
+        "ipsec-pcap-lab"
+      ],
       "expected_unit": "bytes"
     },
     "packet_count": {
-      "compatibility": "no processed values available for unit validation",
-      "datasets_with_values": [],
+      "compatibility": "only one processed dataset has values; cross-dataset compatibility untested",
+      "datasets_with_values": [
+        "ipsec-pcap-lab"
+      ],
       "expected_unit": "packets"
     },
     "packets_per_second": {
-      "compatibility": "no processed values available for unit validation",
-      "datasets_with_values": [],
+      "compatibility": "only one processed dataset has values; cross-dataset compatibility untested",
+      "datasets_with_values": [
+        "ipsec-pcap-lab"
+      ],
       "expected_unit": "packets/second"
     },
     "std_interarrival_time": {
-      "compatibility": "no processed values available for unit validation",
-      "datasets_with_values": [],
+      "compatibility": "only one processed dataset has values; cross-dataset compatibility untested",
+      "datasets_with_values": [
+        "ipsec-pcap-lab"
+      ],
       "expected_unit": "seconds"
     },
     "std_packet_size": {
-      "compatibility": "no processed values available for unit validation",
-      "datasets_with_values": [],
+      "compatibility": "only one processed dataset has values; cross-dataset compatibility untested",
+      "datasets_with_values": [
+        "ipsec-pcap-lab"
+      ],
       "expected_unit": "bytes"
     },
     "total_bytes": {
-      "compatibility": "no processed values available for unit validation",
-      "datasets_with_values": [],
+      "compatibility": "only one processed dataset has values; cross-dataset compatibility untested",
+      "datasets_with_values": [
+        "ipsec-pcap-lab"
+      ],
       "expected_unit": "bytes"
     },
     "upload_bytes": {
-      "compatibility": "no processed values available for unit validation",
-      "datasets_with_values": [],
+      "compatibility": "only one processed dataset has values; cross-dataset compatibility untested",
+      "datasets_with_values": [
+        "ipsec-pcap-lab"
+      ],
       "expected_unit": "bytes"
     },
     "upload_download_ratio": {
-      "compatibility": "no processed values available for unit validation",
-      "datasets_with_values": [],
+      "compatibility": "only one processed dataset has values; cross-dataset compatibility untested",
+      "datasets_with_values": [
+        "ipsec-pcap-lab"
+      ],
       "expected_unit": "ratio"
     },
     "upload_packets": {
-      "compatibility": "no processed values available for unit validation",
-      "datasets_with_values": [],
+      "compatibility": "only one processed dataset has values; cross-dataset compatibility untested",
+      "datasets_with_values": [
+        "ipsec-pcap-lab"
+      ],
       "expected_unit": "packets"
     }
   }

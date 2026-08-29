@@ -693,6 +693,213 @@
       ]
     },
     {
+      "approximate_dataset_size_bytes": 215346219,
+      "approximate_dataset_size_human": "205.4 MiB",
+      "available_label_columns": [
+        "traffic_class"
+      ],
+      "class_counts": {
+        "traffic_class": {
+          "file": 5,
+          "ping": 5,
+          "video": 5,
+          "web": 5
+        }
+      },
+      "csv_or_parquet_column_names": [
+        "actual_nat_present",
+        "capture_duration_s",
+        "cipher",
+        "dh_group",
+        "esp_proposal",
+        "ike_proposal",
+        "ike_version",
+        "integrity",
+        "ip_version",
+        "mode",
+        "nat_t",
+        "nat_t_forced",
+        "outer_left",
+        "outer_right",
+        "pcap_file",
+        "peer_auth",
+        "pfs",
+        "sample_id",
+        "sha256",
+        "traffic_class",
+        "traffic_generator"
+      ],
+      "dataset_name": "ipsec-pcap-lab",
+      "file_formats_found": [
+        "csv",
+        "pcap"
+      ],
+      "flow_features_overlap": {},
+      "inferred_dataset_types": [
+        "application traffic"
+      ],
+      "labels_not_to_map": [],
+      "missing_values": {
+        "actual_nat_present": 0,
+        "capture_duration_s": 0,
+        "cipher": 0,
+        "dh_group": 0,
+        "esp_proposal": 0,
+        "ike_proposal": 0,
+        "ike_version": 0,
+        "integrity": 0,
+        "ip_version": 0,
+        "mode": 0,
+        "nat_t": 0,
+        "nat_t_forced": 0,
+        "outer_left": 0,
+        "outer_right": 0,
+        "pcap_file": 0,
+        "peer_auth": 0,
+        "pfs": 0,
+        "sample_id": 0,
+        "sha256": 0,
+        "traffic_class": 0,
+        "traffic_generator": 0
+      },
+      "notes": [
+        "No files were modified, and this report does not combine datasets.",
+        "Filename/path-derived labels are provenance only and must not become model features."
+      ],
+      "number_of_files": 21,
+      "possible_leakage_columns": [
+        "cipher",
+        "dh_group",
+        "esp_proposal",
+        "filename/path-derived labels (capture provenance; never use as a feature)",
+        "ike_proposal",
+        "ike_version",
+        "integrity",
+        "mode",
+        "nat_t",
+        "nat_t_forced",
+        "outer_left",
+        "outer_right",
+        "pcap_file",
+        "pfs",
+        "sample_id",
+        "sha256",
+        "traffic_class",
+        "traffic_generator"
+      ],
+      "raw_pcap_or_pcapng_present": true,
+      "relative_path": "ipsec-pcap-lab",
+      "tabular_files": [
+        {
+          "class_counts": {
+            "traffic_class": {
+              "file": 5,
+              "ping": 5,
+              "video": 5,
+              "web": 5
+            }
+          },
+          "columns": [
+            "sample_id",
+            "pcap_file",
+            "traffic_class",
+            "mode",
+            "ike_version",
+            "ike_proposal",
+            "esp_proposal",
+            "cipher",
+            "integrity",
+            "dh_group",
+            "pfs",
+            "ip_version",
+            "nat_t",
+            "nat_t_forced",
+            "actual_nat_present",
+            "peer_auth",
+            "capture_duration_s",
+            "outer_left",
+            "outer_right",
+            "traffic_generator",
+            "sha256"
+          ],
+          "format": "csv",
+          "label_columns": [
+            "traffic_class"
+          ],
+          "missing_values": {
+            "actual_nat_present": 0,
+            "capture_duration_s": 0,
+            "cipher": 0,
+            "dh_group": 0,
+            "esp_proposal": 0,
+            "ike_proposal": 0,
+            "ike_version": 0,
+            "integrity": 0,
+            "ip_version": 0,
+            "mode": 0,
+            "nat_t": 0,
+            "nat_t_forced": 0,
+            "outer_left": 0,
+            "outer_right": 0,
+            "pcap_file": 0,
+            "peer_auth": 0,
+            "pfs": 0,
+            "sample_id": 0,
+            "sha256": 0,
+            "traffic_class": 0,
+            "traffic_generator": 0
+          },
+          "path": "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/ml-service/data/external/ipsec-pcap-lab/metadata.csv",
+          "row_count": 20,
+          "unique_labels": {
+            "traffic_class": [
+              "file",
+              "ping",
+              "video",
+              "web"
+            ]
+          }
+        }
+      ],
+      "target_class_mappings": [
+        {
+          "basis": "explicit dataset label or filename",
+          "source_label": "file",
+          "target_class": "file_transfer"
+        },
+        {
+          "basis": "explicit dataset label or filename",
+          "source_label": "ping",
+          "target_class": "icmp"
+        },
+        {
+          "basis": "explicit dataset label or filename",
+          "source_label": "video",
+          "target_class": "video"
+        },
+        {
+          "basis": "explicit dataset label or filename",
+          "source_label": "web",
+          "target_class": "web"
+        }
+      ],
+      "unique_labels": {
+        "traffic_class": [
+          "file",
+          "ping",
+          "video",
+          "web"
+        ]
+      },
+      "unresolved_labels": [
+        "file_p",
+        "pcaps",
+        "ping_p",
+        "video_p",
+        "web_p"
+      ]
+    },
+    {
       "approximate_dataset_size_bytes": 6960755018,
       "approximate_dataset_size_human": "6.5 GiB",
       "available_label_columns": [],
@@ -866,5 +1073,5 @@
     }
   ],
   "external_data_root": "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/ml-service/data/external",
-  "generated_at": "2026-08-27T11:05:14.705716+00:00"
+  "generated_at": "2026-08-29T10:07:58.710361+00:00"
 }

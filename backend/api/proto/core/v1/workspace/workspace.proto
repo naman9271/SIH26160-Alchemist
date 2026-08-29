@@ -2,7 +2,6 @@ syntax = "proto3";
 
 package core.workspace.v1;
 
-import "api/proto/sensor/v1/common.proto";
 import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/workspace;workspacev1";
@@ -23,6 +22,15 @@ enum WorkspaceState {
   WORKSPACE_STATE_COMPLETED = 5;
   WORKSPACE_STATE_FAILED = 6;
   WORKSPACE_STATE_RESETTING = 7;
+}
+
+// AnalysisMode is a public Core concept. It deliberately does not expose the
+// internal Sensor contract to browser or API clients.
+enum AnalysisMode {
+  ANALYSIS_MODE_UNSPECIFIED = 0;
+  PASSIVE_LIVE = 1;
+  OFFLINE_PCAP = 2;
+  DEEP_ASSESSMENT = 3;
 }
 
 message CreateWorkspaceRequest {
@@ -48,7 +56,7 @@ message Workspace {
   string workspace_id = 1;
   string display_name = 2;
   WorkspaceState state = 3;
-  sensor.v1.SensorMode mode = 4;
+  AnalysisMode mode = 4;
   string sensor_session_id = 5;
   string source_id = 6;
   string capture_id = 7;
@@ -63,7 +71,7 @@ message Workspace {
 
 message WorkspaceStateResponse {
   WorkspaceState state = 1;
-  sensor.v1.SensorMode mode = 2;
+  AnalysisMode mode = 2;
   bool has_source = 3;
   bool has_analysis = 4;
   bool has_ml_result = 5;

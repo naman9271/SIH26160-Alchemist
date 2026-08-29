@@ -15,11 +15,30 @@ import (
 )
 
 const (
-	FeatureSchemaVersion  = "flow.v1"
+	FeatureSchemaVersion  = "flow.v2"
 	SequenceSchemaVersion = "sequence.v1"
-	defaultWindowPackets  = 64
 	maxSequencePackets    = 256
+	defaultWindowDuration = 10 * time.Second
+	defaultBurstGap       = 100 * time.Millisecond
+	defaultIdleGap        = time.Second
 )
+
+var FeatureNames = []string{
+	"duration", "packet_count", "total_bytes", "packets_per_second",
+	"bytes_per_second", "mean_packet_size", "std_packet_size",
+	"min_packet_size", "max_packet_size", "p25_packet_size",
+	"median_packet_size", "p75_packet_size", "p95_packet_size",
+	"mean_interarrival_time", "std_interarrival_time", "upload_packets",
+	"download_packets", "upload_bytes", "download_bytes",
+	"upload_download_ratio", "burst_count", "mean_burst_size",
+	"idle_time_ratio",
+}
+
+type Config struct {
+	WindowDuration time.Duration
+	BurstGap       time.Duration
+	IdleGap        time.Duration
+}
 
 type Packet struct {
 	SessionID                         string
@@ -55,6 +74,7 @@ type record struct {
 	src, dst          string
 	sport, dport, spi uint32
 	stats             aggregate
+	spis              map[uint32]struct{}
 	active            bool
 	pending           []packet
 	windows           []string
@@ -62,11 +82,15 @@ type record struct {
 type window struct {
 	id, flowID, sessionID, reason string
 	start, end                    time.Time
+	burstGap, idleGap             time.Duration
 	finalized                     bool
 	packets                       []packet
 }
 
 func (w *window) IsFinalized() bool { return w.finalized }
+func (w *window) IsMLReady() bool {
+	return w.finalized && len(w.packets) >= 2 && w.end.After(w.start)
+}
 
 type subscriber struct {
 	session string
@@ -76,20 +100,34 @@ type subscriber struct {
 	once    sync.Once
 }
 type Service struct {
-	mu            sync.RWMutex
-	flows         map[string]*record
-	byKey         map[string]string
-	windows       map[string]*window
-	subscribers   map[*subscriber]struct{}
-	warnings      []Warning
-	windowPackets int
+	mu             sync.RWMutex
+	flows          map[string]*record
+	byKey          map[string]string
+	windows        map[string]*window
+	subscribers    map[*subscriber]struct{}
+	warnings       []Warning
+	windowDuration time.Duration
+	burstGap       time.Duration
+	idleGap        time.Duration
 }
 
-func New(windowPackets int) *Service {
-	if windowPackets <= 0 {
-		windowPackets = defaultWindowPackets
+func New(config Config) *Service {
+	if config.WindowDuration <= 0 {
+		config.WindowDuration = defaultWindowDuration
 	}
-	return &Service{flows: map[string]*record{}, byKey: map[string]string{}, windows: map[string]*window{}, subscribers: map[*subscriber]struct{}{}, windowPackets: windowPackets}
+	if config.BurstGap <= 0 {
+		config.BurstGap = defaultBurstGap
+	}
+	if config.WindowDuration <= config.BurstGap {
+		config.WindowDuration = defaultWindowDuration
+	}
+	if config.IdleGap <= config.BurstGap || config.IdleGap > config.WindowDuration {
+		config.IdleGap = defaultIdleGap
+		if config.IdleGap > config.WindowDuration {
+			config.IdleGap = config.WindowDuration
+		}
+	}
+	return &Service{flows: map[string]*record{}, byKey: map[string]string{}, windows: map[string]*window{}, subscribers: map[*subscriber]struct{}{}, windowDuration: config.WindowDuration, burstGap: config.BurstGap, idleGap: config.IdleGap}
 }
 func (s *Service) ObservePacket(ctx context.Context, p Packet) (string, error) {
 	if err := ctx.Err(); err != nil {
@@ -113,21 +151,24 @@ func (s *Service) ObservePacket(ctx context.Context, p Packet) (string, error) {
 			s.mu.Unlock()
 			return "", shared.NewError(shared.Internal, "", "could not create flow")
 		}
-		r = &record{id: string(fid), key: key, session: p.SessionID, protocol: p.Protocol, src: p.SourceAddress, dst: p.DestinationAddress, sport: p.SourcePort, dport: p.DestinationPort, spi: p.SPI, active: true}
+		r = &record{id: string(fid), key: key, session: p.SessionID, protocol: p.Protocol, src: p.SourceAddress, dst: p.DestinationAddress, sport: p.SourcePort, dport: p.DestinationPort, spi: p.SPI, spis: make(map[uint32]struct{}), active: true}
 		s.flows[r.id] = r
 		s.byKey[key] = r.id
 	}
+	if p.SPI != 0 {
+		r.spis[p.SPI] = struct{}{}
+	}
 	forward := p.SourceAddress == r.src && p.DestinationAddress == r.dst && p.SourcePort == r.sport && p.DestinationPort == r.dport
-	update(&r.stats, p, forward)
+	var ready *window
+	if len(r.pending) > 0 && !p.SeenAt.Before(r.pending[0].at.Add(s.windowDuration)) {
+		ready = s.finalizeLocked(r, "WINDOW_DURATION")
+	}
+	update(&r.stats, p, forward, s.burstGap, s.idleGap)
 	signed := int64(p.Size)
 	if !forward {
 		signed = -signed
 	}
 	r.pending = append(r.pending, packet{size: signed, at: p.SeenAt, forward: forward})
-	var ready *window
-	if len(r.pending) >= s.windowPackets {
-		ready = s.finalizeLocked(r, "PACKET_LIMIT")
-	}
 	s.mu.Unlock()
 	if ready != nil {
 		s.publish(ready)
@@ -140,9 +181,12 @@ func flowKey(p Packet) string {
 	if b < a {
 		a, b = b, a
 	}
-	return p.SessionID + "|" + strconv.Itoa(int(p.Protocol)) + "|" + strconv.FormatUint(uint64(p.SPI), 10) + "|" + a + "|" + b
+	// ESP SAs are directional and opposite directions normally use different
+	// SPIs. SPI is retained as protocol evidence but excluded from the
+	// bidirectional ML-flow key.
+	return p.SessionID + "|" + strconv.Itoa(int(p.Protocol)) + "|" + a + "|" + b
 }
-func update(a *aggregate, p Packet, forward bool) {
+func update(a *aggregate, p Packet, forward bool, burstGap, idleGap time.Duration) {
 	if a.count == 0 {
 		a.first = p.SeenAt
 		a.min = p.Size
@@ -176,9 +220,11 @@ func update(a *aggregate, p Packet, forward bool) {
 		d = us - a.iaMean
 		a.iaMean += d / float64(a.iaCount)
 		a.iaM2 += d * (us - a.iaMean)
-		if ia > time.Second {
+		if ia >= idleGap {
 			a.idles++
 			a.idleTotal += ia
+		}
+		if ia > burstGap {
 			a.bursts++
 			a.burstPackets = 1
 		} else {
@@ -199,7 +245,7 @@ func (s *Service) finalizeLocked(r *record, reason string) *window {
 		return nil
 	}
 	p := append([]packet(nil), r.pending...)
-	w := &window{id: string(id), flowID: r.id, sessionID: r.session, reason: reason, start: p[0].at, end: p[len(p)-1].at, finalized: true, packets: p}
+	w := &window{id: string(id), flowID: r.id, sessionID: r.session, reason: reason, start: p[0].at, end: p[len(p)-1].at, burstGap: s.burstGap, idleGap: s.idleGap, finalized: true, packets: p}
 	s.windows[w.id] = w
 	r.windows = append(r.windows, w.id)
 	r.pending = nil
@@ -283,8 +329,10 @@ func (s *Service) List(ctx context.Context, req *flowv1.ListFlowsRequest) ([]*re
 		if req.GetProtocol() != flowv1.FlowProtocol_FLOW_PROTOCOL_UNSPECIFIED && r.protocol != req.GetProtocol() {
 			continue
 		}
-		if req.GetSpi() != 0 && r.spi != req.GetSpi() {
-			continue
+		if req.GetSpi() != 0 {
+			if _, ok := r.spis[req.GetSpi()]; !ok {
+				continue
+			}
 		}
 		if req.GetSourceAddress() != "" && r.src != req.GetSourceAddress() {
 			continue
@@ -385,7 +433,10 @@ func (s *Service) Subscribe(ctx context.Context, session string, policy flowv1.F
 		return nil, nil, shared.NewError(shared.InvalidArgument, "", "buffer_size must not exceed 1024")
 	}
 	if policy == flowv1.FeatureBackpressurePolicy_FEATURE_BACKPRESSURE_POLICY_UNSPECIFIED {
-		policy = flowv1.FeatureBackpressurePolicy_BLOCK_CAPTURE
+		policy = flowv1.FeatureBackpressurePolicy_DROP_FEATURE_WINDOW
+	}
+	if policy == flowv1.FeatureBackpressurePolicy_BLOCK_CAPTURE {
+		return nil, nil, shared.NewError(shared.InvalidArgument, "", "BLOCK_CAPTURE is unsafe and unsupported; use DROP_FEATURE_WINDOW or CANCEL_SESSION")
 	}
 	sub := &subscriber{session: session, policy: policy, ch: make(chan string, buffer), done: make(chan struct{})}
 	s.mu.Lock()
@@ -411,6 +462,10 @@ func (s *Service) Subscribe(ctx context.Context, session string, policy flowv1.F
 func (s *Service) publish(w *window) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if !w.IsMLReady() {
+		s.warnings = append(s.warnings, Warning{SessionID: w.sessionID, Reason: "INSUFFICIENT_WINDOW_DATA", Count: 1, At: time.Now().UTC()})
+		return
+	}
 	for sub := range s.subscribers {
 		if sub.session != w.sessionID {
 			continue
@@ -430,6 +485,18 @@ func (s *Service) Warnings() []Warning {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return append([]Warning(nil), s.warnings...)
+}
+
+func (s *Service) RuntimeCounts() (activeFlows, pendingPackets, subscribers uint64) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for _, record := range s.flows {
+		if record.active {
+			activeFlows++
+		}
+		pendingPackets += uint64(len(record.pending))
+	}
+	return activeFlows, pendingPackets, uint64(len(s.subscribers))
 }
 func ToProto(r *record) *flowv1.Flow {
 	return &flowv1.Flow{FlowId: r.id, SessionId: r.session, Protocol: r.protocol, SourceAddress: r.src, DestinationAddress: r.dst, SourcePort: r.sport, DestinationPort: r.dport, Spi: r.spi, FirstSeen: shared.Timestamp(r.stats.first), LastSeen: shared.Timestamp(r.stats.last), PacketCount: r.stats.count, ByteCount: r.stats.bytes, Active: r.active}
@@ -456,20 +523,111 @@ func Stats(r *record) *flowv1.FlowStats {
 }
 func ToFeature(w *window) *flowv1.FeatureWindow {
 	f := &flowv1.FeatureWindow{WindowId: w.id, FlowId: w.flowID, SessionId: w.sessionID, WindowStart: shared.Timestamp(w.start), WindowEnd: shared.Timestamp(w.end), FeatureSchemaVersion: FeatureSchemaVersion, SequenceSchemaVersion: SequenceSchemaVersion, NormalizationProfile: "none", DirectionConvention: "positive=first_observed_direction", WindowDurationMs: uint64(w.end.Sub(w.start).Milliseconds()), PacketCount: uint64(len(w.packets)), Finalized: w.finalized, EvictionReason: w.reason}
-	var bytes, forward uint64
-	for _, p := range w.packets {
-		bytes += uint64(abs(p.size))
+	f.FeatureNames = append([]string(nil), FeatureNames...)
+	f.FeatureValues = featureValues(w)
+	return f
+}
+
+func featureValues(w *window) []float64 {
+	packets := append([]packet(nil), w.packets...)
+	sort.SliceStable(packets, func(i, j int) bool { return packets[i].at.Before(packets[j].at) })
+	if len(packets) == 0 {
+		return make([]float64, len(FeatureNames))
+	}
+	sizes := make([]float64, 0, len(packets))
+	interarrivals := make([]float64, 0, len(packets)-1)
+	var totalBytes, uploadBytes, downloadBytes, uploadPackets, downloadPackets float64
+	var idleTime float64
+	burstCount := 1.0
+	for i, p := range packets {
+		size := float64(abs(p.size))
+		sizes = append(sizes, size)
+		totalBytes += size
 		if p.forward {
-			forward++
+			uploadPackets++
+			uploadBytes += size
+		} else {
+			downloadPackets++
+			downloadBytes += size
+		}
+		if i > 0 {
+			gap := p.at.Sub(packets[i-1].at).Seconds()
+			if gap < 0 {
+				gap = 0
+			}
+			interarrivals = append(interarrivals, gap)
+			if gap > w.burstGap.Seconds() {
+				burstCount++
+			}
+			if gap >= w.idleGap.Seconds() {
+				idleTime += gap
+			}
 		}
 	}
-	f.FeatureNames = []string{"packet_count", "byte_count", "forward_packet_ratio", "duration_ms"}
-	ratio := 0.0
-	if len(w.packets) > 0 {
-		ratio = float64(forward) / float64(len(w.packets))
+	duration := packets[len(packets)-1].at.Sub(packets[0].at).Seconds()
+	meanSize, stdSize := populationStats(sizes)
+	meanIA, stdIA := populationStats(interarrivals)
+	sort.Float64s(sizes)
+	packetsPerSecond, bytesPerSecond := 0.0, 0.0
+	idleRatio := 0.0
+	if duration > 0 {
+		packetsPerSecond = float64(len(packets)) / duration
+		bytesPerSecond = totalBytes / duration
+		idleRatio = math.Min(1, idleTime/duration)
 	}
-	f.FeatureValues = []float64{float64(len(w.packets)), float64(bytes), ratio, float64(f.WindowDurationMs)}
-	return f
+	uploadDownloadRatio := uploadBytes
+	if downloadBytes > 0 {
+		uploadDownloadRatio = uploadBytes / downloadBytes
+	}
+	return []float64{
+		duration, float64(len(packets)), totalBytes, packetsPerSecond,
+		bytesPerSecond, meanSize, stdSize, sizes[0], sizes[len(sizes)-1],
+		percentile(sizes, .25), percentile(sizes, .5), percentile(sizes, .75),
+		percentile(sizes, .95), meanIA, stdIA, uploadPackets, downloadPackets,
+		uploadBytes, downloadBytes, uploadDownloadRatio, burstCount,
+		float64(len(packets)) / burstCount, idleRatio,
+	}
+}
+
+func populationStats(values []float64) (float64, float64) {
+	if len(values) == 0 {
+		return 0, 0
+	}
+	var mean, m2 float64
+	for i, value := range values {
+		delta := value - mean
+		mean += delta / float64(i+1)
+		m2 += delta * (value - mean)
+	}
+	return mean, math.Sqrt(m2 / float64(len(values)))
+}
+
+func percentile(sortedValues []float64, fraction float64) float64 {
+	position := float64(len(sortedValues)-1) * fraction
+	lower := int(math.Floor(position))
+	upper := lower + 1
+	if upper >= len(sortedValues) {
+		upper = len(sortedValues) - 1
+	}
+	return sortedValues[lower] + (sortedValues[upper]-sortedValues[lower])*(position-float64(lower))
+}
+
+// CaptureMetrics supplies the capture service with live, in-memory counts.
+func (s *Service) CaptureMetrics(ctx context.Context, _ string) (uint64, uint64, error) {
+	if err := ctx.Err(); err != nil {
+		return 0, 0, err
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	var activeFlows uint64
+	sessions := make(map[string]struct{})
+	for _, record := range s.flows {
+		if record.active {
+			activeFlows++
+			sessions[record.session] = struct{}{}
+		}
+	}
+	return activeFlows, uint64(len(sessions)), nil
 }
 func abs(v int64) int64 {
 	if v < 0 {

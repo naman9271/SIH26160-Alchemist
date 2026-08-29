@@ -9,7 +9,6 @@ import (
 	"time"
 
 	workspacev1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/workspace"
-	sensorv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/sensor/v1"
 	shared "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/domain/sensor"
 	"google.golang.org/grpc/metadata"
 )
@@ -28,7 +27,7 @@ type Record struct {
 	ID              string
 	DisplayName     string
 	State           workspacev1.WorkspaceState
-	Mode            sensorv1.SensorMode
+	Mode            workspacev1.AnalysisMode
 	SensorSessionID string
 	SourceID        string
 	CaptureID       string
@@ -45,7 +44,7 @@ type Record struct {
 
 type StateView struct {
 	State          workspacev1.WorkspaceState
-	Mode           sensorv1.SensorMode
+	Mode           workspacev1.AnalysisMode
 	HasSource      bool
 	HasAnalysis    bool
 	HasMLResult    bool

@@ -1,5 +1,10 @@
 # IPsec Security Analyzer — Go Core Backend API Specification v1.0
 
+> **Status:** Extended roadmap catalogue. The implemented and normative MVP
+> boundary is defined by [`ARCHITECTURE_MVP.md`](ARCHITECTURE_MVP.md) and the
+> checked-in protobufs. Unimplemented APIs below must not be advertised as
+> available capabilities.
+
 > **Scope:** This document specifies the **Go Core Backend / Control Plane only**.
 >
 > It assumes the following logical contracts already exist inside the same Go process:
@@ -11,7 +16,10 @@
 >
 > **Transport:** gRPC over HTTP/2.
 >
-> **Frontend rule:** Next.js communicates only with the Go Core Backend using gRPC-Web / Connect-compatible transport. It never calls the Go Sensor or Python ML Worker directly.
+> **Frontend rule:** The browser communicates with a Next.js server route/BFF,
+> which calls Go Core. It never calls native gRPC, Go Sensor or Python ML
+> directly. The current Go process exposes native Core gRPC plus `/live` and
+> `/health`; the Next.js adapter is a pending frontend integration task.
 >
 > **One-process rule:** The Go Sensor, Go Core Backend / Security Engine, and Evidence Fusion Engine are logical modules compiled into one Go server. Do not introduce gRPC between these Go modules. Use Go interfaces, direct function calls, channels, shared domain models, and a synchronized in-memory state owner.
 >
@@ -59,7 +67,7 @@ It must **not**:
 ```text
                          NEXT.JS
                             │
-                  gRPC-Web / Connect
+             Next.js server route / Core client
                             │
                             ▼
                     ONE GO SERVER
@@ -72,7 +80,7 @@ It must **not**:
                  │                     │ gRPC process boundary
                  ▼                     ▼
           Protocol/Gateway        PYTHON ML WORKER
-          Evidence                XGBoost / sequence models
+          Evidence                selected tree classifier
                  │                     │
                  └──────────┬──────────┘
                             ▼
@@ -1615,7 +1623,9 @@ Reloads disk policy definitions.
 
 # SERVICE 10 — MLOrchestrationService
 
-This service exposes ML state to frontend and orchestrates Python worker calls.
+This is a future Core facade for stored ML results. It is not implemented in
+the current server. It must delegate prediction, confidence, UNKNOWN and SHAP
+to Python without changing their semantics.
 
 ```protobuf
 service MLOrchestrationService {
@@ -1758,10 +1768,37 @@ Returns SHAP explanation cached from Python worker.
 
 ---
 
-# 10A. Go Server to Python ML Worker gRPC Contract
+# 10A. Canonical Go Server to Python ML gRPC Contract
 
 This is a real process boundary. Go Core is the gRPC client; the Python ML
 Worker is the gRPC server. The frontend never calls this worker directly.
+
+The canonical source is
+`ml-service/proto/ml/v1/traffic_classifier.proto`; `backend/Makefile` generates
+the Go client from that same file.
+
+```protobuf
+service TrafficClassifier {
+  rpc PredictTraffic(FlowFeatures) returns (PredictionResult);
+  rpc HealthCheck(google.protobuf.Empty) returns (HealthStatus);
+}
+```
+
+`FlowFeatures` contains the exact 23 numeric metadata features in the ML
+integration contract. Python validates every field and enforces persisted
+training order. `PredictionResult` contains the class, confidence,
+`is_unknown`, top-three predictions, model version, optional top-five SHAP
+explanations and inference time.
+
+Go never supplies an abstention threshold. Python owns the calibrated
+threshold and final UNKNOWN decision. Explanations are optional request
+metadata on `PredictTraffic`, not a separate RPC. Batch and sequence APIs are
+not part of v1.
+
+## Superseded draft contract — do not implement
+
+The draft below is retained only as design history. It is not a valid v1 wire
+contract and must not be used for code generation.
 
 ```protobuf
 service MLWorkerService {
@@ -2024,9 +2061,12 @@ service FusionOrchestrationService {
   "include_vici": true,
   "include_xfrm": true,
   "include_ml": true,
-  "include_security_rules": true
+  "include_security_rules": false
 }
 ```
+
+Primary Fusion runs before security rules. Findings may be attached later for
+report provenance but cannot participate as primary fact evidence.
 
 ### Response
 
@@ -2402,7 +2442,8 @@ Deletes expired/unreferenced temp artifacts.
 | ArtifactService | 4 |
 | **Total** | **86 RPCs** |
 
-This is the complete v1 surface. It is not the recommended first coding milestone.
+This is the extended roadmap surface, not the implemented MVP and not a
+commitment to expose all 86 RPCs.
 
 ---
 
@@ -2496,7 +2537,7 @@ Do not allow every package to mutate maps independently.
 ```text
 backend/
 ├── api/proto/core/v1/
-├── api/proto/mlworker/v1/
+├── gen/go/ml/v1/ # generated from ../ml-service/proto/ml/v1
 ├── src/cmd/server/main.go
 ├── src/internal/
 │   ├── transport/grpc/
@@ -2514,8 +2555,8 @@ backend/
 └── tests/
 ```
 
-`api/proto/mlworker/v1` is the shared gRPC contract for the external Python ML
-Worker. It is used by Go only to generate the ML client.
+`../ml-service/proto/ml/v1/traffic_classifier.proto` is the shared gRPC
+contract for the external Python ML process and generates the Go client.
 
 ---
 
@@ -2538,9 +2579,7 @@ Worker. It is used by Go only to generate the ML client.
 - protocol read APIs
 
 ## Phase 4
-- deterministic security findings
-- policy
-- risk score
+- primary Fusion evidence/conclusion pass
 
 ## Phase 5
 - EventService
@@ -2549,9 +2588,11 @@ Worker. It is used by Go only to generate the ML client.
 - Python ML orchestration
 
 ## Phase 7
-- Fusion orchestration
+- deterministic security findings, policy and risk score
 
 ## Phase 8
 - reports
 
-At the end of Phase 4 the Go Core already provides a useful deterministic IPsec security analyzer even before ML/Fusion are complete.
+At the end of Phase 4 the analyzer has deterministic evidence and a basic
+Fusion pass. It becomes a security assessment after Phase 7 rules and risk are
+implemented; ML remains optional enrichment.

@@ -41,6 +41,12 @@ type PacketMetadata struct {
 	SourceAddress, DestinationAddress string
 	SourcePort, DestinationPort       uint16
 	SPI                               uint32
+	IKEInitiatorSPI, IKEResponderSPI  uint64
+	IKEVersion                        string
+	IKEExchangeType, IKEFlags         uint8
+	IKEMessageID                      uint32
+	IKE, NATT, EncapsulatedESP        bool
+	NATKeepalive                      bool
 	Length                            uint64
 	SeenAt                            time.Time
 }
@@ -112,6 +118,19 @@ func New(sessions *session.Service, engine Engine, metrics FlowMetrics) *Service
 }
 
 func (s *Service) Available() bool { return s.engine.Available() }
+
+func (s *Service) Probe(ctx context.Context) error {
+	if err := contextError(ctx); err != nil {
+		return err
+	}
+	return s.engine.ValidateFilter(ctx, ipsecFilter)
+}
+
+func (s *Service) Active() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.activeID != ""
+}
 
 func (s *Service) Start(ctx context.Context, sessionID, interfaceName string, mode capturev1.CaptureFilterMode, custom string, promiscuous, savePCAP bool, maxDurationSeconds, maxBytes uint64) (*captureRecord, error) {
 	if err := contextError(ctx); err != nil {

@@ -8,6 +8,7 @@ from typing import TypeAlias
 from src.datasets.base import DatasetAdapter
 from src.datasets.cic_darknet2020 import CicDarknet2020Adapter
 from src.datasets.cic_vpn2016 import CicVpn2016Adapter
+from src.datasets.ipsec_pcap_lab import IpsecPcapLabAdapter
 from src.datasets.network_traffic import NetworkTrafficDatasetAdapter
 from src.datasets.ustc_tfc2016 import UstcTfc2016Adapter
 from src.label_mapping import ClassMappingConfig
@@ -17,6 +18,7 @@ AdapterType: TypeAlias = type[DatasetAdapter]
 ADAPTERS: dict[str, AdapterType] = {
     CicDarknet2020Adapter.cli_name: CicDarknet2020Adapter,
     CicVpn2016Adapter.cli_name: CicVpn2016Adapter,
+    IpsecPcapLabAdapter.cli_name: IpsecPcapLabAdapter,
     NetworkTrafficDatasetAdapter.cli_name: NetworkTrafficDatasetAdapter,
     UstcTfc2016Adapter.cli_name: UstcTfc2016Adapter,
 }

@@ -84,9 +84,10 @@ type FeatureBackpressurePolicy int32
 
 const (
 	FeatureBackpressurePolicy_FEATURE_BACKPRESSURE_POLICY_UNSPECIFIED FeatureBackpressurePolicy = 0
-	FeatureBackpressurePolicy_BLOCK_CAPTURE                           FeatureBackpressurePolicy = 1
-	FeatureBackpressurePolicy_DROP_FEATURE_WINDOW                     FeatureBackpressurePolicy = 2
-	FeatureBackpressurePolicy_CANCEL_SESSION                          FeatureBackpressurePolicy = 3
+	// Deprecated: Marked as deprecated in api/proto/sensor/v1/flow/flow.proto.
+	FeatureBackpressurePolicy_BLOCK_CAPTURE       FeatureBackpressurePolicy = 1
+	FeatureBackpressurePolicy_DROP_FEATURE_WINDOW FeatureBackpressurePolicy = 2
+	FeatureBackpressurePolicy_CANCEL_SESSION      FeatureBackpressurePolicy = 3
 )
 
 // Enum value maps for FeatureBackpressurePolicy.
@@ -1475,10 +1476,10 @@ const file_api_proto_sensor_v1_flow_flow_proto_rawDesc = "" +
 	"\x03ESP\x10\x02\x12\x06\n" +
 	"\x02AH\x10\x03\x12\t\n" +
 	"\x05NAT_T\x10\x04\x12\t\n" +
-	"\x05OTHER\x10\x05*\x88\x01\n" +
+	"\x05OTHER\x10\x05*\x8c\x01\n" +
 	"\x19FeatureBackpressurePolicy\x12+\n" +
-	"'FEATURE_BACKPRESSURE_POLICY_UNSPECIFIED\x10\x00\x12\x11\n" +
-	"\rBLOCK_CAPTURE\x10\x01\x12\x17\n" +
+	"'FEATURE_BACKPRESSURE_POLICY_UNSPECIFIED\x10\x00\x12\x15\n" +
+	"\rBLOCK_CAPTURE\x10\x01\x1a\x02\b\x01\x12\x17\n" +
 	"\x13DROP_FEATURE_WINDOW\x10\x02\x12\x12\n" +
 	"\x0eCANCEL_SESSION\x10\x032\x87\x05\n" +
 	"\x14FlowTelemetryService\x12P\n" +

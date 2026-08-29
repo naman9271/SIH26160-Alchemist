@@ -18,7 +18,7 @@
           │                 │ gRPC process boundary
           ▼                 ▼
  Protocol / Gateway   PYTHON ML WORKER
- Evidence             XGBoost / Sequence Models
+ Evidence             Selected Tree Classifier
                       Confidence + SHAP
           │                 │
           └────────┬────────┘
@@ -37,7 +37,7 @@
                    │
                    ▼
        NEXT.JS FRONTEND
-       gRPC-Web / Connect
+       Browser HTTP via Next.js server route
              │
        ┌─────┼───────────┐
        ▼     ▼           ▼
@@ -50,5 +50,9 @@ in-memory state. Do not introduce gRPC between these Go modules in v1.
 
 The only v1 process-boundary gRPC contracts are:
 
-- Next.js / external client to the one Go Server
+- trusted/native client to Go Core; browser requests use a Next.js server adapter
 - Go Server to the Python ML Worker
+
+Only Core services are registered on the external Go gRPC server. Sensor and
+Fusion remain internal Go packages. See
+[`src/internal/docs/ARCHITECTURE_MVP.md`](src/internal/docs/ARCHITECTURE_MVP.md).

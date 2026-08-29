@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import socket
+import hashlib
 from pathlib import Path
 
 import dpkt
@@ -50,6 +51,32 @@ def write_two_packet_capture(path: Path, pcapng: bool = False) -> None:
                 dst=socket.inet_aton(destination),
                 p=dpkt.ip.IP_PROTO_UDP,
                 data=udp,
+            )
+            ip.len = len(ip)
+            ethernet = dpkt.ethernet.Ethernet(
+                src=b"\x00\x01\x02\x03\x04\x05",
+                dst=b"\x06\x07\x08\x09\x0a\x0b",
+                type=dpkt.ethernet.ETH_TYPE_IP,
+                data=ip,
+            )
+            writer.writepkt(bytes(ethernet), ts=timestamp)
+        writer.close()
+
+
+def write_two_packet_esp_capture(path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("wb") as file:
+        writer = dpkt.pcap.Writer(file)
+        for timestamp, source, destination, spi in (
+            (1.0, "10.0.0.1", "10.0.0.2", 0x11111111),
+            (1.5, "10.0.0.2", "10.0.0.1", 0x22222222),
+        ):
+            payload = spi.to_bytes(4, "big") + b"encrypted-esp-metadata-only"
+            ip = dpkt.ip.IP(
+                src=socket.inet_aton(source),
+                dst=socket.inet_aton(destination),
+                p=dpkt.ip.IP_PROTO_ESP,
+                data=payload,
             )
             ip.len = len(ip)
             ethernet = dpkt.ethernet.Ethernet(
@@ -156,6 +183,29 @@ def test_ustc_adapter_reads_pcapng_and_ignores_malware(tmp_path: Path) -> None:
     assert records[0].original_label == "Gmail"
     assert records[0].canonical_label == "email"
     assert any("Cridex" in reason for reason in adapter.skipped_reasons)
+
+
+def test_ipsec_lab_uses_metadata_label_and_only_esp_windows(tmp_path: Path) -> None:
+    external_root = tmp_path / "external"
+    lab = external_root / "ipsec-pcap-lab"
+    capture = lab / "pcaps" / "opaque-name.pcap"
+    write_two_packet_esp_capture(capture)
+    checksum = hashlib.sha256(capture.read_bytes()).hexdigest()
+    lab.joinpath("metadata.csv").write_text(
+        "sample_id,pcap_file,traffic_class,mode,sha256\n"
+        f"sample-1,opaque-name.pcap,ping,tunnel,{checksum}\n",
+        encoding="utf-8",
+    )
+    adapter = create_adapter("ipsec-pcap-lab", external_root, load_class_mapping(MAPPING_PATH))
+
+    records = list(adapter.iter_records())
+
+    assert len(records) == 1
+    assert records[0].original_label == "ping"
+    assert records[0].canonical_label == "icmp"
+    assert records[0].packet_count == 2
+    assert records[0].burst_count == 2
+    assert records[0].split_group_id == "ipsec-pcap-lab:sample-1"
 
 
 def test_preprocess_writes_only_the_requested_dataset(tmp_path: Path) -> None:

@@ -28,8 +28,12 @@ const (
 	EvidenceStatus_EVIDENCE_STATUS_UNSPECIFIED EvidenceStatus = 0
 	EvidenceStatus_OBSERVED                    EvidenceStatus = 1
 	EvidenceStatus_DERIVED                     EvidenceStatus = 2
-	EvidenceStatus_VERIFIED_GATEWAY            EvidenceStatus = 3
-	EvidenceStatus_UNKNOWN                     EvidenceStatus = 4
+	// INFERRED is reserved for probabilistic conclusions such as ML output.
+	EvidenceStatus_INFERRED EvidenceStatus = 3
+	// VERIFIED_GATEWAY is stronger than packet-derived evidence and is emitted
+	// only by trusted read-only gateway sources such as VICI or XFRM.
+	EvidenceStatus_VERIFIED_GATEWAY EvidenceStatus = 4
+	EvidenceStatus_UNKNOWN          EvidenceStatus = 5
 )
 
 // Enum value maps for EvidenceStatus.
@@ -38,15 +42,17 @@ var (
 		0: "EVIDENCE_STATUS_UNSPECIFIED",
 		1: "OBSERVED",
 		2: "DERIVED",
-		3: "VERIFIED_GATEWAY",
-		4: "UNKNOWN",
+		3: "INFERRED",
+		4: "VERIFIED_GATEWAY",
+		5: "UNKNOWN",
 	}
 	EvidenceStatus_value = map[string]int32{
 		"EVIDENCE_STATUS_UNSPECIFIED": 0,
 		"OBSERVED":                    1,
 		"DERIVED":                     2,
-		"VERIFIED_GATEWAY":            3,
-		"UNKNOWN":                     4,
+		"INFERRED":                    3,
+		"VERIFIED_GATEWAY":            4,
+		"UNKNOWN":                     5,
 	}
 )
 
@@ -81,13 +87,14 @@ var File_api_proto_common_v1_evidence_proto protoreflect.FileDescriptor
 
 const file_api_proto_common_v1_evidence_proto_rawDesc = "" +
 	"\n" +
-	"\"api/proto/common/v1/evidence.proto\x12\x0fipsec.common.v1*o\n" +
+	"\"api/proto/common/v1/evidence.proto\x12\x0fipsec.common.v1*}\n" +
 	"\x0eEvidenceStatus\x12\x1f\n" +
 	"\x1bEVIDENCE_STATUS_UNSPECIFIED\x10\x00\x12\f\n" +
 	"\bOBSERVED\x10\x01\x12\v\n" +
-	"\aDERIVED\x10\x02\x12\x14\n" +
-	"\x10VERIFIED_GATEWAY\x10\x03\x12\v\n" +
-	"\aUNKNOWN\x10\x04BTZRgithub.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/common/v1;commonv1b\x06proto3"
+	"\aDERIVED\x10\x02\x12\f\n" +
+	"\bINFERRED\x10\x03\x12\x14\n" +
+	"\x10VERIFIED_GATEWAY\x10\x04\x12\v\n" +
+	"\aUNKNOWN\x10\x05BTZRgithub.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/common/v1;commonv1b\x06proto3"
 
 var (
 	file_api_proto_common_v1_evidence_proto_rawDescOnce sync.Once

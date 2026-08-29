@@ -113,7 +113,7 @@ func (h *FlowHandler) StreamFeatureWindows(r *flowv1.StreamFeatureWindowsRequest
 			if e != nil {
 				continue
 			}
-			if w.IsFinalized() {
+			if w.IsMLReady() {
 				if e = stream.Send(flow.ToFeature(w)); e != nil {
 					return e
 				}

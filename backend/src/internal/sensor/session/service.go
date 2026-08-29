@@ -51,6 +51,18 @@ type Service struct {
 
 func New() *Service { return &Service{sessions: make(map[string]Session)} }
 
+func (s *Service) ActiveCount() uint64 {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	var count uint64
+	for _, item := range s.sessions {
+		if item.State == StateReady || item.State == StateRunning {
+			count++
+		}
+	}
+	return count
+}
+
 func (s *Service) SetLifecycleHooks(hooks LifecycleHooks) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -105,7 +117,9 @@ func (s *Service) Get(ctx context.Context, id string) (Session, error) {
 	return item, nil
 }
 
-// BeginCapture atomically validates and transitions a passive-live session.
+// BeginCapture atomically validates and transitions a live capture session.
+// Deep assessment is passive live capture enriched by read-only VICI/XFRM
+// telemetry; it does not mutate the gateway.
 func (s *Service) BeginCapture(ctx context.Context, sessionID, captureID string) error {
 	if err := contextError(ctx); err != nil {
 		return err
@@ -116,8 +130,8 @@ func (s *Service) BeginCapture(ctx context.Context, sessionID, captureID string)
 	if !ok {
 		return shared.NewError(shared.NotFound, "", "sensor session was not found")
 	}
-	if item.Mode != sensorv1.SensorMode_PASSIVE_LIVE {
-		return shared.NewError(shared.FailedPrecondition, shared.SessionNotActive, "live capture requires a PASSIVE_LIVE session")
+	if item.Mode != sensorv1.SensorMode_PASSIVE_LIVE && item.Mode != sensorv1.SensorMode_DEEP_ASSESSMENT {
+		return shared.NewError(shared.FailedPrecondition, shared.SessionNotActive, "live capture requires a PASSIVE_LIVE or DEEP_ASSESSMENT session")
 	}
 	if item.State != StateReady {
 		return shared.NewError(shared.FailedPrecondition, shared.SessionNotActive, "sensor session is not ready for live capture")

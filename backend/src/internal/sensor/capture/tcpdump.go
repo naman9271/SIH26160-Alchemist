@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -99,7 +100,6 @@ func (e *tcpdumpEngine) Start(_ context.Context, config Config) (Handle, error) 
 			return nil, shared.NewError(shared.ResourceExhausted, "", "create capture file: "+fileErr.Error())
 		}
 		h.files = []string{file.Name()}
-		cmd.Stdout = nil
 		_ = file.Close()
 	}
 	cmd.Stderr = &h.stderr
@@ -163,7 +163,7 @@ func readPCAP(reader io.Reader, writer io.Writer, h *tcpdumpHandle, config Confi
 	if writer != nil {
 		_, _ = writer.Write(header)
 	}
-	order, ok := pcapByteOrder(header[:4])
+	format, ok := pcapFormatForMagic(header[:4])
 	if !ok {
 		return errors.New("tcpdump emitted an unsupported capture format")
 	}
@@ -176,7 +176,7 @@ func readPCAP(reader io.Reader, writer io.Writer, h *tcpdumpHandle, config Confi
 		if _, err := io.ReadFull(reader, recordHeader); err != nil {
 			return err
 		}
-		length := order.Uint32(recordHeader[8:12])
+		length := format.order.Uint32(recordHeader[8:12])
 		if length > 16<<20 {
 			return errors.New("capture packet exceeds safety limit")
 		}
@@ -188,7 +188,11 @@ func readPCAP(reader io.Reader, writer io.Writer, h *tcpdumpHandle, config Confi
 			_, _ = writer.Write(recordHeader)
 			_, _ = writer.Write(packet)
 		}
-		seenAt := time.Unix(int64(order.Uint32(recordHeader[:4])), int64(order.Uint32(recordHeader[4:8]))*1_000).UTC()
+		fraction := int64(format.order.Uint32(recordHeader[4:8]))
+		if !format.nanosecond {
+			fraction *= 1_000
+		}
+		seenAt := time.Unix(int64(format.order.Uint32(recordHeader[:4])), fraction).UTC()
 		if config.PacketObserver != nil {
 			if metadata, ok := decodePacketMetadata(packet, uint64(length), seenAt); ok {
 				metadata.SessionID = config.SessionID
@@ -210,50 +214,31 @@ func readPCAP(reader io.Reader, writer io.Writer, h *tcpdumpHandle, config Confi
 }
 
 func decodePacketMetadata(packet []byte, length uint64, seenAt time.Time) (PacketMetadata, bool) {
-	if len(packet) < 14 {
-		return PacketMetadata{}, false
-	}
-	offset, etherType := 14, binary.BigEndian.Uint16(packet[12:14])
-	for etherType == 0x8100 || etherType == 0x88a8 {
-		if len(packet) < offset+4 {
-			return PacketMetadata{}, false
-		}
-		etherType = binary.BigEndian.Uint16(packet[offset+2 : offset+4])
-		offset += 4
-	}
-	var protocol uint8
-	var source, destination string
-	var payload []byte
-	switch etherType {
-	case 0x0800:
-		if len(packet) < offset+20 {
-			return PacketMetadata{}, false
-		}
-		ihl := int(packet[offset]&15) * 4
-		if ihl < 20 || len(packet) < offset+ihl {
-			return PacketMetadata{}, false
-		}
-		protocol = packet[offset+9]
-		source = netip.AddrFrom4([4]byte(packet[offset+12 : offset+16])).String()
-		destination = netip.AddrFrom4([4]byte(packet[offset+16 : offset+20])).String()
-		payload = packet[offset+ihl:]
-	case 0x86dd:
-		if len(packet) < offset+40 {
-			return PacketMetadata{}, false
-		}
-		protocol = packet[offset+6]
-		source = netip.AddrFrom16([16]byte(packet[offset+8 : offset+24])).String()
-		destination = netip.AddrFrom16([16]byte(packet[offset+24 : offset+40])).String()
-		payload = packet[offset+40:]
-	default:
+	protocol, payload, source, destination, ok := networkPayload(packet)
+	if !ok {
 		return PacketMetadata{}, false
 	}
 	m := PacketMetadata{Protocol: protocol, SourceAddress: source, DestinationAddress: destination, Length: length, SeenAt: seenAt}
-	if protocol == 17 && len(payload) >= 4 {
+	if protocol == 17 && len(payload) >= 8 {
 		m.SourcePort = binary.BigEndian.Uint16(payload[:2])
 		m.DestinationPort = binary.BigEndian.Uint16(payload[2:4])
-		if (m.SourcePort == 500 || m.DestinationPort == 500 || m.SourcePort == 4500 || m.DestinationPort == 4500) && len(payload) >= 12 && !(m.SourcePort == 4500 || m.DestinationPort == 4500) && len(payload) >= 12 {
-			m.SPI = binary.BigEndian.Uint32(payload[8:12])
+		udpPayload := payload[8:]
+		switch {
+		case m.SourcePort == 500 || m.DestinationPort == 500:
+			m.IKE = true
+			setIKESPIs(&m, udpPayload)
+		case m.SourcePort == 4500 || m.DestinationPort == 4500:
+			m.NATT = true
+			switch {
+			case len(udpPayload) == 1 && udpPayload[0] == 0xff:
+				m.NATKeepalive = true
+			case len(udpPayload) >= 4 && bytes.Equal(udpPayload[:4], []byte{0, 0, 0, 0}):
+				m.IKE = true
+				setIKESPIs(&m, udpPayload[4:])
+			case len(udpPayload) >= 4:
+				m.EncapsulatedESP = true
+				m.SPI = binary.BigEndian.Uint32(udpPayload[:4])
+			}
 		}
 	}
 	if protocol == 50 && len(payload) >= 4 {
@@ -264,59 +249,122 @@ func decodePacketMetadata(packet []byte, length uint64, seenAt time.Time) (Packe
 	}
 	return m, true
 }
-func pcapByteOrder(magic []byte) (binary.ByteOrder, bool) {
+func setIKESPIs(metadata *PacketMetadata, payload []byte) {
+	if len(payload) < 16 {
+		return
+	}
+	metadata.IKEInitiatorSPI = binary.BigEndian.Uint64(payload[:8])
+	metadata.IKEResponderSPI = binary.BigEndian.Uint64(payload[8:16])
+	if len(payload) < 28 {
+		return
+	}
+	declaredLength := binary.BigEndian.Uint32(payload[24:28])
+	if declaredLength < 28 || uint64(declaredLength) > uint64(len(payload)) {
+		return
+	}
+	major, minor := payload[17]>>4, payload[17]&0x0f
+	if major == 1 || major == 2 {
+		metadata.IKEVersion = "IKEv" + strconv.Itoa(int(major)) + "." + strconv.Itoa(int(minor))
+	}
+	metadata.IKEExchangeType = payload[18]
+	metadata.IKEFlags = payload[19]
+	metadata.IKEMessageID = binary.BigEndian.Uint32(payload[20:24])
+}
+
+type pcapFormat struct {
+	order      binary.ByteOrder
+	nanosecond bool
+}
+
+func pcapFormatForMagic(magic []byte) (pcapFormat, bool) {
 	switch string(magic) {
-	case "\xd4\xc3\xb2\xa1", "\x4d\x3c\xb2\xa1":
-		return binary.LittleEndian, true
-	case "\xa1\xb2\xc3\xd4", "\xa1\xb2\x3c\x4d":
-		return binary.BigEndian, true
+	case "\xd4\xc3\xb2\xa1":
+		return pcapFormat{order: binary.LittleEndian}, true
+	case "\x4d\x3c\xb2\xa1":
+		return pcapFormat{order: binary.LittleEndian, nanosecond: true}, true
+	case "\xa1\xb2\xc3\xd4":
+		return pcapFormat{order: binary.BigEndian}, true
+	case "\xa1\xb2\x3c\x4d":
+		return pcapFormat{order: binary.BigEndian, nanosecond: true}, true
 	default:
-		return nil, false
+		return pcapFormat{}, false
 	}
 }
 func classify(packet []byte, counters *Counters) {
-	if len(packet) < 14 {
+	metadata, ok := decodePacketMetadata(packet, uint64(len(packet)), time.Time{})
+	if !ok {
 		return
 	}
-	offset := 14
-	etherType := binary.BigEndian.Uint16(packet[12:14])
-	for etherType == 0x8100 || etherType == 0x88a8 {
-		if len(packet) < offset+4 {
-			return
-		}
-		etherType = binary.BigEndian.Uint16(packet[offset+2 : offset+4])
-		offset += 4
+	if metadata.NATT {
+		counters.NATTPackets++
 	}
-	if etherType == 0x0800 {
-		if len(packet) < offset+20 {
-			return
-		}
-		ihl := int(packet[offset]&0x0f) * 4
-		if ihl < 20 || len(packet) < offset+ihl {
-			return
-		}
-		classifyIP(packet[offset+9], packet[offset+ihl:], counters)
-	} else if etherType == 0x86dd && len(packet) >= offset+40 {
-		classifyIP(packet[offset+6], packet[offset+40:], counters)
+	if metadata.IKE {
+		counters.IKEPackets++
 	}
-}
-func classifyIP(protocol byte, payload []byte, counters *Counters) {
-	switch protocol {
+	switch metadata.Protocol {
 	case 50:
 		counters.ESPPackets++
 	case 51:
 		counters.AHPackets++
-	case 17:
-		if len(payload) < 4 {
-			return
+	}
+	if metadata.EncapsulatedESP {
+		counters.ESPPackets++
+	}
+}
+
+func networkPayload(packet []byte) (uint8, []byte, string, string, bool) {
+	if len(packet) < 14 {
+		return 0, nil, "", "", false
+	}
+	offset, etherType := 14, binary.BigEndian.Uint16(packet[12:14])
+	for etherType == 0x8100 || etherType == 0x88a8 {
+		if len(packet) < offset+4 {
+			return 0, nil, "", "", false
 		}
-		source, destination := binary.BigEndian.Uint16(payload[:2]), binary.BigEndian.Uint16(payload[2:4])
-		if source == 4500 || destination == 4500 {
-			counters.NATTPackets++
-			counters.IKEPackets++
-		} else if source == 500 || destination == 500 {
-			counters.IKEPackets++
+		etherType = binary.BigEndian.Uint16(packet[offset+2 : offset+4])
+		offset += 4
+	}
+	switch etherType {
+	case 0x0800:
+		if len(packet) < offset+20 {
+			return 0, nil, "", "", false
 		}
+		ihl := int(packet[offset]&15) * 4
+		if ihl < 20 || len(packet) < offset+ihl {
+			return 0, nil, "", "", false
+		}
+		source := netip.AddrFrom4([4]byte(packet[offset+12 : offset+16])).String()
+		destination := netip.AddrFrom4([4]byte(packet[offset+16 : offset+20])).String()
+		return packet[offset+9], packet[offset+ihl:], source, destination, true
+	case 0x86dd:
+		if len(packet) < offset+40 {
+			return 0, nil, "", "", false
+		}
+		source := netip.AddrFrom16([16]byte(packet[offset+8 : offset+24])).String()
+		destination := netip.AddrFrom16([16]byte(packet[offset+24 : offset+40])).String()
+		next, payload := packet[offset+6], packet[offset+40:]
+		for {
+			switch next {
+			case 0, 43, 60: // Hop-by-Hop, Routing, Destination Options.
+				if len(payload) < 2 {
+					return 0, nil, "", "", false
+				}
+				headerLength := (int(payload[1]) + 1) * 8
+				if len(payload) < headerLength {
+					return 0, nil, "", "", false
+				}
+				next, payload = payload[0], payload[headerLength:]
+			case 44: // Fragment header; only the first fragment has a transport header.
+				if len(payload) < 8 || binary.BigEndian.Uint16(payload[2:4])&0xfff8 != 0 {
+					return 0, nil, "", "", false
+				}
+				next, payload = payload[0], payload[8:]
+			default:
+				return next, payload, source, destination, true
+			}
+		}
+	default:
+		return 0, nil, "", "", false
 	}
 }
 

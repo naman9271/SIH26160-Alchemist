@@ -1,5 +1,9 @@
 # IPsec Security Analyzer — Go Sensor Internal Contract Specification v1.0
 
+> **Status:** Extended capability catalogue. Implement the MVP subset and
+> ownership rules in [`ARCHITECTURE_MVP.md`](ARCHITECTURE_MVP.md) first. These
+> service-shaped sections are internal Go interfaces, not public RPCs.
+
 > **Scope:** This document specifies **only the Go Sensor logical module** inside the one Go Server.  
 > Go Backend / Security Engine and Evidence Fusion contracts are intentionally specified separately.
 >
@@ -1651,7 +1655,8 @@ debugging but must not be sent to ML inference.
 
 ### What it does
 
-Returns the compact packet-sequence representation for future TCN/1D-CNN inference.
+Returns a compact packet-sequence representation for diagnostics or future
+research. It is not consumed by the v1 tree classifier.
 
 ### Response example
 
@@ -1684,13 +1689,15 @@ Primary future low-latency feed to the Go Backend / ML orchestration path.
 Emits finalized feature windows as soon as they are ready.
 
 The stream must use bounded channels. If the downstream consumer is too slow,
-the Sensor should apply the configured backpressure policy:
+the Sensor should apply one of the safe nonblocking policies:
 
 ```text
-BLOCK_CAPTURE
 DROP_FEATURE_WINDOW
 CANCEL_SESSION
 ```
+
+`BLOCK_CAPTURE` is retained only as a deprecated enum value for compatibility
+and must be rejected. A slow ML consumer must never stall packet acquisition.
 
 Dropped windows must emit a `SENSOR_WARNING` with counts and reason codes.
 

@@ -27,8 +27,8 @@ This project aims to build an AI-driven framework that can analyze IPsec traffic
 The proposed system is designed to:
 
 - Identify IPsec traffic from captured packets or live streams
-- Detect IKE version, tunnel/transport mode, cipher suite, DH group, and SA characteristics
-- Infer the type of traffic encapsulated inside ESP tunnels
+- Deterministically observe or verify IKE version, mode, cipher suite, DH group, PFS, SPI, and SA characteristics
+- Use ML only to classify the likely dominant traffic type from encrypted-flow metadata
 - Evaluate cryptographic strength and configuration compliance
 - Generate a security score, threat matrix, and actionable recommendations
 - Present results in an interactive dashboard with executive and technical reports
@@ -55,9 +55,11 @@ Dataset collection using tools such as Wireshark, tcpdump, and custom packet cap
 - AH packets, if enabled
 - Normal communication traffic
 
-### AI-Based Protocol Identification
+### Hybrid Protocol and Traffic Identification
 
-An AI engine for automatically identifying:
+Deterministic packet/gateway analysis identifies protocol and security facts.
+The ML component is limited to encrypted application-traffic classification
+and experimental anomaly detection.
 
 - IPsec protocol usage
 - IKE version
@@ -97,6 +99,8 @@ Automatic evaluation of:
 .
 ├── backend/        # Go-based API, services, and analysis logic
 ├── frontend/       # Next.js dashboard and user interface
+├── ml-service/     # Python traffic classifier, UNKNOWN, SHAP and anomaly experiment
+├── ipsec_esp/      # Legacy insecure parser fixtures; never ML training data
 └── README.md       # Project overview and documentation
 ```
 
@@ -105,7 +109,7 @@ Automatic evaluation of:
 - Frontend: Next.js, React, TypeScript
 - Backend: Go
 - Packet analysis: Wireshark, tcpdump, custom capture utilities
-- AI/ML: protocol classification and risk assessment models
+- AI/ML: encrypted traffic classification from metadata; deterministic Go security scoring
 - Visualization: dashboard for reports, scores, and packet insights
 
 ## Getting Started
@@ -140,4 +144,7 @@ The long-term goal is to provide a practical assistant for security analysts tha
 
 ## Status
 
-This project README documents the initial SIH 2026 concept and repository structure. Implementation details can be expanded as the prototype evolves.
+The packet/flow and ML foundations are under active development. A calibrated
+production model, complete testbed coverage, Fusion/security/risk/report APIs,
+and the interactive dashboard are not yet complete and must not be advertised
+as production-ready.

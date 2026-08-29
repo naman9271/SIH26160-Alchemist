@@ -1,5 +1,10 @@
 # IPsec Security Analyzer — Backend File Structure v1
 
+> **Status:** Roadmap layout. The current normative MVP contract is
+> [`ARCHITECTURE_MVP.md`](ARCHITECTURE_MVP.md). Directories shown below are
+> created only when their implementation is started; the tree is not a claim
+> that every module already exists.
+
 This document defines the target backend layout for implementing the final API
 contracts:
 
@@ -13,7 +18,8 @@ inside that process. Do not add gRPC between those Go modules.
 
 The only v1 process-boundary gRPC contracts are:
 
-- Next.js / external client to the Go server
+- trusted/native client to the Go Core gRPC server; browser traffic goes
+  through a Next.js server route/BFF
 - Go server to the Python ML Worker
 
 ---
@@ -51,9 +57,6 @@ SIH26160/
 │   │       │   ├── runtime_config.proto
 │   │       │   ├── artifacts.proto
 │   │       │   └── types.proto
-│   │       ├── mlworker/v1/
-│   │       │   ├── ml_worker.proto
-│   │       │   └── types.proto
 │   │       └── common/v1/
 │   │           ├── ids.proto
 │   │           ├── evidence.proto
@@ -83,7 +86,7 @@ SIH26160/
 │   │       ├── observability/
 │   │       └── docs/
 │   └── tests/
-├── ml-worker/
+├── ml-service/
 │   ├── README.md
 │   ├── requirements.txt
 │   ├── pyproject.toml
@@ -97,16 +100,15 @@ SIH26160/
 │   │   └── config/
 │   └── tests/
 └── frontend/
-    └── nextjs-dashboard/
+    └── app/
 ```
 
 `backend/api/proto/core/v1` is the external Go server API consumed by Next.js.
-`backend/api/proto/mlworker/v1` is not one of the three Go blocks and is not a
-Go implementation package. It is only the shared gRPC wire contract used to
-generate:
+`ml-service/proto/ml/v1/traffic_classifier.proto` is the shared process-boundary
+contract. It is outside the three Go blocks and generates:
 
-- a Go client in `backend/src/internal/mlclient`
-- Python server/message stubs in `ml-worker/src/generated`
+- a Go client in `backend/gen/go/ml/v1`
+- Python server/message stubs in `ml-service/proto`
 
 This is required because the Python ML Worker is a real separate process.
 `.proto` files describe the wire contract; they do not mean the worker is
@@ -121,9 +123,9 @@ service blocks so the domain can be extracted later without redesign.
 # 2. Process and module map
 
 ```text
-Next.js / external client
+Browser -> Next.js server route / trusted client
         |
-        | gRPC-Web / Connect
+        | browser HTTP adapter / native gRPC
         v
 src/cmd/server
         |

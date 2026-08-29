@@ -332,8 +332,15 @@ def _recommendations(
             and not summary["suspicious_correlation_in"]
         ):
             safe.append(feature)
-        elif feature in IPSEC_ONLY_CANDIDATES or not value_datasets:
+        elif (
+            value_datasets
+            and all(Path(name).stem == "ipsec-pcap-lab" for name in value_datasets)
+            and not summary["constant_in"]
+            and not summary["has_nan_or_inf_in"]
+        ) or feature in IPSEC_ONLY_CANDIDATES:
             own_ipsec.append(feature)
+        elif not value_datasets:
+            drop.add(feature)
         if summary["constant_in"] or summary["has_nan_or_inf_in"]:
             drop.add(feature)
     return {

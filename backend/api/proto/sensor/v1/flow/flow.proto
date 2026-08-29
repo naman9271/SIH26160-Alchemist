@@ -17,7 +17,7 @@ service FlowTelemetryService {
 }
 
 enum FlowProtocol { FLOW_PROTOCOL_UNSPECIFIED = 0; IKE = 1; ESP = 2; AH = 3; NAT_T = 4; OTHER = 5; }
-enum FeatureBackpressurePolicy { FEATURE_BACKPRESSURE_POLICY_UNSPECIFIED = 0; BLOCK_CAPTURE = 1; DROP_FEATURE_WINDOW = 2; CANCEL_SESSION = 3; }
+enum FeatureBackpressurePolicy { FEATURE_BACKPRESSURE_POLICY_UNSPECIFIED = 0; BLOCK_CAPTURE = 1 [deprecated = true]; DROP_FEATURE_WINDOW = 2; CANCEL_SESSION = 3; }
 
 message Flow {
   string flow_id = 1; string session_id = 2; FlowProtocol protocol = 3;

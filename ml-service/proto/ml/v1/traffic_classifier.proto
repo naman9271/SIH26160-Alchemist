@@ -4,7 +4,7 @@ package sih.ipsec.ml.v1;
 
 import "google/protobuf/empty.proto";
 
-option go_package = "github.com/naman9271/SIH26160---Team-Alchemist/backend/gen/ml/v1;mlv1";
+option go_package = "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/ml/v1;mlv1";
 
 service TrafficClassifier {
   rpc PredictTraffic(FlowFeatures) returns (PredictionResult);

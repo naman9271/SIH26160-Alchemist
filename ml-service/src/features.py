@@ -12,7 +12,7 @@ import hashlib
 import logging
 import socket
 import statistics
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from math import floor, isfinite
 from pathlib import Path
@@ -223,7 +223,27 @@ def _finalize_flow(
     }
 
 
-def _read_capture_flows(path: Path) -> tuple[dict[Hashable, _FlowAccumulator], int]:
+def _is_encrypted_ipsec_data(ip_packet: dpkt.ip.IP | dpkt.ip6.IP6) -> bool:
+    """Accept ESP, including RFC 3948 UDP encapsulation, but not IKE/keepalives."""
+
+    protocol = int(ip_packet.p if isinstance(ip_packet, dpkt.ip.IP) else ip_packet.nxt)
+    if protocol == 50:
+        return True
+    transport = ip_packet.data
+    if protocol != 17 or not isinstance(transport, dpkt.udp.UDP):
+        return False
+    if int(transport.sport) != 4500 and int(transport.dport) != 4500:
+        return False
+    payload = bytes(transport.data)
+    if payload == b"\xff" or len(payload) < 4:
+        return False
+    return payload[:4] != b"\x00\x00\x00\x00"
+
+
+def _read_capture_flows(
+    path: Path,
+    packet_filter: Callable[[dpkt.ip.IP | dpkt.ip6.IP6], bool] | None = None,
+) -> tuple[dict[Hashable, _FlowAccumulator], int]:
     flows: dict[Hashable, _FlowAccumulator] = {}
     malformed_frames = 0
     with path.open("rb") as file:
@@ -232,6 +252,8 @@ def _read_capture_flows(path: Path) -> tuple[dict[Hashable, _FlowAccumulator], i
             ip_packet = _network_packet(frame)
             if ip_packet is None:
                 malformed_frames += 1
+                continue
+            if packet_filter is not None and not packet_filter(ip_packet):
                 continue
             key, source, _ = _flow_key(ip_packet)
             flow = flows.setdefault(key, _FlowAccumulator(initiator=source))
@@ -258,11 +280,15 @@ def extract_window_features(
     path: Path,
     capture_id: str,
     config: FeatureExtractionConfig,
+    *,
+    encrypted_ipsec_only: bool = False,
 ) -> Iterator[dict[str, object]]:
     """Yield complete, inference-ready metadata for fixed per-flow windows."""
 
     config.validate()
-    flows, malformed_frames = _read_capture_flows(path)
+    flows, malformed_frames = _read_capture_flows(
+        path, _is_encrypted_ipsec_data if encrypted_ipsec_only else None
+    )
     if malformed_frames:
         LOGGER.info("%s ignored %d non-IP or malformed frames", path, malformed_frames)
     for key, flow in flows.items():

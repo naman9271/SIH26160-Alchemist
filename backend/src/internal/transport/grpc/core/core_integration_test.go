@@ -10,7 +10,6 @@ import (
 	"github.com/google/uuid"
 	coresystemv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/system"
 	workspacev1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/workspace"
-	sensorv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/sensor/v1"
 	coresystem "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/system"
 	coreworkspace "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/workspace"
 	transport "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/transport/grpc/core"
@@ -163,7 +162,7 @@ func TestWorkspaceServiceOverGRPC(t *testing.T) {
 	}
 	if !f.state.UpdateIfCurrent(ownedID, generation, func(record *coreworkspace.Record) {
 		record.State = workspacev1.WorkspaceState_WORKSPACE_STATE_COMPLETED
-		record.Mode = sensorv1.SensorMode_PASSIVE_PCAP
+		record.Mode = workspacev1.AnalysisMode_OFFLINE_PCAP
 		record.SourceID = "source"
 		record.AnalysisID = "analysis"
 		record.MLJobID = "ml"

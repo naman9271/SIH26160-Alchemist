@@ -38,8 +38,11 @@ func (h lifecycleHooks) ResetForSession(ctx context.Context, id string, remove b
 
 func New(engine capture.Engine, counters network.CounterReader, metrics capture.FlowMetrics) Services {
 	sessions := session.New()
+	flows := flow.New(flow.Config{})
+	if metrics == nil {
+		metrics = flows
+	}
 	captures := capture.New(sessions, engine, metrics)
-	flows := flow.New(64)
 	captures.SetPacketObserver(func(ctx context.Context, packet capture.PacketMetadata) error {
 		return observePacket(ctx, flows, packet)
 	})
@@ -49,17 +52,19 @@ func New(engine capture.Engine, counters network.CounterReader, metrics capture.
 
 func observePacket(ctx context.Context, flows *flow.Service, p capture.PacketMetadata) error {
 	protocol := flowv1.FlowProtocol_OTHER
-	switch p.Protocol {
-	case 50:
+	switch {
+	case p.NATKeepalive:
+		return nil
+	case p.IKE:
+		protocol = flowv1.FlowProtocol_IKE
+	case p.EncapsulatedESP:
+		protocol = flowv1.FlowProtocol_NAT_T
+	case p.Protocol == 50:
 		protocol = flowv1.FlowProtocol_ESP
-	case 51:
+	case p.Protocol == 51:
 		protocol = flowv1.FlowProtocol_AH
-	case 17:
-		if p.SourcePort == 4500 || p.DestinationPort == 4500 {
-			protocol = flowv1.FlowProtocol_NAT_T
-		} else if p.SourcePort == 500 || p.DestinationPort == 500 {
-			protocol = flowv1.FlowProtocol_IKE
-		}
+	case p.NATT:
+		return nil
 	}
 	_, err := flows.ObservePacket(ctx, flow.Packet{SessionID: p.SessionID, Protocol: protocol, SourceAddress: p.SourceAddress, DestinationAddress: p.DestinationAddress, SourcePort: uint32(p.SourcePort), DestinationPort: uint32(p.DestinationPort), SPI: p.SPI, Size: p.Length, SeenAt: p.SeenAt})
 	return err

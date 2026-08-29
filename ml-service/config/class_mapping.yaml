@@ -12,6 +12,16 @@ canonical_classes:
 ignore_label: IGNORE
 
 datasets:
+  ipsec-pcap-lab:
+    label_source: metadata.csv:traffic_class
+    labels:
+      web: web
+      video: video
+      file: file_transfer
+      ping: icmp
+      # Only explicit application ground truth is mapped. IKE version, VPN
+      # mode, cipher, PFS and NAT-T metadata are never classifier labels.
+
   cicdarknet2020.parquet:
     label_source: Label
     labels:

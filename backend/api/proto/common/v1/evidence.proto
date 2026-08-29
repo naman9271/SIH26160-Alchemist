@@ -9,6 +9,10 @@ enum EvidenceStatus {
   EVIDENCE_STATUS_UNSPECIFIED = 0;
   OBSERVED = 1;
   DERIVED = 2;
-  VERIFIED_GATEWAY = 3;
-  UNKNOWN = 4;
+  // INFERRED is reserved for probabilistic conclusions such as ML output.
+  INFERRED = 3;
+  // VERIFIED_GATEWAY is stronger than packet-derived evidence and is emitted
+  // only by trusted read-only gateway sources such as VICI or XFRM.
+  VERIFIED_GATEWAY = 4;
+  UNKNOWN = 5;
 }

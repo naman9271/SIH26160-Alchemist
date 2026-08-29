@@ -1,5 +1,8 @@
 # IPsec Security Analyzer — Evidence Fusion Engine Internal Contract Specification v1.0
 
+> **Status:** Extended roadmap catalogue. The normative MVP ownership and
+> evidence values are in [`ARCHITECTURE_MVP.md`](ARCHITECTURE_MVP.md).
+
 > **Scope:** This document specifies the **Evidence Fusion Engine logical module** inside the one Go Server.
 >
 > The Fusion Engine combines evidence produced by:
@@ -98,8 +101,8 @@ enum EvidenceSource {
   STRONGSWAN_VICI = 10;
   LINUX_XFRM = 11;
 
-  ML_XGBOOST = 20;
-  ML_TCN = 21;
+  ML_CLASSIFIER = 20; // model name/version are evidence metadata
+  ML_ANOMALY = 21;    // separate from traffic class and UNKNOWN
   SHAP = 22;
 
   SECURITY_RULE_ENGINE = 30; // finding/provenance references only
@@ -658,7 +661,7 @@ resource_id = child-123
   "PACKET_PARSER": "COMPLETE",
   "STRONGSWAN_VICI": "COMPLETE",
   "LINUX_XFRM": "UNAVAILABLE",
-  "ML_XGBOOST": "COMPLETE",
+  "ML_CLASSIFIER": "COMPLETE",
   "SECURITY_RULE_ENGINE": "COMPLETE"
 }
 ```
@@ -1178,7 +1181,7 @@ Example:
   "PACKET_PARSER": 0.31,
   "STRONGSWAN_VICI": 0.41,
   "LINUX_XFRM": 0.17,
-  "ML_XGBOOST": 0.11
+  "ML_CLASSIFIER": 0.11
 }
 ```
 
@@ -1541,13 +1544,14 @@ status = INFERRED
 ambiguity = HIGH
 ```
 
-or policy may return:
+The classifier may already have returned:
 
 ```text
 traffic.class = UNKNOWN
 ```
 
-when below threshold.
+when below its calibrated threshold. Fusion preserves `is_unknown`; it does
+not apply another probability threshold.
 
 ---
 

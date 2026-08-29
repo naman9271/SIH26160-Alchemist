@@ -7,7 +7,6 @@
 package workspacev1
 
 import (
-	v1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/sensor/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -85,6 +84,60 @@ func (x WorkspaceState) Number() protoreflect.EnumNumber {
 // Deprecated: Use WorkspaceState.Descriptor instead.
 func (WorkspaceState) EnumDescriptor() ([]byte, []int) {
 	return file_api_proto_core_v1_workspace_workspace_proto_rawDescGZIP(), []int{0}
+}
+
+// AnalysisMode is a public Core concept. It deliberately does not expose the
+// internal Sensor contract to browser or API clients.
+type AnalysisMode int32
+
+const (
+	AnalysisMode_ANALYSIS_MODE_UNSPECIFIED AnalysisMode = 0
+	AnalysisMode_PASSIVE_LIVE              AnalysisMode = 1
+	AnalysisMode_OFFLINE_PCAP              AnalysisMode = 2
+	AnalysisMode_DEEP_ASSESSMENT           AnalysisMode = 3
+)
+
+// Enum value maps for AnalysisMode.
+var (
+	AnalysisMode_name = map[int32]string{
+		0: "ANALYSIS_MODE_UNSPECIFIED",
+		1: "PASSIVE_LIVE",
+		2: "OFFLINE_PCAP",
+		3: "DEEP_ASSESSMENT",
+	}
+	AnalysisMode_value = map[string]int32{
+		"ANALYSIS_MODE_UNSPECIFIED": 0,
+		"PASSIVE_LIVE":              1,
+		"OFFLINE_PCAP":              2,
+		"DEEP_ASSESSMENT":           3,
+	}
+)
+
+func (x AnalysisMode) Enum() *AnalysisMode {
+	p := new(AnalysisMode)
+	*p = x
+	return p
+}
+
+func (x AnalysisMode) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (AnalysisMode) Descriptor() protoreflect.EnumDescriptor {
+	return file_api_proto_core_v1_workspace_workspace_proto_enumTypes[1].Descriptor()
+}
+
+func (AnalysisMode) Type() protoreflect.EnumType {
+	return &file_api_proto_core_v1_workspace_workspace_proto_enumTypes[1]
+}
+
+func (x AnalysisMode) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use AnalysisMode.Descriptor instead.
+func (AnalysisMode) EnumDescriptor() ([]byte, []int) {
+	return file_api_proto_core_v1_workspace_workspace_proto_rawDescGZIP(), []int{1}
 }
 
 type CreateWorkspaceRequest struct {
@@ -278,7 +331,7 @@ type Workspace struct {
 	WorkspaceId     string                 `protobuf:"bytes,1,opt,name=workspace_id,json=workspaceId,proto3" json:"workspace_id,omitempty"`
 	DisplayName     string                 `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
 	State           WorkspaceState         `protobuf:"varint,3,opt,name=state,proto3,enum=core.workspace.v1.WorkspaceState" json:"state,omitempty"`
-	Mode            v1.SensorMode          `protobuf:"varint,4,opt,name=mode,proto3,enum=sensor.v1.SensorMode" json:"mode,omitempty"`
+	Mode            AnalysisMode           `protobuf:"varint,4,opt,name=mode,proto3,enum=core.workspace.v1.AnalysisMode" json:"mode,omitempty"`
 	SensorSessionId string                 `protobuf:"bytes,5,opt,name=sensor_session_id,json=sensorSessionId,proto3" json:"sensor_session_id,omitempty"`
 	SourceId        string                 `protobuf:"bytes,6,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
 	CaptureId       string                 `protobuf:"bytes,7,opt,name=capture_id,json=captureId,proto3" json:"capture_id,omitempty"`
@@ -344,11 +397,11 @@ func (x *Workspace) GetState() WorkspaceState {
 	return WorkspaceState_WORKSPACE_STATE_UNSPECIFIED
 }
 
-func (x *Workspace) GetMode() v1.SensorMode {
+func (x *Workspace) GetMode() AnalysisMode {
 	if x != nil {
 		return x.Mode
 	}
-	return v1.SensorMode(0)
+	return AnalysisMode_ANALYSIS_MODE_UNSPECIFIED
 }
 
 func (x *Workspace) GetSensorSessionId() string {
@@ -424,7 +477,7 @@ func (x *Workspace) GetUpdatedAt() *timestamppb.Timestamp {
 type WorkspaceStateResponse struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	State          WorkspaceState         `protobuf:"varint,1,opt,name=state,proto3,enum=core.workspace.v1.WorkspaceState" json:"state,omitempty"`
-	Mode           v1.SensorMode          `protobuf:"varint,2,opt,name=mode,proto3,enum=sensor.v1.SensorMode" json:"mode,omitempty"`
+	Mode           AnalysisMode           `protobuf:"varint,2,opt,name=mode,proto3,enum=core.workspace.v1.AnalysisMode" json:"mode,omitempty"`
 	HasSource      bool                   `protobuf:"varint,3,opt,name=has_source,json=hasSource,proto3" json:"has_source,omitempty"`
 	HasAnalysis    bool                   `protobuf:"varint,4,opt,name=has_analysis,json=hasAnalysis,proto3" json:"has_analysis,omitempty"`
 	HasMlResult    bool                   `protobuf:"varint,5,opt,name=has_ml_result,json=hasMlResult,proto3" json:"has_ml_result,omitempty"`
@@ -471,11 +524,11 @@ func (x *WorkspaceStateResponse) GetState() WorkspaceState {
 	return WorkspaceState_WORKSPACE_STATE_UNSPECIFIED
 }
 
-func (x *WorkspaceStateResponse) GetMode() v1.SensorMode {
+func (x *WorkspaceStateResponse) GetMode() AnalysisMode {
 	if x != nil {
 		return x.Mode
 	}
-	return v1.SensorMode(0)
+	return AnalysisMode_ANALYSIS_MODE_UNSPECIFIED
 }
 
 func (x *WorkspaceStateResponse) GetHasSource() bool {
@@ -569,7 +622,7 @@ var File_api_proto_core_v1_workspace_workspace_proto protoreflect.FileDescriptor
 
 const file_api_proto_core_v1_workspace_workspace_proto_rawDesc = "" +
 	"\n" +
-	"+api/proto/core/v1/workspace/workspace.proto\x12\x11core.workspace.v1\x1a api/proto/sensor/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\";\n" +
+	"+api/proto/core/v1/workspace/workspace.proto\x12\x11core.workspace.v1\x1a\x1fgoogle/protobuf/timestamp.proto\";\n" +
 	"\x16CreateWorkspaceRequest\x12!\n" +
 	"\fdisplay_name\x18\x01 \x01(\tR\vdisplayName\"8\n" +
 	"\x13GetWorkspaceRequest\x12!\n" +
@@ -578,12 +631,12 @@ const file_api_proto_core_v1_workspace_workspace_proto_rawDesc = "" +
 	"\fworkspace_id\x18\x01 \x01(\tR\vworkspaceId\"c\n" +
 	"\x15ResetWorkspaceRequest\x12\x14\n" +
 	"\x05force\x18\x01 \x01(\bR\x05force\x124\n" +
-	"\x16delete_temporary_files\x18\x02 \x01(\bR\x14deleteTemporaryFiles\"\xc1\x04\n" +
+	"\x16delete_temporary_files\x18\x02 \x01(\bR\x14deleteTemporaryFiles\"\xcb\x04\n" +
 	"\tWorkspace\x12!\n" +
 	"\fworkspace_id\x18\x01 \x01(\tR\vworkspaceId\x12!\n" +
 	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x127\n" +
-	"\x05state\x18\x03 \x01(\x0e2!.core.workspace.v1.WorkspaceStateR\x05state\x12)\n" +
-	"\x04mode\x18\x04 \x01(\x0e2\x15.sensor.v1.SensorModeR\x04mode\x12*\n" +
+	"\x05state\x18\x03 \x01(\x0e2!.core.workspace.v1.WorkspaceStateR\x05state\x123\n" +
+	"\x04mode\x18\x04 \x01(\x0e2\x1f.core.workspace.v1.AnalysisModeR\x04mode\x12*\n" +
 	"\x11sensor_session_id\x18\x05 \x01(\tR\x0fsensorSessionId\x12\x1b\n" +
 	"\tsource_id\x18\x06 \x01(\tR\bsourceId\x12\x1d\n" +
 	"\n" +
@@ -599,10 +652,10 @@ const file_api_proto_core_v1_workspace_workspace_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xab\x02\n" +
+	"updated_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xb5\x02\n" +
 	"\x16WorkspaceStateResponse\x127\n" +
-	"\x05state\x18\x01 \x01(\x0e2!.core.workspace.v1.WorkspaceStateR\x05state\x12)\n" +
-	"\x04mode\x18\x02 \x01(\x0e2\x15.sensor.v1.SensorModeR\x04mode\x12\x1d\n" +
+	"\x05state\x18\x01 \x01(\x0e2!.core.workspace.v1.WorkspaceStateR\x05state\x123\n" +
+	"\x04mode\x18\x02 \x01(\x0e2\x1f.core.workspace.v1.AnalysisModeR\x04mode\x12\x1d\n" +
 	"\n" +
 	"has_source\x18\x03 \x01(\bR\thasSource\x12!\n" +
 	"\fhas_analysis\x18\x04 \x01(\bR\vhasAnalysis\x12\"\n" +
@@ -621,7 +674,12 @@ const file_api_proto_core_v1_workspace_workspace_proto_rawDesc = "" +
 	"\x19WORKSPACE_STATE_ANALYZING\x10\x04\x12\x1d\n" +
 	"\x19WORKSPACE_STATE_COMPLETED\x10\x05\x12\x1a\n" +
 	"\x16WORKSPACE_STATE_FAILED\x10\x06\x12\x1d\n" +
-	"\x19WORKSPACE_STATE_RESETTING\x10\a2\xf4\x02\n" +
+	"\x19WORKSPACE_STATE_RESETTING\x10\a*f\n" +
+	"\fAnalysisMode\x12\x1d\n" +
+	"\x19ANALYSIS_MODE_UNSPECIFIED\x10\x00\x12\x10\n" +
+	"\fPASSIVE_LIVE\x10\x01\x12\x10\n" +
+	"\fOFFLINE_PCAP\x10\x02\x12\x13\n" +
+	"\x0fDEEP_ASSESSMENT\x10\x032\xf4\x02\n" +
 	"\x10WorkspaceService\x12Q\n" +
 	"\x06Create\x12).core.workspace.v1.CreateWorkspaceRequest\x1a\x1c.core.workspace.v1.Workspace\x12K\n" +
 	"\x03Get\x12&.core.workspace.v1.GetWorkspaceRequest\x1a\x1c.core.workspace.v1.Workspace\x12b\n" +
@@ -640,36 +698,36 @@ func file_api_proto_core_v1_workspace_workspace_proto_rawDescGZIP() []byte {
 	return file_api_proto_core_v1_workspace_workspace_proto_rawDescData
 }
 
-var file_api_proto_core_v1_workspace_workspace_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_api_proto_core_v1_workspace_workspace_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
 var file_api_proto_core_v1_workspace_workspace_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_api_proto_core_v1_workspace_workspace_proto_goTypes = []any{
 	(WorkspaceState)(0),              // 0: core.workspace.v1.WorkspaceState
-	(*CreateWorkspaceRequest)(nil),   // 1: core.workspace.v1.CreateWorkspaceRequest
-	(*GetWorkspaceRequest)(nil),      // 2: core.workspace.v1.GetWorkspaceRequest
-	(*GetWorkspaceStateRequest)(nil), // 3: core.workspace.v1.GetWorkspaceStateRequest
-	(*ResetWorkspaceRequest)(nil),    // 4: core.workspace.v1.ResetWorkspaceRequest
-	(*Workspace)(nil),                // 5: core.workspace.v1.Workspace
-	(*WorkspaceStateResponse)(nil),   // 6: core.workspace.v1.WorkspaceStateResponse
-	(*ResetWorkspaceResponse)(nil),   // 7: core.workspace.v1.ResetWorkspaceResponse
-	(v1.SensorMode)(0),               // 8: sensor.v1.SensorMode
+	(AnalysisMode)(0),                // 1: core.workspace.v1.AnalysisMode
+	(*CreateWorkspaceRequest)(nil),   // 2: core.workspace.v1.CreateWorkspaceRequest
+	(*GetWorkspaceRequest)(nil),      // 3: core.workspace.v1.GetWorkspaceRequest
+	(*GetWorkspaceStateRequest)(nil), // 4: core.workspace.v1.GetWorkspaceStateRequest
+	(*ResetWorkspaceRequest)(nil),    // 5: core.workspace.v1.ResetWorkspaceRequest
+	(*Workspace)(nil),                // 6: core.workspace.v1.Workspace
+	(*WorkspaceStateResponse)(nil),   // 7: core.workspace.v1.WorkspaceStateResponse
+	(*ResetWorkspaceResponse)(nil),   // 8: core.workspace.v1.ResetWorkspaceResponse
 	(*timestamppb.Timestamp)(nil),    // 9: google.protobuf.Timestamp
 }
 var file_api_proto_core_v1_workspace_workspace_proto_depIdxs = []int32{
 	0,  // 0: core.workspace.v1.Workspace.state:type_name -> core.workspace.v1.WorkspaceState
-	8,  // 1: core.workspace.v1.Workspace.mode:type_name -> sensor.v1.SensorMode
+	1,  // 1: core.workspace.v1.Workspace.mode:type_name -> core.workspace.v1.AnalysisMode
 	9,  // 2: core.workspace.v1.Workspace.created_at:type_name -> google.protobuf.Timestamp
 	9,  // 3: core.workspace.v1.Workspace.updated_at:type_name -> google.protobuf.Timestamp
 	0,  // 4: core.workspace.v1.WorkspaceStateResponse.state:type_name -> core.workspace.v1.WorkspaceState
-	8,  // 5: core.workspace.v1.WorkspaceStateResponse.mode:type_name -> sensor.v1.SensorMode
+	1,  // 5: core.workspace.v1.WorkspaceStateResponse.mode:type_name -> core.workspace.v1.AnalysisMode
 	0,  // 6: core.workspace.v1.ResetWorkspaceResponse.state:type_name -> core.workspace.v1.WorkspaceState
-	1,  // 7: core.workspace.v1.WorkspaceService.Create:input_type -> core.workspace.v1.CreateWorkspaceRequest
-	2,  // 8: core.workspace.v1.WorkspaceService.Get:input_type -> core.workspace.v1.GetWorkspaceRequest
-	3,  // 9: core.workspace.v1.WorkspaceService.GetState:input_type -> core.workspace.v1.GetWorkspaceStateRequest
-	4,  // 10: core.workspace.v1.WorkspaceService.Reset:input_type -> core.workspace.v1.ResetWorkspaceRequest
-	5,  // 11: core.workspace.v1.WorkspaceService.Create:output_type -> core.workspace.v1.Workspace
-	5,  // 12: core.workspace.v1.WorkspaceService.Get:output_type -> core.workspace.v1.Workspace
-	6,  // 13: core.workspace.v1.WorkspaceService.GetState:output_type -> core.workspace.v1.WorkspaceStateResponse
-	7,  // 14: core.workspace.v1.WorkspaceService.Reset:output_type -> core.workspace.v1.ResetWorkspaceResponse
+	2,  // 7: core.workspace.v1.WorkspaceService.Create:input_type -> core.workspace.v1.CreateWorkspaceRequest
+	3,  // 8: core.workspace.v1.WorkspaceService.Get:input_type -> core.workspace.v1.GetWorkspaceRequest
+	4,  // 9: core.workspace.v1.WorkspaceService.GetState:input_type -> core.workspace.v1.GetWorkspaceStateRequest
+	5,  // 10: core.workspace.v1.WorkspaceService.Reset:input_type -> core.workspace.v1.ResetWorkspaceRequest
+	6,  // 11: core.workspace.v1.WorkspaceService.Create:output_type -> core.workspace.v1.Workspace
+	6,  // 12: core.workspace.v1.WorkspaceService.Get:output_type -> core.workspace.v1.Workspace
+	7,  // 13: core.workspace.v1.WorkspaceService.GetState:output_type -> core.workspace.v1.WorkspaceStateResponse
+	8,  // 14: core.workspace.v1.WorkspaceService.Reset:output_type -> core.workspace.v1.ResetWorkspaceResponse
 	11, // [11:15] is the sub-list for method output_type
 	7,  // [7:11] is the sub-list for method input_type
 	7,  // [7:7] is the sub-list for extension type_name
@@ -687,7 +745,7 @@ func file_api_proto_core_v1_workspace_workspace_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_proto_core_v1_workspace_workspace_proto_rawDesc), len(file_api_proto_core_v1_workspace_workspace_proto_rawDesc)),
-			NumEnums:      1,
+			NumEnums:      2,
 			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   1,

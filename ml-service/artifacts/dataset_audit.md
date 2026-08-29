@@ -1,6 +1,6 @@
 # Dataset Audit
 
-Generated: 2026-08-27T11:05:14.705716+00:00
+Generated: 2026-08-29T10:07:58.710361+00:00
 
 Each top-level entry is reported independently. No datasets were combined or modified.
 
@@ -74,6 +74,40 @@ P2P
 - Unique labels: `{"traffic_type": ["BROWSING", "CHAT", "FT", "MAIL", "P2P", "STREAMING", "VOIP", "VPN-BROWSING", "VPN-CHAT", "VPN-FT", "VPN-MAIL", "VPN-P2P", "VPN-STREAMING", "VPN-VOIP"]}`
 - Class counts: `{"traffic_type": {"BROWSING": 10000, "CHAT": 2505, "FT": 3975, "MAIL": 1364, "P2P": 4000, "STREAMING": 1284, "VOIP": 6485, "VPN-BROWSING": 10000, "VPN-CHAT": 2839, "VPN-FT": 4704, "VPN-MAIL": 2444, "VPN-P2P": 3415, "VPN-STREAMING": 1115, "VPN-VOIP": 5576}}`
 - Missing values: `{"duration": 0, "flowBytesPerSecond": 0, "flowPktsPerSecond": 0, "max_active": 0, "max_biat": 0, "max_fiat": 0, "max_flowiat": 0, "max_idle": 0, "mean_active": 0, "mean_biat": 0, "mean_fiat": 0, "mean_flowiat": 0, "mean_idle": 0, "min_active": 0, "min_biat": 0, "min_fiat": 0, "min_flowiat": 0, "min_idle": 0, "std_active": 0, "std_flowiat": 0, "std_idle": 0, "total_biat": 0, "total_fiat": 0, "traffic_type": 0}`
+
+## ipsec-pcap-lab
+
+- Files: 21 (205.4 MiB)
+- Formats: csv, pcap
+- Raw PCAP/PCAPNG present: True
+- Inferred type(s): application traffic
+- Label columns: traffic_class
+- FlowFeatures overlap: {}
+- Possible leakage: cipher, dh_group, esp_proposal, filename/path-derived labels (capture provenance; never use as a feature), ike_proposal, ike_version, integrity, mode, nat_t, nat_t_forced, outer_left, outer_right, pcap_file, pfs, sample_id, sha256, traffic_class, traffic_generator
+
+### Target-class mappings
+- `file` → `file_transfer` (explicit dataset label or filename)
+- `ping` → `icmp` (explicit dataset label or filename)
+- `video` → `video` (explicit dataset label or filename)
+- `web` → `web` (explicit dataset label or filename)
+
+### Unresolved labels
+
+file_p, pcaps, ping_p, video_p, web_p
+
+### Labels not to map
+
+None
+
+### Tabular details
+
+#### `/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/ml-service/data/external/ipsec-pcap-lab/metadata.csv`
+
+- Rows: 20
+- Columns: sample_id, pcap_file, traffic_class, mode, ike_version, ike_proposal, esp_proposal, cipher, integrity, dh_group, pfs, ip_version, nat_t, nat_t_forced, actual_nat_present, peer_auth, capture_duration_s, outer_left, outer_right, traffic_generator, sha256
+- Unique labels: `{"traffic_class": ["file", "ping", "video", "web"]}`
+- Class counts: `{"traffic_class": {"file": 5, "ping": 5, "video": 5, "web": 5}}`
+- Missing values: `{"actual_nat_present": 0, "capture_duration_s": 0, "cipher": 0, "dh_group": 0, "esp_proposal": 0, "ike_proposal": 0, "ike_version": 0, "integrity": 0, "ip_version": 0, "mode": 0, "nat_t": 0, "nat_t_forced": 0, "outer_left": 0, "outer_right": 0, "pcap_file": 0, "peer_auth": 0, "pfs": 0, "sample_id": 0, "sha256": 0, "traffic_class": 0, "traffic_generator": 0}`
 
 ## Network-Traffic-Dataset
 

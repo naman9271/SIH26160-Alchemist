@@ -44,8 +44,8 @@ LABEL_COLUMN_NAMES = {
     "classes",
     "target",
     "category",
-    "traffic_type",
     "traffictype",
+    "trafficclass",
     "application",
     "app",
     "service",
@@ -100,19 +100,31 @@ FLOW_FEATURE_ALIASES: Mapping[str, set[str]] = {
 
 LEAKAGE_TERMS = (
     "filename",
-    "file_name",
     "filepath",
-    "file_path",
     "pcap",
     "flowid",
-    "flow_id",
+    "sampleid",
+    "recordid",
     "srcip",
     "sourceip",
     "dstip",
     "destinationip",
+    "outerleft",
+    "outerright",
     "timestamp",
     "time",
     "date",
+    "sha256",
+    "trafficgenerator",
+    "ikeversion",
+    "ikeproposal",
+    "espproposal",
+    "cipher",
+    "integrity",
+    "dhgroup",
+    "pfs",
+    "natt",
+    "mode",
 )
 
 DIRECT_TARGET_MAPPINGS: Mapping[str, str] = {
@@ -130,6 +142,7 @@ DIRECT_TARGET_MAPPINGS: Mapping[str, str] = {
     "email": "email",
     "mail": "email",
     "ft": "file_transfer",
+    "file": "file_transfer",
     "ftp": "file_transfer",
     "smb": "file_transfer",
     "dropbox": "file_transfer",
@@ -140,6 +153,7 @@ DIRECT_TARGET_MAPPINGS: Mapping[str, str] = {
     "messaging": "messaging",
     "voip": "voip",
     "icmp": "icmp",
+    "ping": "icmp",
 }
 
 DO_NOT_MAP_TOKENS = {

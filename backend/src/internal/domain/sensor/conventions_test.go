@@ -100,7 +100,7 @@ func TestSharedEnumNumbersAreStable(t *testing.T) {
 	if sensorv1.SensorMode_DEEP_ASSESSMENT != 3 {
 		t.Fatalf("DEEP_ASSESSMENT number = %d, want 3", sensorv1.SensorMode_DEEP_ASSESSMENT)
 	}
-	if commonv1.EvidenceStatus_VERIFIED_GATEWAY != 3 || commonv1.EvidenceStatus_UNKNOWN != 4 {
+	if commonv1.EvidenceStatus_INFERRED != 3 || commonv1.EvidenceStatus_VERIFIED_GATEWAY != 4 || commonv1.EvidenceStatus_UNKNOWN != 5 {
 		t.Fatalf("EvidenceStatus numeric contract changed")
 	}
 }
