@@ -18,39 +18,20 @@ import (
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/workspace"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/fusion"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/sensor/acquisition"
-<<<<<<< HEAD
 	coretransport "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/transport/grpc/core"
-=======
-	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/sensor/system"
-	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/sensor/vici"
-	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/sensor/xfrm"
-	transport "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/transport/grpc/sensor"
->>>>>>> decaacd (fixed the non working api's)
 	"google.golang.org/grpc"
 )
 
 func main() {
-<<<<<<< HEAD
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	sensorServices := acquisition.New(nil, nil, nil)
-	fusionEngine := fusion.New()
+	fusionRuntime := fusion.NewRuntime(fusion.RuntimeOptions{})
+	fusionReadiness, fusionReadinessErr := fusionRuntime.System.Readiness(context.Background())
 	workspaceService := workspace.New(workspace.Options{})
 	provider := &dependencies.Provider{
 		Sensor:          sensorServices,
 		MLAddress:       envOrDefault("ML_GRPC_ADDRESS", "127.0.0.1:50051"),
-		FusionAvailable: fusionEngine != nil,
-=======
-	services := acquisition.New(nil, nil, nil)
-	grpcServer := grpc.NewServer()
-	sensorv1.RegisterSensorSystemServiceServer(grpcServer, transport.NewSystemHandler(system.New(system.Options{})))
-	transport.RegisterAcquisitionServices(grpcServer, transport.NewSessionHandler(services.Sessions), transport.NewNetworkInterfaceHandler(services.Interfaces), transport.NewCaptureHandler(services.Captures))
-	transport.RegisterTelemetryServices(grpcServer, transport.NewFlowHandler(services.Flows), transport.NewViciHandler(vici.New(nil)))
-	transport.RegisterDeepAndTelemetryServices(grpcServer, transport.NewXfrmHandler(xfrm.New(nil)), transport.NewTelemetryHandler(services.Sessions, services.Flows))
-	reflection.Register(grpcServer)
-	grpcListener, err := net.Listen("tcp", ":50052")
-	if err != nil {
-		log.Fatalf("gRPC listener: %v", err)
->>>>>>> decaacd (fixed the non working api's)
+		FusionAvailable: fusionReadinessErr == nil && fusionReadiness.Ready,
 	}
 	systemService := coresystem.New(coresystem.Options{
 		Dependencies: provider,

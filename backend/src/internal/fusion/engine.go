@@ -9,19 +9,20 @@ import (
 	"time"
 
 	commonv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/common/v1"
+	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/fusion/model"
 )
 
-type Source string
+type Source = model.Source
 
 const (
-	SourcePacketParser Source = "PACKET_PARSER"
-	SourceFlowAnalyzer Source = "FLOW_ANALYZER"
-	SourceVICI         Source = "STRONGSWAN_VICI"
-	SourceXFRM         Source = "LINUX_XFRM"
-	SourceMLClassifier Source = "ML_CLASSIFIER"
-	SourceMLAnomaly    Source = "ML_ANOMALY"
-	SourceSHAP         Source = "SHAP"
-	SourceSecurityRule Source = "SECURITY_RULE_ENGINE"
+	SourcePacketParser = model.SourcePacketParser
+	SourceFlowAnalyzer = model.SourceFlowAnalyzer
+	SourceVICI         = model.SourceVICI
+	SourceXFRM         = model.SourceXFRM
+	SourceMLClassifier = model.SourceMLClassifier
+	SourceMLAnomaly    = model.SourceMLAnomaly
+	SourceSHAP         = model.SourceSHAP
+	SourceSecurityRule = model.SourceSecurityRule
 )
 
 type Evidence struct {
