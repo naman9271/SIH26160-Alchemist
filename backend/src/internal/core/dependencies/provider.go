@@ -65,7 +65,11 @@ func (p *Provider) Capabilities(ctx context.Context) (coresystem.Capabilities, e
 	passiveLive := p.sensorAvailable(ctx)
 	mlAvailable := p.mlAvailable(ctx)
 	return coresystem.Capabilities{
-		PassiveLive:      passiveLive,
+		PassiveLive: passiveLive,
+		// The capture package can decode an uploaded classic-PCAP stream without
+		// relying on tcpdump or local capture privileges. PCAPNG is intentionally
+		// not advertised until its parser is implemented.
+		PassivePCAP:      true,
 		MLClassification: mlAvailable,
 		SHAP:             mlAvailable,
 		MetadataExposure: true,
@@ -129,7 +133,7 @@ func (p *Provider) SensorProbe(ctx context.Context) (localsensor.Probe, error) {
 	}
 	return localsensor.Probe{
 		PassiveLive: localsensor.Dependency{Available: live, Reason: reason},
-		PassivePCAP: localsensor.Dependency{Reason: "offline Go PCAP ingestion is not implemented"},
+		PassivePCAP: localsensor.Dependency{Available: true, Reason: "classic PCAP decoding is available; PCAPNG is not supported by the Go decoder yet"},
 		VICI:        localsensor.Dependency{Reason: "StrongSwan VICI decoder is not configured"},
 		XFRM:        localsensor.Dependency{Reason: "Linux XFRM provider is not configured"},
 	}, nil
