@@ -17,8 +17,20 @@ datasets:
     labels:
       web: web
       video: video
+      voip: voip
+      email: email
+      messaging: messaging
       file: file_transfer
+      file_transfer: file_transfer
       ping: icmp
+      icmp: icmp
+      # These labels are evaluation-only and must never be included in the
+      # supervised known-traffic dataset.
+      dns: IGNORE
+      interactive_ssh: IGNORE
+      gaming_udp: IGNORE
+      protocol_session: IGNORE
+      unknown: IGNORE
       # Only explicit application ground truth is mapped. IKE version, VPN
       # mode, cipher, PFS and NAT-T metadata are never classifier labels.
 

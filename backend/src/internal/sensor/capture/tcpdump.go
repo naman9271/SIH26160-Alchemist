@@ -213,6 +213,70 @@ func readPCAP(reader io.Reader, writer io.Writer, h *tcpdumpHandle, config Confi
 	}
 }
 
+// ReadOfflinePCAP decodes a finite classic-PCAP stream with the same metadata
+// decoder as live tcpdump capture. It is intentionally limited to classic
+// PCAP; PCAPNG is rejected until a real parser is added.
+func ReadOfflinePCAP(ctx context.Context, reader io.Reader, sessionID string, observer PacketObserver) (OfflineResult, error) {
+	if ctx == nil {
+		return OfflineResult{}, shared.NewError(shared.InvalidArgument, "", "context is required")
+	}
+	if reader == nil {
+		return OfflineResult{}, shared.NewError(shared.InvalidArgument, "", "PCAP reader is required")
+	}
+	if strings.TrimSpace(sessionID) == "" {
+		return OfflineResult{}, shared.NewError(shared.InvalidArgument, "", "session_id is required")
+	}
+	header := make([]byte, 24)
+	if _, err := io.ReadFull(reader, header); err != nil {
+		return OfflineResult{}, shared.NewError(shared.InvalidArgument, shared.InvalidPCAP, "read PCAP header: "+err.Error())
+	}
+	format, ok := pcapFormatForMagic(header[:4])
+	if !ok {
+		return OfflineResult{}, shared.NewError(shared.InvalidArgument, shared.InvalidPCAP, "unsupported PCAP format")
+	}
+	result := OfflineResult{}
+	recordHeader := make([]byte, 16)
+	for {
+		if err := ctx.Err(); err != nil {
+			return OfflineResult{}, err
+		}
+		if _, err := io.ReadFull(reader, recordHeader); err != nil {
+			if errors.Is(err, io.EOF) {
+				return result, nil
+			}
+			return OfflineResult{}, shared.NewError(shared.InvalidArgument, shared.InvalidPCAP, "read PCAP record: "+err.Error())
+		}
+		length := format.order.Uint32(recordHeader[8:12])
+		if length > 16<<20 {
+			return OfflineResult{}, shared.NewError(shared.InvalidArgument, shared.InvalidPCAP, "PCAP packet exceeds safety limit")
+		}
+		packet := make([]byte, length)
+		if _, err := io.ReadFull(reader, packet); err != nil {
+			return OfflineResult{}, shared.NewError(shared.InvalidArgument, shared.InvalidPCAP, "read PCAP packet: "+err.Error())
+		}
+		fraction := int64(format.order.Uint32(recordHeader[4:8]))
+		if !format.nanosecond {
+			fraction *= 1_000
+		}
+		seenAt := time.Unix(int64(format.order.Uint32(recordHeader[:4])), fraction).UTC()
+		if result.FirstSeen.IsZero() {
+			result.FirstSeen = seenAt
+		}
+		result.LastSeen = seenAt
+		result.Counters.PacketsTotal++
+		result.Counters.BytesTotal += uint64(length)
+		classify(packet, &result.Counters)
+		if observer != nil {
+			if metadata, decoded := decodePacketMetadata(packet, uint64(length), seenAt); decoded {
+				metadata.SessionID = sessionID
+				if err := observer(ctx, metadata); err != nil {
+					return OfflineResult{}, err
+				}
+			}
+		}
+	}
+}
+
 func decodePacketMetadata(packet []byte, length uint64, seenAt time.Time) (PacketMetadata, bool) {
 	protocol, payload, source, destination, ok := networkPayload(packet)
 	if !ok {

@@ -208,6 +208,47 @@ def test_ipsec_lab_uses_metadata_label_and_only_esp_windows(tmp_path: Path) -> N
     assert records[0].split_group_id == "ipsec-pcap-lab:sample-1"
 
 
+def test_ipsec_lab_reads_nested_known_records_and_excludes_evaluation_roles(tmp_path: Path) -> None:
+    external_root = tmp_path / "external"
+    lab = external_root / "ipsec-pcap-lab"
+    known = lab / "pcaps" / "known" / "email" / "capture.pcap"
+    ood = lab / "pcaps" / "ood" / "dns.pcap"
+    write_two_packet_esp_capture(known)
+    write_two_packet_esp_capture(ood)
+    known_hash = hashlib.sha256(known.read_bytes()).hexdigest()
+    ood_hash = hashlib.sha256(ood.read_bytes()).hexdigest()
+    lab.joinpath("metadata.csv").write_text(
+        "sample_id,pcap_file,traffic_class,canonical_label,dataset_role,sha256\n"
+        f"known-1,pcaps/known/email/capture.pcap,email,email,train_known,{known_hash}\n"
+        f"ood-1,pcaps/ood/dns.pcap,dns,IGNORE,ood_eval,{ood_hash}\n",
+        encoding="utf-8",
+    )
+    adapter = create_adapter("ipsec-pcap-lab", external_root, load_class_mapping(MAPPING_PATH))
+
+    records = list(adapter.iter_records())
+
+    assert len(records) == 1
+    assert records[0].capture_id == "pcaps/known/email/capture.pcap"
+    assert records[0].original_label == "email"
+    assert records[0].canonical_label == "email"
+    assert any("non-supervised dataset_role" in reason for reason in adapter.skipped_reasons)
+
+
+def test_ipsec_lab_rejects_path_traversal_in_manifest(tmp_path: Path) -> None:
+    external_root = tmp_path / "external"
+    lab = external_root / "ipsec-pcap-lab"
+    lab.mkdir(parents=True)
+    lab.joinpath("metadata.csv").write_text(
+        "sample_id,pcap_file,traffic_class,sha256\n"
+        "unsafe,pcaps/../secret.pcap,web,unused\n",
+        encoding="utf-8",
+    )
+    adapter = create_adapter("ipsec-pcap-lab", external_root, load_class_mapping(MAPPING_PATH))
+
+    assert list(adapter.iter_records()) == []
+    assert any("unsafe pcap_file" in reason for reason in adapter.skipped_reasons)
+
+
 def test_preprocess_writes_only_the_requested_dataset(tmp_path: Path) -> None:
     external_root = tmp_path / "external"
     output_dir = tmp_path / "processed"

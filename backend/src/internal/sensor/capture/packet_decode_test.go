@@ -128,6 +128,39 @@ func TestReadPCAPPreservesNanosecondTimestamps(t *testing.T) {
 	}
 }
 
+func TestReadOfflinePCAPUsesTheLivePacketDecoder(t *testing.T) {
+	frame := ipv4UDPFrame(4500, 4500, []byte{0x12, 0x34, 0x56, 0x78, 1, 2, 3, 4})
+	var input bytes.Buffer
+	header := make([]byte, 24)
+	copy(header[:4], []byte{0xd4, 0xc3, 0xb2, 0xa1})
+	input.Write(header)
+	record := make([]byte, 16)
+	binary.LittleEndian.PutUint32(record[:4], 7)
+	binary.LittleEndian.PutUint32(record[4:8], 500_000)
+	binary.LittleEndian.PutUint32(record[8:12], uint32(len(frame)))
+	binary.LittleEndian.PutUint32(record[12:16], uint32(len(frame)))
+	input.Write(record)
+	input.Write(frame)
+
+	var observed PacketMetadata
+	result, err := ReadOfflinePCAP(context.Background(), &input, "offline-session", func(_ context.Context, metadata PacketMetadata) error {
+		observed = metadata
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("ReadOfflinePCAP error = %v", err)
+	}
+	if result.Counters.PacketsTotal != 1 || result.Counters.NATTPackets != 1 || result.Counters.ESPPackets != 1 {
+		t.Fatalf("offline counters = %+v", result.Counters)
+	}
+	if observed.SessionID != "offline-session" || !observed.EncapsulatedESP || observed.SPI != 0x12345678 {
+		t.Fatalf("offline metadata = %+v", observed)
+	}
+	if result.FirstSeen.Unix() != 7 || result.LastSeen.Nanosecond() != 500_000_000 {
+		t.Fatalf("offline time range = %+v", result)
+	}
+}
+
 func ipv4UDPFrame(sourcePort, destinationPort uint16, data []byte) []byte {
 	frame := make([]byte, 14+20+8+len(data))
 	binary.BigEndian.PutUint16(frame[12:14], 0x0800)

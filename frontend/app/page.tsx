@@ -1,69 +1,83 @@
-import Image from "next/image";
+const trafficClasses = [
+  { label: "Web", value: 10, color: "#58a6ff" },
+  { label: "Video", value: 10, color: "#b392f0" },
+  { label: "VoIP", value: 10, color: "#f778ba" },
+  { label: "Email", value: 10, color: "#f2cc60" },
+  { label: "File transfer", value: 10, color: "#3fb950" },
+  { label: "Messaging", value: 10, color: "#39c5cf" },
+  { label: "ICMP", value: 10, color: "#ff7b72" },
+];
+
+const corpusRoles = [
+  { label: "Known traffic", value: 70, color: "#58a6ff" },
+  { label: "Protocol validation", value: 5, color: "#b392f0" },
+  { label: "OOD / UNKNOWN", value: 4, color: "#f2cc60" },
+  { label: "Anomaly evaluation", value: 3, color: "#ff7b72" },
+];
+
+const profileCoverage = [
+  { label: "IKEv1", value: 33, color: "#f778ba" },
+  { label: "IKEv2", value: 49, color: "#58a6ff" },
+  { label: "Tunnel mode", value: 66, color: "#3fb950" },
+  { label: "Transport mode", value: 16, color: "#f2cc60" },
+  { label: "IPv6", value: 15, color: "#b392f0" },
+];
+
+type ChartItem = { label: string; value: number; color: string };
+
+function BarChart({ title, items, maximum }: { title: string; items: ChartItem[]; maximum: number }) {
+  return (
+    <figure className="panel chart-panel">
+      <figcaption>{title}</figcaption>
+      <div className="bar-list">
+        {items.map((item) => (
+          <div className="bar-row" key={item.label}>
+            <span>{item.label}</span>
+            <div className="bar-track" aria-label={`${item.label}: ${item.value}`}>
+              <div className="bar-fill" style={{ width: `${(item.value / maximum) * 100}%`, background: item.color }} />
+            </div>
+            <strong>{item.value}</strong>
+          </div>
+        ))}
+      </div>
+    </figure>
+  );
+}
+
+function Donut({ value, label, color }: { value: number; label: string; color: string }) {
+  return (
+    <figure className="panel donut-panel">
+      <div className="donut" style={{ background: `conic-gradient(${color} ${value}%, #202b3b 0)` }} aria-label={`${label}: ${value}%`}>
+        <div className="donut-center"><strong>{value}%</strong><span>{label}</span></div>
+      </div>
+    </figure>
+  );
+}
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="dashboard">
+      <header className="topbar">
+        <div><p className="eyebrow">SIH 26160 · Team Alchemist</p><h1>IPsec VPN Analyzer</h1></div>
+        <div className="status-chip">Dataset figures · model not trained</div>
+      </header>
+      <section className="metric-grid" aria-label="Corpus summary">
+        <article className="panel metric"><span>Validated PCAPs</span><strong>82</strong></article>
+        <article className="panel metric"><span>Traffic classes</span><strong>7</strong></article>
+        <article className="panel metric"><span>Known captures</span><strong>70</strong></article>
+        <article className="panel metric warning"><span>Calibrated models</span><strong>0</strong></article>
+      </section>
+      <section className="chart-grid">
+        <BarChart title="Known captures per traffic class" items={trafficClasses} maximum={10} />
+        <BarChart title="Capture corpus by role" items={corpusRoles} maximum={82} />
+        <BarChart title="IPsec profile coverage" items={profileCoverage} maximum={82} />
+        <div className="donut-grid">
+          <Donut value={100} label="hashes verified" color="#3fb950" />
+          <Donut value={0} label="model readiness" color="#ff7b72" />
+          <Donut value={40} label="final corpus target" color="#f2cc60" />
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+      </section>
+      <footer>Figures are static repository-state indicators. Live capture, predictions, risk scores, and reports appear here only after the Core analysis API and trained ML model are available.</footer>
+    </main>
   );
 }

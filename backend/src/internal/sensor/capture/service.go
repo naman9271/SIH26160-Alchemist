@@ -63,6 +63,14 @@ type Counters struct {
 	PacketDrops  uint64
 }
 
+// OfflineResult summarizes one already-captured classic PCAP. It contains
+// payload-free outer-packet facts only; ESP payloads are never decrypted.
+type OfflineResult struct {
+	Counters  Counters
+	FirstSeen time.Time
+	LastSeen  time.Time
+}
+
 type Handle interface {
 	Stop(context.Context) error
 	Done() <-chan error

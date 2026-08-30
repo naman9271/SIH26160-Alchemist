@@ -6,7 +6,7 @@ import csv
 import hashlib
 import logging
 from collections.abc import Iterator
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from src.datasets.base import DatasetAdapter, PreprocessedRecord
 from src.features import (
@@ -22,6 +22,7 @@ LOGGER = logging.getLogger(__name__)
 REQUIRED_METADATA_COLUMNS = frozenset(
     {"sample_id", "pcap_file", "traffic_class", "sha256"}
 )
+SUPERVISED_DATASET_ROLE = "train_known"
 
 
 class IpsecPcapLabAdapter(DatasetAdapter):
@@ -48,17 +49,32 @@ class IpsecPcapLabAdapter(DatasetAdapter):
                     f"ipsec-pcap-lab metadata is missing columns: {', '.join(sorted(missing))}"
                 )
             for row_number, row in enumerate(reader, start=2):
+                dataset_role = (row.get("dataset_role") or SUPERVISED_DATASET_ROLE).strip()
+                if dataset_role != SUPERVISED_DATASET_ROLE:
+                    self.total_source_records += 1
+                    self.skip(
+                        f"metadata row {row_number} has non-supervised dataset_role "
+                        f"{dataset_role!r}"
+                    )
+                    continue
                 original_label = (row.get("traffic_class") or "").strip()
                 canonical_label = self.canonical_label(original_label)
                 if canonical_label is None:
                     self.total_source_records += 1
                     continue
-                filename = Path((row.get("pcap_file") or "").strip())
-                if not filename.name or filename.name != filename.as_posix():
+                declared_canonical_label = (row.get("canonical_label") or "").strip()
+                if declared_canonical_label and declared_canonical_label != canonical_label:
+                    self.total_source_records += 1
+                    self.skip(
+                        f"metadata row {row_number} canonical_label does not match "
+                        "the configured dataset-specific mapping"
+                    )
+                    continue
+                capture_path = _safe_capture_path(self.input_path, row.get("pcap_file") or "")
+                if capture_path is None:
                     self.total_source_records += 1
                     self.skip(f"metadata row {row_number} has an unsafe pcap_file")
                     continue
-                capture_path = self.input_path / "pcaps" / filename.name
                 if not capture_path.is_file():
                     self.total_source_records += 1
                     self.skip(f"metadata row {row_number} capture is missing")
@@ -69,7 +85,7 @@ class IpsecPcapLabAdapter(DatasetAdapter):
                     self.skip(f"metadata row {row_number} SHA-256 does not match")
                     continue
 
-                capture_id = f"pcaps/{filename.name}"
+                capture_id = capture_path.relative_to(self.input_path.resolve()).as_posix()
                 extracted = False
                 try:
                     windows = extract_window_features(
@@ -118,3 +134,32 @@ def _sha256(path: Path) -> str:
         for block in iter(lambda: capture_file.read(1024 * 1024), b""):
             digest.update(block)
     return digest.hexdigest()
+
+
+def _safe_capture_path(dataset_root: Path, raw_path: str) -> Path | None:
+    """Return a PCAP path confined to ``pcaps/`` without flattening its layout.
+
+    Older manifests used a filename such as ``web_p01.pcap``. Current manifests
+    use an explicit relative path such as ``pcaps/known/web/web_p01_R02.pcap``.
+    Both forms are accepted; absolute paths, traversal, and non-capture files
+    are rejected before touching the filesystem.
+    """
+
+    value = raw_path.strip()
+    if not value:
+        return None
+    declared = PurePosixPath(value)
+    if declared.is_absolute() or ".." in declared.parts or declared.name in {"", "."}:
+        return None
+    if declared.suffix.casefold() not in {".pcap", ".pcapng"}:
+        return None
+
+    root = dataset_root.resolve()
+    capture_root = (root / "pcaps").resolve()
+    relative = Path(*declared.parts)
+    candidate = (root / relative) if declared.parts[0] == "pcaps" else (capture_root / relative)
+    try:
+        candidate.resolve().relative_to(capture_root)
+    except ValueError:
+        return None
+    return candidate
