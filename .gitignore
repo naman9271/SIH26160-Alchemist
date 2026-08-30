@@ -8,3 +8,8 @@ ml-service/data/external/
 ml-service/data/processed/*.parquet
 ml-service/models/*.joblib
 ml-service/models/*.json
+
+# The small selected production classifier and its metadata are required for
+# reproducible Docker builds. Alternate/training-only models remain local.
+!ml-service/models/random_forest.joblib
+!ml-service/models/model_metadata.json

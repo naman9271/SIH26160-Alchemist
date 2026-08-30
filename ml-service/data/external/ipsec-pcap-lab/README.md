@@ -1,17 +1,23 @@
 # IPsec PCAP lab dataset snapshot
 
-This directory contains the validated data snapshot imported from the separate
+This directory contains the retained metadata and frozen manifest for a validated
+data snapshot imported from the separate
 [`ipsec-pcap-lab`](https://github.com/naman9271/ipsec-pcap-lab) repository at
 source commit `c0cf256`. The reproducible Docker/strongSwan testbed, generators,
-and validation scripts remain in that repository; they are intentionally not
-duplicated here.
+validation scripts, and large PCAP files remain in that repository; they are
+intentionally not duplicated here or included in inference deployments.
 
 The captures contain only outer-side IPsec traffic. The ML pipeline extracts
 flow metadata from ESP or UDP/4500-encapsulated ESP and does not decrypt payloads.
 
-## Snapshot contents
+## Restoring captures for retraining
 
-The snapshot contains 239 classic Ethernet PCAPs referenced by `metadata.csv`:
+The manifest describes 239 classic Ethernet PCAPs referenced by `metadata.csv`.
+To retrain, check out source commit `c0cf256` in the dedicated dataset repository
+and restore its `pcaps/` directory beside this file. Do not commit the restored
+captures to the main application repository.
+
+The external snapshot contains:
 
 | Dataset role | Captures | Intended use |
 |---|---:|---|
@@ -43,7 +49,7 @@ generated. At import time:
 - all 239 manifest paths existed;
 - all common PCAPs matched the source byte-for-byte;
 - no manifest-referenced capture was missing;
-- no unreferenced PCAP remained in this directory.
+- no unreferenced PCAP remained in the validated source snapshot.
 
 ## Important usage rules
 

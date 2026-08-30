@@ -205,3 +205,42 @@ def test_rejects_leakage_column_marked_safe(tmp_path: Path) -> None:
 
     with pytest.raises(DatasetBuildError, match="leakage columns"):
         load_safe_features(validation_path)
+
+
+def test_preserves_declared_splits_and_caps_capture_contribution(tmp_path: Path) -> None:
+    processed_dir = tmp_path / "processed"
+    processed_dir.mkdir()
+    validation_path = tmp_path / "feature_validation.json"
+    write_validation(validation_path, ["duration"])
+    write_processed(
+        processed_dir / "dataset-a.parquet",
+        [
+            processed_row(source_record_id="train-1", declared_split="train"),
+            processed_row(source_record_id="train-2", declared_split="train", duration=2.0),
+            processed_row(
+                source_record_id="validation",
+                split_group_id="validation-group",
+                declared_split="validation",
+            ),
+            processed_row(
+                source_record_id="test",
+                split_group_id="test-group",
+                declared_split="locked_test",
+            ),
+        ],
+    )
+    output = processed_dir / "training_dataset.parquet"
+
+    summary = build_training_dataset(
+        BuildConfig(
+            processed_dir=processed_dir,
+            feature_validation_path=validation_path,
+            output_path=output,
+            summary_path=tmp_path / "summary.json",
+            max_records_per_group=1,
+        )
+    )
+
+    rows = pq.read_table(output).to_pylist()
+    assert [row["split"] for row in rows] == ["train", "validation", "test"]
+    assert summary["records_dropped_by_group_cap"] == 1

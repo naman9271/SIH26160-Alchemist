@@ -1,0 +1,149 @@
+{
+  "audit_metadata_column": "audit_metadata",
+  "audit_metadata_fields": [
+    "dataset_source",
+    "original_label",
+    "capture_id",
+    "source_record_id",
+    "flow_id",
+    "excluded_leakage_columns",
+    "input_file",
+    "declared_split"
+  ],
+  "balancing": "No rows were duplicated or synthetically balanced.",
+  "class_counts": {
+    "email": 25,
+    "file_transfer": 25,
+    "icmp": 25,
+    "messaging": 25,
+    "video": 25,
+    "voip": 25,
+    "web": 25
+  },
+  "class_counts_per_source_dataset": {
+    "ipsec-pcap-lab": {
+      "email": 25,
+      "file_transfer": 25,
+      "icmp": 25,
+      "messaging": 25,
+      "video": 25,
+      "voip": 25,
+      "web": 25
+    }
+  },
+  "classes_absent_from_inputs": [],
+  "classes_dropped_for_minimum_samples": {},
+  "eligible_classes": [
+    "email",
+    "file_transfer",
+    "icmp",
+    "messaging",
+    "video",
+    "voip",
+    "web"
+  ],
+  "excluded_features": [],
+  "feature_recommendation": "safe_across_public_datasets",
+  "generated_at": "2026-08-30T18:37:11.041362+00:00",
+  "group_column": "split_group_id",
+  "group_count": 175,
+  "groups_in_multiple_splits": [],
+  "input_manifest": [
+    {
+      "path": "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/ml-service/data/processed/ipsec-pcap-lab.parquet",
+      "sha256": "e45cab24bbb102eb759a75b987e98a956c08d38edc2693cfac380f026c17b4be",
+      "size_bytes": 83432
+    }
+  ],
+  "leakage_controls": [
+    "Only feature_validation safe_across_public_datasets fields are model features.",
+    "Source labels, dataset identity, filenames, IDs, and adapter leakage flags are nested inside audit_metadata.",
+    "Source-declared train/validation/locked_test partitions are preserved when present; otherwise each split_group_id is assigned deterministically."
+  ],
+  "max_records_per_group": 1,
+  "minimum_samples_per_class": 20,
+  "output_path": "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/ml-service/data/processed/training_dataset.parquet",
+  "pre_minimum_class_counts": {
+    "email": 45,
+    "file_transfer": 59,
+    "icmp": 47,
+    "messaging": 199,
+    "video": 64,
+    "voip": 149,
+    "web": 28
+  },
+  "pre_minimum_class_counts_per_source_dataset": {
+    "ipsec-pcap-lab": {
+      "email": 45,
+      "file_transfer": 59,
+      "icmp": 47,
+      "messaging": 199,
+      "video": 64,
+      "voip": 149,
+      "web": 28
+    }
+  },
+  "records_dropped_by_group_cap": 416,
+  "row_count": 175,
+  "safe_model_features": [
+    "burst_count",
+    "bytes_per_second",
+    "download_bytes",
+    "download_packets",
+    "idle_time_ratio",
+    "max_packet_size",
+    "mean_burst_size",
+    "mean_interarrival_time",
+    "mean_packet_size",
+    "median_packet_size",
+    "min_packet_size",
+    "p25_packet_size",
+    "p75_packet_size",
+    "p95_packet_size",
+    "packet_count",
+    "packets_per_second",
+    "std_interarrival_time",
+    "std_packet_size",
+    "total_bytes",
+    "upload_download_ratio",
+    "upload_packets"
+  ],
+  "skipped_rows": {
+    "by_reason": {},
+    "total": 0
+  },
+  "split_class_counts": {
+    "test": {
+      "email": 5,
+      "file_transfer": 5,
+      "icmp": 5,
+      "messaging": 5,
+      "video": 5,
+      "voip": 5,
+      "web": 5
+    },
+    "train": {
+      "email": 15,
+      "file_transfer": 15,
+      "icmp": 15,
+      "messaging": 15,
+      "video": 15,
+      "voip": 15,
+      "web": 15
+    },
+    "validation": {
+      "email": 5,
+      "file_transfer": 5,
+      "icmp": 5,
+      "messaging": 5,
+      "video": 5,
+      "voip": 5,
+      "web": 5
+    }
+  },
+  "split_column": "split",
+  "split_seed": "sih-ipsec-v1",
+  "status": "complete",
+  "target_column": "canonical_label",
+  "test_fraction": 0.2
+}

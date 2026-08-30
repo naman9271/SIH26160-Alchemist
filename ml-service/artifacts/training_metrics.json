@@ -1,0 +1,809 @@
+{
+  "generated_at": "2026-08-30T18:37:41.225864+00:00",
+  "models": {
+    "random_forest": {
+      "candidates": [
+        {
+          "name": "baseline",
+          "validation_metrics": {
+            "accuracy": 1.0,
+            "confusion_matrix": [
+              [
+                5,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                5,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                5,
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                5,
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0,
+                5,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0,
+                0,
+                5,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                5
+              ]
+            ],
+            "confusion_matrix_labels": [
+              "email",
+              "file_transfer",
+              "icmp",
+              "messaging",
+              "video",
+              "voip",
+              "web"
+            ],
+            "macro_f1": 1.0,
+            "macro_precision": 1.0,
+            "macro_recall": 1.0,
+            "per_class": {
+              "email": {
+                "f1": 1.0,
+                "precision": 1.0,
+                "recall": 1.0,
+                "support": 5
+              },
+              "file_transfer": {
+                "f1": 1.0,
+                "precision": 1.0,
+                "recall": 1.0,
+                "support": 5
+              },
+              "icmp": {
+                "f1": 1.0,
+                "precision": 1.0,
+                "recall": 1.0,
+                "support": 5
+              },
+              "messaging": {
+                "f1": 1.0,
+                "precision": 1.0,
+                "recall": 1.0,
+                "support": 5
+              },
+              "video": {
+                "f1": 1.0,
+                "precision": 1.0,
+                "recall": 1.0,
+                "support": 5
+              },
+              "voip": {
+                "f1": 1.0,
+                "precision": 1.0,
+                "recall": 1.0,
+                "support": 5
+              },
+              "web": {
+                "f1": 1.0,
+                "precision": 1.0,
+                "recall": 1.0,
+                "support": 5
+              }
+            },
+            "weighted_f1": 1.0
+          }
+        },
+        {
+          "name": "regularized",
+          "validation_metrics": {
+            "accuracy": 1.0,
+            "confusion_matrix": [
+              [
+                5,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                5,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                5,
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                5,
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0,
+                5,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0,
+                0,
+                5,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                5
+              ]
+            ],
+            "confusion_matrix_labels": [
+              "email",
+              "file_transfer",
+              "icmp",
+              "messaging",
+              "video",
+              "voip",
+              "web"
+            ],
+            "macro_f1": 1.0,
+            "macro_precision": 1.0,
+            "macro_recall": 1.0,
+            "per_class": {
+              "email": {
+                "f1": 1.0,
+                "precision": 1.0,
+                "recall": 1.0,
+                "support": 5
+              },
+              "file_transfer": {
+                "f1": 1.0,
+                "precision": 1.0,
+                "recall": 1.0,
+                "support": 5
+              },
+              "icmp": {
+                "f1": 1.0,
+                "precision": 1.0,
+                "recall": 1.0,
+                "support": 5
+              },
+              "messaging": {
+                "f1": 1.0,
+                "precision": 1.0,
+                "recall": 1.0,
+                "support": 5
+              },
+              "video": {
+                "f1": 1.0,
+                "precision": 1.0,
+                "recall": 1.0,
+                "support": 5
+              },
+              "voip": {
+                "f1": 1.0,
+                "precision": 1.0,
+                "recall": 1.0,
+                "support": 5
+              },
+              "web": {
+                "f1": 1.0,
+                "precision": 1.0,
+                "recall": 1.0,
+                "support": 5
+              }
+            },
+            "weighted_f1": 1.0
+          }
+        }
+      ],
+      "selected_candidate": "baseline",
+      "test_metrics": {
+        "accuracy": 1.0,
+        "confusion_matrix": [
+          [
+            5,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            5,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            5,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            5,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            5,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            5,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            5
+          ]
+        ],
+        "confusion_matrix_labels": [
+          "email",
+          "file_transfer",
+          "icmp",
+          "messaging",
+          "video",
+          "voip",
+          "web"
+        ],
+        "macro_f1": 1.0,
+        "macro_precision": 1.0,
+        "macro_recall": 1.0,
+        "per_class": {
+          "email": {
+            "f1": 1.0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 5
+          },
+          "file_transfer": {
+            "f1": 1.0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 5
+          },
+          "icmp": {
+            "f1": 1.0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 5
+          },
+          "messaging": {
+            "f1": 1.0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 5
+          },
+          "video": {
+            "f1": 1.0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 5
+          },
+          "voip": {
+            "f1": 1.0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 5
+          },
+          "web": {
+            "f1": 1.0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 5
+          }
+        },
+        "weighted_f1": 1.0
+      }
+    },
+    "xgboost": {
+      "candidates": [
+        {
+          "name": "baseline",
+          "validation_metrics": {
+            "accuracy": 0.971429,
+            "confusion_matrix": [
+              [
+                5,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                4,
+                0,
+                0,
+                1,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                5,
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                5,
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0,
+                5,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0,
+                0,
+                5,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                5
+              ]
+            ],
+            "confusion_matrix_labels": [
+              "email",
+              "file_transfer",
+              "icmp",
+              "messaging",
+              "video",
+              "voip",
+              "web"
+            ],
+            "macro_f1": 0.97114,
+            "macro_precision": 0.97619,
+            "macro_recall": 0.971429,
+            "per_class": {
+              "email": {
+                "f1": 1.0,
+                "precision": 1.0,
+                "recall": 1.0,
+                "support": 5
+              },
+              "file_transfer": {
+                "f1": 0.888889,
+                "precision": 1.0,
+                "recall": 0.8,
+                "support": 5
+              },
+              "icmp": {
+                "f1": 1.0,
+                "precision": 1.0,
+                "recall": 1.0,
+                "support": 5
+              },
+              "messaging": {
+                "f1": 1.0,
+                "precision": 1.0,
+                "recall": 1.0,
+                "support": 5
+              },
+              "video": {
+                "f1": 0.909091,
+                "precision": 0.833333,
+                "recall": 1.0,
+                "support": 5
+              },
+              "voip": {
+                "f1": 1.0,
+                "precision": 1.0,
+                "recall": 1.0,
+                "support": 5
+              },
+              "web": {
+                "f1": 1.0,
+                "precision": 1.0,
+                "recall": 1.0,
+                "support": 5
+              }
+            },
+            "weighted_f1": 0.97114
+          }
+        },
+        {
+          "name": "regularized",
+          "validation_metrics": {
+            "accuracy": 0.971429,
+            "confusion_matrix": [
+              [
+                5,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                4,
+                0,
+                0,
+                1,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                5,
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                5,
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0,
+                5,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0,
+                0,
+                5,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                5
+              ]
+            ],
+            "confusion_matrix_labels": [
+              "email",
+              "file_transfer",
+              "icmp",
+              "messaging",
+              "video",
+              "voip",
+              "web"
+            ],
+            "macro_f1": 0.97114,
+            "macro_precision": 0.97619,
+            "macro_recall": 0.971429,
+            "per_class": {
+              "email": {
+                "f1": 1.0,
+                "precision": 1.0,
+                "recall": 1.0,
+                "support": 5
+              },
+              "file_transfer": {
+                "f1": 0.888889,
+                "precision": 1.0,
+                "recall": 0.8,
+                "support": 5
+              },
+              "icmp": {
+                "f1": 1.0,
+                "precision": 1.0,
+                "recall": 1.0,
+                "support": 5
+              },
+              "messaging": {
+                "f1": 1.0,
+                "precision": 1.0,
+                "recall": 1.0,
+                "support": 5
+              },
+              "video": {
+                "f1": 0.909091,
+                "precision": 0.833333,
+                "recall": 1.0,
+                "support": 5
+              },
+              "voip": {
+                "f1": 1.0,
+                "precision": 1.0,
+                "recall": 1.0,
+                "support": 5
+              },
+              "web": {
+                "f1": 1.0,
+                "precision": 1.0,
+                "recall": 1.0,
+                "support": 5
+              }
+            },
+            "weighted_f1": 0.97114
+          }
+        }
+      ],
+      "selected_candidate": "baseline",
+      "test_metrics": {
+        "accuracy": 1.0,
+        "confusion_matrix": [
+          [
+            5,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            5,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            5,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            5,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            5,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            5,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            5
+          ]
+        ],
+        "confusion_matrix_labels": [
+          "email",
+          "file_transfer",
+          "icmp",
+          "messaging",
+          "video",
+          "voip",
+          "web"
+        ],
+        "macro_f1": 1.0,
+        "macro_precision": 1.0,
+        "macro_recall": 1.0,
+        "per_class": {
+          "email": {
+            "f1": 1.0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 5
+          },
+          "file_transfer": {
+            "f1": 1.0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 5
+          },
+          "icmp": {
+            "f1": 1.0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 5
+          },
+          "messaging": {
+            "f1": 1.0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 5
+          },
+          "video": {
+            "f1": 1.0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 5
+          },
+          "voip": {
+            "f1": 1.0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 5
+          },
+          "web": {
+            "f1": 1.0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 5
+          }
+        },
+        "weighted_f1": 1.0
+      }
+    }
+  },
+  "selected_model": "random_forest",
+  "selection_metric": "macro_f1",
+  "selection_split": "validation",
+  "split_class_counts": {
+    "test": {
+      "email": 5,
+      "file_transfer": 5,
+      "icmp": 5,
+      "messaging": 5,
+      "video": 5,
+      "voip": 5,
+      "web": 5
+    },
+    "train": {
+      "email": 15,
+      "file_transfer": 15,
+      "icmp": 15,
+      "messaging": 15,
+      "video": 15,
+      "voip": 15,
+      "web": 15
+    },
+    "validation": {
+      "email": 5,
+      "file_transfer": 5,
+      "icmp": 5,
+      "messaging": 5,
+      "video": 5,
+      "voip": 5,
+      "web": 5
+    }
+  }
+}

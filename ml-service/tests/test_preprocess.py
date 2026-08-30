@@ -16,6 +16,8 @@ from src.datasets.base import PreprocessedRecord
 from src.datasets.registry import create_adapter
 from src.label_mapping import load_class_mapping
 from src.preprocess import preprocess_dataset
+from src.prepare_evaluation_data import prepare_evaluation_datasets
+from src.features import FeatureExtractionConfig
 
 
 MAPPING_PATH = Path(__file__).resolve().parents[1] / "config" / "class_mapping.yaml"
@@ -218,9 +220,9 @@ def test_ipsec_lab_reads_nested_known_records_and_excludes_evaluation_roles(tmp_
     known_hash = hashlib.sha256(known.read_bytes()).hexdigest()
     ood_hash = hashlib.sha256(ood.read_bytes()).hexdigest()
     lab.joinpath("metadata.csv").write_text(
-        "sample_id,pcap_file,traffic_class,canonical_label,dataset_role,sha256\n"
-        f"known-1,pcaps/known/email/capture.pcap,email,email,train_known,{known_hash}\n"
-        f"ood-1,pcaps/ood/dns.pcap,dns,IGNORE,ood_eval,{ood_hash}\n",
+        "sample_id,pcap_file,traffic_class,canonical_label,dataset_role,split,sha256\n"
+        f"known-1,pcaps/known/email/capture.pcap,email,email,train_known,locked_test,{known_hash}\n"
+        f"ood-1,pcaps/ood/dns.pcap,dns,IGNORE,ood_eval,,{ood_hash}\n",
         encoding="utf-8",
     )
     adapter = create_adapter("ipsec-pcap-lab", external_root, load_class_mapping(MAPPING_PATH))
@@ -231,6 +233,7 @@ def test_ipsec_lab_reads_nested_known_records_and_excludes_evaluation_roles(tmp_
     assert records[0].capture_id == "pcaps/known/email/capture.pcap"
     assert records[0].original_label == "email"
     assert records[0].canonical_label == "email"
+    assert records[0].declared_split == "locked_test"
     assert any("non-supervised dataset_role" in reason for reason in adapter.skipped_reasons)
 
 
@@ -269,3 +272,45 @@ def test_preprocess_writes_only_the_requested_dataset(tmp_path: Path) -> None:
     assert table.column("dataset_source").to_pylist() == ["cic-vpn2016"]
     assert table.column("canonical_label").to_pylist() == ["email"]
     assert not (output_dir / "cic-darknet2020.parquet").exists()
+
+
+def test_prepares_ood_and_anomaly_evaluation_without_mixing_training(tmp_path: Path) -> None:
+    dataset_root = tmp_path / "ipsec-pcap-lab"
+    captures = {
+        "pcaps/known/web.pcap": ("known", "web", "train_known", "locked_test", "false"),
+        "pcaps/ood/dns.pcap": ("ood", "dns", "ood_eval", "", "false"),
+        "pcaps/anomaly/flood.pcap": ("anomaly", "udp_flood", "anomaly_eval", "", "true"),
+    }
+    rows: list[str] = []
+    for relative, (sample_id, label, role, split, is_anomaly) in captures.items():
+        capture = dataset_root / relative
+        write_two_packet_esp_capture(capture)
+        checksum = hashlib.sha256(capture.read_bytes()).hexdigest()
+        rows.append(
+            f"{sample_id},{relative},{label},{role},{split},{checksum},{is_anomaly},flood"
+        )
+    dataset_root.joinpath("metadata.csv").write_text(
+        "sample_id,pcap_file,traffic_class,dataset_role,split,sha256,is_anomaly,anomaly_type\n"
+        + "\n".join(rows)
+        + "\n",
+        encoding="utf-8",
+    )
+    ood_output = tmp_path / "ood.parquet"
+    anomaly_output = tmp_path / "anomaly.parquet"
+
+    summary = prepare_evaluation_datasets(
+        dataset_root,
+        ood_output,
+        anomaly_output,
+        FeatureExtractionConfig(10.0, 0.1, 1.0),
+    )
+
+    assert summary == {
+        "ood_records": 1,
+        "anomaly_evaluation_records": 2,
+        "anomaly_records": 1,
+        "normal_records": 1,
+        "skipped": {},
+    }
+    assert pq.read_table(ood_output).column("original_label").to_pylist() == ["dns"]
+    assert pq.read_table(anomaly_output).column("is_anomaly").to_pylist() == [False, True]

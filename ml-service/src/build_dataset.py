@@ -37,6 +37,7 @@ AUDIT_METADATA_FIELDS = (
     "flow_id",
     "excluded_leakage_columns",
     "input_file",
+    "declared_split",
 )
 FORBIDDEN_MODEL_COLUMNS = {
     "dataset_source",
@@ -71,6 +72,9 @@ class BuildConfig:
     minimum_samples_per_class: int = 1
     test_fraction: float = 0.2
     split_seed: str = "sih-ipsec-v1"
+    feature_recommendation: str = "safe_across_public_datasets"
+    excluded_features: tuple[str, ...] = ()
+    max_records_per_group: int | None = None
 
     def validate(self) -> None:
         if self.minimum_samples_per_class < 1:
@@ -79,6 +83,13 @@ class BuildConfig:
             raise DatasetBuildError("test_fraction must be within (0, 1)")
         if not self.split_seed:
             raise DatasetBuildError("split_seed must not be empty")
+        if self.feature_recommendation not in {
+            "safe_across_public_datasets",
+            "usable_only_for_our_ipsec_dataset",
+        }:
+            raise DatasetBuildError("unsupported feature recommendation scope")
+        if self.max_records_per_group is not None and self.max_records_per_group < 1:
+            raise DatasetBuildError("max_records_per_group must be positive")
 
 
 @dataclass(frozen=True)
@@ -86,6 +97,7 @@ class CandidateRecord:
     features: Mapping[str, int | float | None]
     canonical_label: str
     split_group_id: str
+    declared_split: str | None
     audit_metadata: Mapping[str, Any]
 
 
@@ -95,7 +107,11 @@ def _complete_class_counts(counts: Mapping[str, int]) -> dict[str, int]:
     return {label: int(counts.get(label, 0)) for label in sorted(CANONICAL_LABELS)}
 
 
-def load_safe_features(validation_path: Path) -> list[str]:
+def load_safe_features(
+    validation_path: Path,
+    recommendation: str = "safe_across_public_datasets",
+    excluded_features: Sequence[str] = (),
+) -> list[str]:
     """Load the machine-readable validation decision and reject unsafe names."""
 
     try:
@@ -106,11 +122,13 @@ def load_safe_features(validation_path: Path) -> list[str]:
     recommendations = report.get("recommendations")
     if not isinstance(recommendations, Mapping):
         raise DatasetBuildError("Feature validation has no recommendations object")
-    raw_features = recommendations.get("safe_across_public_datasets")
+    raw_features = recommendations.get(recommendation)
     if not isinstance(raw_features, list) or not all(isinstance(item, str) for item in raw_features):
-        raise DatasetBuildError("safe_across_public_datasets must be a list of feature names")
+        raise DatasetBuildError(f"{recommendation} must be a list of feature names")
 
-    safe_features = list(dict.fromkeys(raw_features))
+    safe_features = [
+        feature for feature in dict.fromkeys(raw_features) if feature not in set(excluded_features)
+    ]
     forbidden = sorted(set(safe_features) & FORBIDDEN_MODEL_COLUMNS)
     if forbidden:
         raise DatasetBuildError(f"Feature validation marked leakage columns safe: {', '.join(forbidden)}")
@@ -121,7 +139,8 @@ def load_safe_features(validation_path: Path) -> list[str]:
         raise DatasetBuildError(f"Feature validation contains unknown features: {', '.join(unknown)}")
     if not safe_features:
         raise DatasetBuildError(
-            "Feature validation approves no public features; generate processed datasets and rerun "
+            "Feature validation approves no public features or usable scoped features after exclusions; "
+            "generate processed datasets and rerun "
             "python -m src.validate_features before building"
         )
     return safe_features
@@ -136,7 +155,9 @@ def source_parquet_paths(processed_dir: Path, output_path: Path) -> list[Path]:
     paths = sorted(
         path
         for path in processed_dir.glob("*.parquet")
-        if path.resolve() != output_resolved and path.name != TRAINING_DATASET_NAME
+        if path.resolve() != output_resolved
+        and path.name != TRAINING_DATASET_NAME
+        and not path.stem.endswith(("-ood", "-anomaly-evaluation"))
     )
     if not paths:
         raise DatasetBuildError(f"No processed source Parquet files found in {processed_dir}")
@@ -191,12 +212,17 @@ def _candidate_from_row(
         "flow_id": row.get("flow_id"),
         "excluded_leakage_columns": row.get("excluded_leakage_columns") or [],
         "input_file": input_file,
+        "declared_split": row.get("declared_split"),
     }
+    declared_split = row.get("declared_split")
+    if declared_split not in {None, "train", "validation", "locked_test"}:
+        return None, "declared_split is invalid"
     return (
         CandidateRecord(
             features=features,
             canonical_label=str(label),
             split_group_id=split_group_id,
+            declared_split=declared_split,
             audit_metadata=metadata,
         ),
         None,
@@ -219,6 +245,7 @@ def iter_candidates(
         "flow_id",
         "split_group_id",
         "excluded_leakage_columns",
+        "declared_split",
         *safe_features,
     }
     for path in paths:
@@ -269,6 +296,7 @@ def training_arrow_schema(safe_features: Sequence[str]) -> pa.Schema:
                         pa.field("flow_id", pa.string()),
                         pa.field("excluded_leakage_columns", pa.list_(pa.string())),
                         pa.field("input_file", pa.string(), nullable=False),
+                        pa.field("declared_split", pa.string()),
                     ]
                 ),
                 nullable=False,
@@ -304,6 +332,8 @@ def _write_training_data(
     split_counts: dict[str, Counter[str]] = defaultdict(Counter)
     contributions: dict[str, Counter[str]] = defaultdict(Counter)
     group_splits: dict[str, str] = {}
+    records_per_group: Counter[str] = Counter()
+    capped_records = 0
 
     def flush() -> None:
         nonlocal writer, total
@@ -319,9 +349,18 @@ def _write_training_data(
         for candidate in candidates:
             if candidate.canonical_label not in eligible_classes:
                 continue
-            split = split_for_group(
-                candidate.split_group_id, config.test_fraction, config.split_seed
-            )
+            if (
+                config.max_records_per_group is not None
+                and records_per_group[candidate.split_group_id] >= config.max_records_per_group
+            ):
+                capped_records += 1
+                continue
+            records_per_group[candidate.split_group_id] += 1
+            split = (
+                "test"
+                if candidate.declared_split == "locked_test"
+                else candidate.declared_split
+            ) or split_for_group(candidate.split_group_id, config.test_fraction, config.split_seed)
             previous_split = group_splits.setdefault(candidate.split_group_id, split)
             if previous_split != split:
                 raise DatasetBuildError(
@@ -357,6 +396,7 @@ def _write_training_data(
         },
         "group_count": len(group_splits),
         "groups_in_multiple_splits": [],
+        "records_dropped_by_group_cap": capped_records,
     }
 
 
@@ -371,7 +411,11 @@ def build_training_dataset(config: BuildConfig) -> dict[str, Any]:
     """Build one supervised dataset from independently validated source files."""
 
     config.validate()
-    safe_features = load_safe_features(config.feature_validation_path)
+    safe_features = load_safe_features(
+        config.feature_validation_path,
+        config.feature_recommendation,
+        config.excluded_features,
+    )
     paths = source_parquet_paths(config.processed_dir, config.output_path)
     skipped_reasons: Counter[str] = Counter()
     pre_minimum_counts: Counter[str] = Counter()
@@ -408,6 +452,9 @@ def build_training_dataset(config: BuildConfig) -> dict[str, Any]:
         "output_path": str(config.output_path),
         "row_count": total,
         "safe_model_features": safe_features,
+        "feature_recommendation": config.feature_recommendation,
+        "excluded_features": list(config.excluded_features),
+        "max_records_per_group": config.max_records_per_group,
         "target_column": "canonical_label",
         "group_column": "split_group_id",
         "split_column": "split",
@@ -438,10 +485,11 @@ def build_training_dataset(config: BuildConfig) -> dict[str, Any]:
         ],
         "balancing": "No rows were duplicated or synthetically balanced.",
         "leakage_controls": [
-            "Only feature_validation safe_across_public_datasets fields are model features.",
+            f"Only feature_validation {config.feature_recommendation} fields are model features.",
             "Source labels, dataset identity, filenames, IDs, and adapter leakage flags are nested "
             "inside audit_metadata.",
-            "Each split_group_id is deterministically assigned wholly to train or test.",
+            "Source-declared train/validation/locked_test partitions are preserved when present; "
+            "otherwise each split_group_id is assigned deterministically.",
         ],
         **output_stats,
     }
@@ -467,6 +515,13 @@ def parse_args() -> argparse.Namespace:
             )
         ),
     )
+    parser.add_argument(
+        "--feature-recommendation",
+        choices=("safe_across_public_datasets", "usable_only_for_our_ipsec_dataset"),
+        default=os.environ.get("ML_FEATURE_RECOMMENDATION", "safe_across_public_datasets"),
+    )
+    parser.add_argument("--exclude-feature", action="append", default=[])
+    parser.add_argument("--max-records-per-group", type=int)
     parser.add_argument(
         "--output",
         type=Path,
@@ -507,6 +562,9 @@ def main() -> None:
                 minimum_samples_per_class=args.minimum_samples_per_class,
                 test_fraction=args.test_fraction,
                 split_seed=args.split_seed,
+                feature_recommendation=args.feature_recommendation,
+                excluded_features=tuple(args.exclude_feature),
+                max_records_per_group=args.max_records_per_group,
             )
         )
     except DatasetBuildError as error:

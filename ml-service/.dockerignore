@@ -15,6 +15,12 @@ docs/
 artifacts/*
 !artifacts/training_metrics.json
 
+# Ship only the selected production classifier and metadata. Training
+# alternatives and the experimental anomaly model remain outside this image.
+models/*
+!models/random_forest.joblib
+!models/model_metadata.json
+
 # Keep the image source minimal even if the build context contains more code.
 src/analyze_pcap.py
 src/build_dataset.py

@@ -1,10 +1,239 @@
 {
-  "generated_at": "2026-08-27T11:45:00.694990+00:00",
-  "missing_required_artifacts": [
-    "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/ml-service/data/processed/training_dataset.parquet",
-    "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/ml-service/models/model_metadata.json",
-    "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/ml-service/artifacts/training_metrics.json"
+  "accuracy": 1.0,
+  "class_distribution": {
+    "email": 5,
+    "file_transfer": 5,
+    "icmp": 5,
+    "messaging": 5,
+    "video": 5,
+    "voip": 5,
+    "web": 5
+  },
+  "classification_report": {
+    "accuracy": 1.0,
+    "email": {
+      "f1-score": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "support": 5.0
+    },
+    "file_transfer": {
+      "f1-score": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "support": 5.0
+    },
+    "icmp": {
+      "f1-score": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "support": 5.0
+    },
+    "macro avg": {
+      "f1-score": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "support": 35.0
+    },
+    "messaging": {
+      "f1-score": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "support": 5.0
+    },
+    "video": {
+      "f1-score": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "support": 5.0
+    },
+    "voip": {
+      "f1-score": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "support": 5.0
+    },
+    "web": {
+      "f1-score": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "support": 5.0
+    },
+    "weighted avg": {
+      "f1-score": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "support": 35.0
+    }
+  },
+  "confidence_histogram": {
+    "bin_edges": [
+      0.0,
+      0.05,
+      0.1,
+      0.15,
+      0.2,
+      0.25,
+      0.3,
+      0.35,
+      0.4,
+      0.45,
+      0.5,
+      0.55,
+      0.6,
+      0.65,
+      0.7,
+      0.75,
+      0.8,
+      0.85,
+      0.9,
+      0.95,
+      1.0
+    ],
+    "counts": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      1,
+      2,
+      0,
+      31
+    ]
+  },
+  "confusion_matrix": [
+    [
+      5,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      5,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      5,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      5,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      5,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      5,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      5
+    ]
   ],
-  "reason": "Required trained-model artifacts are unavailable; evaluation was not run.",
-  "status": "blocked"
+  "confusion_matrix_labels": [
+    "email",
+    "file_transfer",
+    "icmp",
+    "messaging",
+    "video",
+    "voip",
+    "web"
+  ],
+  "feature_order": [
+    "burst_count",
+    "bytes_per_second",
+    "download_bytes",
+    "download_packets",
+    "idle_time_ratio",
+    "max_packet_size",
+    "mean_burst_size",
+    "mean_interarrival_time",
+    "mean_packet_size",
+    "median_packet_size",
+    "min_packet_size",
+    "p25_packet_size",
+    "p75_packet_size",
+    "p95_packet_size",
+    "packet_count",
+    "packets_per_second",
+    "std_interarrival_time",
+    "std_packet_size",
+    "total_bytes",
+    "upload_download_ratio",
+    "upload_packets"
+  ],
+  "generated_at": "2026-08-30T18:38:53.198286+00:00",
+  "group_split_strategy": "source-declared group split",
+  "macro_f1": 1.0,
+  "misclassified_sample_summary": {
+    "sample_limit": 50,
+    "samples": [],
+    "total_misclassified": 0
+  },
+  "model_version": "traffic-classifier-291d3300b298",
+  "per_class_confidence": {
+    "email": 0.967,
+    "file_transfer": 0.944,
+    "icmp": 0.965,
+    "messaging": 0.961,
+    "video": 0.995,
+    "voip": 0.992,
+    "web": 0.99
+  },
+  "plots": {
+    "confidence_histogram": "confidence_histogram.png",
+    "confusion_matrix": "confusion_matrix.png",
+    "per_class_confidence": "per_class_confidence.png"
+  },
+  "selected_model": "random_forest",
+  "status": "complete",
+  "weighted_f1": 1.0
 }

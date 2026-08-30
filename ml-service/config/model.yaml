@@ -1,4 +1,4 @@
-# Runtime model and UNKNOWN-rejection configuration.
+# Runtime model, UNKNOWN-rejection, and anomaly configuration.
 version: 1
 
 model:
@@ -21,9 +21,9 @@ grpc:
 
 unknown_detection:
   method: max_class_probability_threshold
-  # Written by `python -m src.calibrate_unknown` after real held-out known and
-  # OOD samples are available. Null deliberately fails closed before calibration.
-  confidence_threshold: null
+  # Calibrated on 35 locked known captures and 25 held-out OOD captures.
+  # Re-run calibration whenever the model or deployment traffic changes.
+  confidence_threshold: 0.85
   candidate_thresholds:
     - 0.30
     - 0.40
@@ -36,17 +36,16 @@ unknown_detection:
     - 0.85
     - 0.90
     - 0.95
-  # Add preprocessed Parquet paths here, or pass --ood-dataset repeatedly.
-  # Eligible records must be from a class absent from the fitted model or from
-  # a dataset_source absent from training. Paths are relative to this file.
-  ood_dataset_paths: []
+  # Paths are relative to this configuration file.
+  ood_dataset_paths:
+    - ../data/processed/ipsec-pcap-lab-ood.parquet
   calibration_metrics_path: ../artifacts/unknown_calibration.json
   limitation: >-
     Confidence-threshold rejection is a baseline open-set method and cannot
     perfectly detect every unknown or out-of-distribution traffic type.
 
 anomaly_detection:
-  enabled: false
+  enabled: true
   method: isolation_forest
   contamination: 0.05
   n_estimators: 200
@@ -57,6 +56,6 @@ anomaly_detection:
   model_path: ../models/isolation_forest.joblib
   metadata_path: ../models/anomaly_metadata.json
   metrics_path: ../artifacts/anomaly_metrics.json
-  # Optional labeled Parquet with the exact model features and a boolean
-  # `is_anomaly` column. Null means report held-out normal metrics only.
-  evaluation_dataset_path: null
+  # Contains locked normal captures plus anomaly-only evaluation captures.
+  # It is never used for fitting.
+  evaluation_dataset_path: ../data/processed/ipsec-pcap-lab-anomaly-evaluation.parquet

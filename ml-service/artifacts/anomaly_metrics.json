@@ -1,0 +1,39 @@
+{
+  "generated_at": "2026-08-30T18:39:25.401847+00:00",
+  "held_out_normal": {
+    "average_anomaly_score": 0.343674,
+    "false_positive_rate": 0.085714,
+    "normal_detection_rate": 0.914286,
+    "p95_anomaly_score": 0.902881,
+    "sample_count": 35,
+    "suspicious_count": 3
+  },
+  "labeled_evaluation": {
+    "accuracy": 0.923077,
+    "anomaly_count": 30,
+    "anomaly_f1": 0.918033,
+    "anomaly_precision": 0.903226,
+    "anomaly_recall": 0.933333,
+    "confusion_matrix": [
+      [
+        32,
+        3
+      ],
+      [
+        2,
+        28
+      ]
+    ],
+    "confusion_matrix_labels": [
+      "normal",
+      "suspicious"
+    ],
+    "sample_count": 65
+  },
+  "method": "isolation_forest",
+  "model_version": "isolation-forest-291d3300b298",
+  "normalized_suspicious_threshold": 0.832153,
+  "reference_assumption": "The supervised training dataset is treated as normal-reference traffic; application class labels are not anomaly labels.",
+  "reference_samples": 140,
+  "status": "complete"
+}

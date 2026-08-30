@@ -45,6 +45,7 @@ def common_arrow_schema() -> pa.Schema:
         pa.field("original_label", pa.string(), nullable=False),
         pa.field("canonical_label", pa.string(), nullable=False),
         pa.field("split_group_id", pa.string(), nullable=False),
+        pa.field("declared_split", pa.string()),
         pa.field("excluded_leakage_columns", pa.list_(pa.string()), nullable=False),
         pa.field("flow_id", pa.string()),
     ]

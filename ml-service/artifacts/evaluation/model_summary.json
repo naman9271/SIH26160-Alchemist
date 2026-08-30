@@ -1,10 +1,16 @@
 {
-  "macro_f1": null,
-  "model_version": null,
-  "overall_accuracy": null,
-  "reason": "Required trained-model artifacts are unavailable; evaluation was not run.",
-  "status": "blocked",
-  "supported_classes": [],
-  "test_samples": null,
-  "training_samples": null
+  "macro_f1": 1.0,
+  "model_version": "traffic-classifier-291d3300b298",
+  "overall_accuracy": 1.0,
+  "supported_classes": [
+    "email",
+    "file_transfer",
+    "icmp",
+    "messaging",
+    "video",
+    "voip",
+    "web"
+  ],
+  "test_samples": 35,
+  "training_samples": 140
 }

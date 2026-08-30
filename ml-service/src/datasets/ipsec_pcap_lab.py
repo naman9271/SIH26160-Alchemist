@@ -70,6 +70,14 @@ class IpsecPcapLabAdapter(DatasetAdapter):
                         "the configured dataset-specific mapping"
                     )
                     continue
+                declared_split = (row.get("split") or "").strip() or None
+                if declared_split not in {None, "train", "validation", "locked_test"}:
+                    self.total_source_records += 1
+                    self.skip(
+                        f"metadata row {row_number} has invalid supervised split "
+                        f"{declared_split!r}"
+                    )
+                    continue
                 capture_path = _safe_capture_path(self.input_path, row.get("pcap_file") or "")
                 if capture_path is None:
                     self.total_source_records += 1
@@ -105,6 +113,7 @@ class IpsecPcapLabAdapter(DatasetAdapter):
                             "original_label": original_label,
                             "canonical_label": canonical_label,
                             "split_group_id": f"{self.cli_name}:{row.get('sample_id') or capture_id}",
+                            "declared_split": declared_split,
                             "excluded_leakage_columns": [
                                 "sample_id and capture filename",
                                 "traffic_class label",

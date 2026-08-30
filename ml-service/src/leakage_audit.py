@@ -371,6 +371,11 @@ def audit_leakage(
             if source_association_by_feature.get(feature, 0) >= source_association_threshold
         }
     )
+    if len(set(sources)) == 1 and normal_metrics["accuracy"] >= high_accuracy_threshold:
+        # With one synthetic capture source, source-association statistics are
+        # unidentifiable. Ablate the dominant features instead of falsely
+        # treating zero eta-squared as evidence of safety.
+        suspicious_features = sorted(set(suspicious_features) | high_importance)
     source_label_nmi = round(float(normalized_mutual_info_score(sources, data.labels)), 6)
     source_predictability = _source_predictability(data, sources, split_config.random_seed)
     per_source = _per_source_test_metrics(
@@ -389,7 +394,8 @@ def audit_leakage(
         fixes.append("Collect overlapping classes from multiple sources and report source-balanced metrics.")
     if suspicious_features:
         findings.append(
-            "High-importance features also encode source differences: " + ", ".join(suspicious_features)
+            "Dominant features need artifact checks or encode measured source differences: "
+            + ", ".join(suspicious_features)
         )
         fixes.append(
             "Review units and capture tooling for suspicious features; drop them only after confirming the ablation result."

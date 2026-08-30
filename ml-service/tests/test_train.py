@@ -147,3 +147,29 @@ def test_group_split_rejects_class_without_train_group(tmp_path: Path) -> None:
 
     with pytest.raises(TrainingError):
         split_group_safe(data, config)
+
+
+def test_group_split_preserves_complete_source_declared_partitions(tmp_path: Path) -> None:
+    labels = np.asarray(["web", "video"] * 3)
+    data = DatasetData(
+        features=np.arange(6, dtype=float).reshape(-1, 1),
+        labels=labels,
+        groups=np.asarray([f"group-{index}" for index in range(6)]),
+        feature_order=["packet_count"],
+        dataset_sha256="fixture",
+        declared_splits=np.asarray(
+            ["train", "train", "validation", "validation", "test", "test"]
+        ),
+    )
+    config = TrainingConfig(
+        dataset_path=tmp_path / "unused.parquet",
+        models_dir=tmp_path / "models",
+        metrics_path=tmp_path / "metrics.json",
+    )
+
+    splits = split_group_safe(data, config)
+
+    assert splits.strategy == "source-declared group split"
+    assert splits.train.tolist() == [0, 1]
+    assert splits.validation.tolist() == [2, 3]
+    assert splits.test.tolist() == [4, 5]

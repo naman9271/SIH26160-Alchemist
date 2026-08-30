@@ -10,7 +10,29 @@ Initial classes are:
 
 `web`, `video`, `voip`, `email`, `file_transfer`, `messaging`, and `icmp`.
 
-Predictions must be able to return `UNKNOWN` when confidence is below the configured threshold. Responses are planned to include the predicted class, confidence, unknown status, top predictions, and explainability details.
+Predictions return `UNKNOWN` when confidence is below the configured threshold. Responses include the predicted class, confidence, unknown status, top predictions, model version, inference time, and optional explainability details.
+
+## Current IPsec-lab training run
+
+The checked-in corpus metadata defines 175 known-class captures with source-declared train/validation/locked-test partitions (105/35/35), plus 25 OOD and 30 anomaly captures. Raw captures are immutable. Build reproducible local artifacts with:
+
+The large PCAP files are kept in the dedicated `ipsec-pcap-lab` dataset repository, not this deployable application repository. Restore its `pcaps/` tree under `data/external/ipsec-pcap-lab/` only for retraining.
+
+```bash
+python -m src.preprocess --dataset ipsec-pcap-lab
+python -m src.prepare_evaluation_data
+python -m src.validate_features
+python -m src.build_dataset --minimum-samples-per-class 20 --max-records-per-group 1
+python -m src.train
+python -m src.leakage_audit
+python -m src.evaluate
+python -m src.calibrate_unknown
+python -m src.anomaly.train
+```
+
+The group cap keeps one representative window per capture so long captures cannot dominate. The resulting table has 25 captures per class and excludes duration plus all identifiers, labels, addresses, timestamps, filenames, dataset identity, and IPsec configuration fields from model inputs.
+
+The current selected Random Forest scored 1.00 macro F1 on the 35-capture locked lab test. This is an internal synthetic-lab result, not a production-generalization claim: all captures came from one generator environment. UNKNOWN calibration selected 0.85 on the current holdouts (80% OOD detection and 5.7% false-unknown rate). The experimental Isolation Forest reached 0.918 anomaly F1 on its 65-capture lab evaluation. Exact generated results live under `artifacts/`.
 
 ## UNKNOWN calibration
 

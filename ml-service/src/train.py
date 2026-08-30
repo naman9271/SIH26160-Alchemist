@@ -92,6 +92,7 @@ class DatasetData:
     groups: np.ndarray
     feature_order: list[str]
     dataset_sha256: str
+    declared_splits: np.ndarray | None = None
 
 
 @dataclass(frozen=True)
@@ -133,7 +134,10 @@ def load_training_dataset(path: Path) -> DatasetData:
     if unexpected:
         raise TrainingError(f"Potential metadata leaked into feature columns: {', '.join(unexpected)}")
 
-    table = pq.read_table(path, columns=[*feature_order, TARGET_COLUMN, GROUP_COLUMN])
+    selected_columns = [*feature_order, TARGET_COLUMN, GROUP_COLUMN]
+    if SPLIT_COLUMN in columns:
+        selected_columns.append(SPLIT_COLUMN)
+    table = pq.read_table(path, columns=selected_columns)
     records = table.to_pylist()
     if not records:
         raise TrainingError("Training dataset has no rows")
@@ -141,6 +145,7 @@ def load_training_dataset(path: Path) -> DatasetData:
     labels: list[str] = []
     groups: list[str] = []
     rows: list[list[float]] = []
+    declared_splits: list[str] = []
     for row_number, row in enumerate(records, start=1):
         label = row.get(TARGET_COLUMN)
         group = row.get(GROUP_COLUMN)
@@ -161,6 +166,11 @@ def load_training_dataset(path: Path) -> DatasetData:
                 feature_row.append(float(value))
         labels.append(label)
         groups.append(group)
+        if SPLIT_COLUMN in columns:
+            split = row.get(SPLIT_COLUMN)
+            if split not in {"train", "validation", "test"}:
+                raise TrainingError(f"Row {row_number} has an invalid split: {split!r}")
+            declared_splits.append(str(split))
         rows.append(feature_row)
     return DatasetData(
         features=np.asarray(rows, dtype=float),
@@ -168,6 +178,9 @@ def load_training_dataset(path: Path) -> DatasetData:
         groups=np.asarray(groups, dtype=str),
         feature_order=feature_order,
         dataset_sha256=_sha256(path),
+        declared_splits=(
+            np.asarray(declared_splits, dtype=str) if declared_splits else None
+        ),
     )
 
 
@@ -218,6 +231,25 @@ def split_group_safe(data: DatasetData, config: TrainingConfig) -> GroupSplits:
 
     if len(set(data.groups)) < 3:
         raise TrainingError("At least three distinct split_group_id values are required")
+    if data.declared_splits is not None and set(data.declared_splits) == {
+        "train",
+        "validation",
+        "test",
+    }:
+        splits = GroupSplits(
+            train=np.flatnonzero(data.declared_splits == "train"),
+            validation=np.flatnonzero(data.declared_splits == "validation"),
+            test=np.flatnonzero(data.declared_splits == "test"),
+            strategy="source-declared group split",
+        )
+        _assert_group_separation(data.groups, splits)
+        missing_train_classes = sorted(set(data.labels) - set(data.labels[splits.train]))
+        if missing_train_classes:
+            raise TrainingError(
+                "Source-declared split left classes absent from training: "
+                + ", ".join(missing_train_classes)
+            )
+        return splits
     all_indices = np.arange(len(data.labels))
     train_validation, test, outer_strategy = _stratified_group_split(
         all_indices, data.labels, data.groups, config.test_fraction, config.random_seed
@@ -510,9 +542,16 @@ def train_models(config: TrainingConfig) -> dict[str, Any]:
             }
             validation_metrics["confusion_matrix_labels"] = class_names
 
+    rf_validation_macro_f1 = max(
+        float(candidate["validation_metrics"]["macro_f1"]) for candidate in rf_candidates
+    )
+    xgb_validation_macro_f1 = max(
+        float(candidate["validation_metrics"]["macro_f1"]) for candidate in xgb_candidates
+    )
+    # Model-family selection must not inspect the locked test partition.
     better_model = (
         "random_forest"
-        if rf_test_metrics["macro_f1"] >= xgb_test_metrics["macro_f1"]
+        if rf_validation_macro_f1 >= xgb_validation_macro_f1
         else "xgboost"
     )
     rf_path = config.models_dir / "random_forest.joblib"
@@ -531,6 +570,7 @@ def train_models(config: TrainingConfig) -> dict[str, Any]:
     metrics = {
         "generated_at": datetime.now(UTC).isoformat(),
         "selection_metric": "macro_f1",
+        "selection_split": "validation",
         "selected_model": better_model,
         "models": {
             "random_forest": {
@@ -578,7 +618,7 @@ def train_models(config: TrainingConfig) -> dict[str, Any]:
     }
     _atomic_json_dump(metrics, config.metrics_path)
     _atomic_json_dump(metadata, config.models_dir / "model_metadata.json")
-    LOGGER.info("Selected %s by test macro F1", better_model)
+    LOGGER.info("Selected %s by validation macro F1", better_model)
     return metrics
 
 
