@@ -8,25 +8,133 @@ import (
 	"path/filepath"
 
 	analysisv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/analysis"
+	fusionv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/fusion"
 	inputv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/input"
 	reportv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/report"
 	workspacev1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/workspace"
 	coreanalysis "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/analysis"
+	corefusion "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/fusion"
 	coreinput "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/input"
+	coreml "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/ml"
+	coreprotocol "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/protocolread"
 	corereport "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/report"
+	corerisk "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/risk"
+	coresecurity "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/security"
 	coreworkspace "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/workspace"
 	shared "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/domain/sensor"
+	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/fusion/query"
 )
 
 const maxHTTPPCAPBytes = 4 << 30
 
-func registerWorkflowAPI(mux *http.ServeMux, input *coreinput.Service, analysis *coreanalysis.Service, reports *corereport.Service, workspace *coreworkspace.Service) {
+func registerWorkflowAPI(mux *http.ServeMux, input *coreinput.Service, analysis *coreanalysis.Service, reports *corereport.Service, workspace *coreworkspace.Service, protocol *coreprotocol.Service, fusion *corefusion.Service, security *coresecurity.Service, risk *corerisk.Service, ml *coreml.Service) {
 	mux.HandleFunc("POST /api/v1/pcap", func(w http.ResponseWriter, r *http.Request) { uploadPCAP(w, r, input, workspace) })
 	mux.HandleFunc("POST /api/v1/analyses", func(w http.ResponseWriter, r *http.Request) { startAnalysis(w, r, analysis) })
 	mux.HandleFunc("GET /api/v1/analyses/{analysisID}", func(w http.ResponseWriter, r *http.Request) { getAnalysis(w, r, analysis) })
+	mux.HandleFunc("GET /api/v1/analyses/{analysisID}/insights", func(w http.ResponseWriter, r *http.Request) {
+		getAnalysisInsights(w, r, analysis, protocol, fusion, security, risk, ml)
+	})
 	mux.HandleFunc("POST /api/v1/analyses/{analysisID}/report", func(w http.ResponseWriter, r *http.Request) { generateReport(w, r, reports) })
 	mux.HandleFunc("GET /api/v1/reports/{reportID}", func(w http.ResponseWriter, r *http.Request) { getReport(w, r, reports) })
 	mux.HandleFunc("GET /api/v1/reports/{reportID}/download", func(w http.ResponseWriter, r *http.Request) { downloadReport(w, r, reports) })
+}
+
+// getAnalysisInsights is deliberately a read-only, browser-oriented view of
+// the current analysis. Native gRPC remains the complete trusted-client API;
+// this endpoint exposes the data needed by the dashboard without publishing a
+// generic gRPC proxy to browsers.
+func getAnalysisInsights(w http.ResponseWriter, r *http.Request, analysis *coreanalysis.Service, protocol *coreprotocol.Service, fusion *corefusion.Service, security *coresecurity.Service, risk *corerisk.Service, ml *coreml.Service) {
+	analysisID := r.PathValue("analysisID")
+	record, err := analysis.Get(r.Context(), analysisID)
+	if err != nil {
+		writeWorkflowError(w, err)
+		return
+	}
+	progress, _ := analysis.ProgressDetails(r.Context(), analysisID)
+	summary, _ := analysis.SummaryDetails(r.Context(), analysisID)
+
+	result := map[string]any{
+		"analysis": map[string]any{"analysis_id": record.ID, "source_id": record.SourceID, "state": record.State.String(), "stage": record.Stage.String(), "failure_reason": record.Failure, "created_at": record.CreatedAt, "updated_at": record.UpdatedAt},
+		"progress": progress,
+		"summary":  summary,
+	}
+
+	if protocol != nil {
+		section := map[string]any{}
+		if value, sectionErr := protocol.Summary(r.Context(), analysisID); sectionErr == nil {
+			section["summary"] = value
+		}
+		if value, _, sectionErr := protocol.Sessions(r.Context(), analysisID, 100, ""); sectionErr == nil {
+			section["sessions"] = value
+		}
+		if value, _, sectionErr := protocol.IKE(r.Context(), analysisID, "", 100, ""); sectionErr == nil {
+			section["ike_exchanges"] = value
+		}
+		if value, _, sectionErr := protocol.SAs(r.Context(), analysisID, "", 100, ""); sectionErr == nil {
+			section["security_associations"] = value
+		}
+		if value, _, sectionErr := protocol.Crypto(r.Context(), analysisID, "", 100, ""); sectionErr == nil {
+			section["crypto_properties"] = value
+		}
+		if value, sectionErr := protocol.NAT(r.Context(), analysisID, ""); sectionErr == nil {
+			section["nat_traversal"] = value
+		}
+		if value, _, sectionErr := protocol.Timeline(r.Context(), analysisID, "", 200, ""); sectionErr == nil {
+			section["timeline"] = value
+		}
+		if value, _, sectionErr := protocol.Evidence(r.Context(), analysisID, query.Filter{}, 200, ""); sectionErr == nil {
+			section["evidence"] = value
+		}
+		result["protocol"] = section
+	}
+
+	if fusion != nil {
+		section := map[string]any{}
+		if value, sectionErr := fusion.Status(r.Context(), analysisID); sectionErr == nil {
+			section["status"] = value
+		}
+		if value, sectionErr := fusion.Summary(r.Context(), analysisID); sectionErr == nil {
+			section["summary"] = value
+		}
+		if value, _, sectionErr := fusion.List(r.Context(), analysisID, &fusionv1.ListFusedConclusionsRequest{PageSize: 200}); sectionErr == nil {
+			section["conclusions"] = value
+		}
+		result["fusion"] = section
+	}
+
+	if security != nil {
+		section := map[string]any{}
+		if assessment, sectionErr := security.LatestForAnalysis(r.Context(), analysisID); sectionErr == nil {
+			findings, _ := security.Findings(r.Context(), assessment.ID, "")
+			recommendations, _ := security.Recommendations(r.Context(), assessment.ID)
+			section["assessment"] = map[string]any{"assessment_id": assessment.ID, "policy_id": assessment.PolicyID, "state": assessment.State.String(), "score": assessment.Result.Score, "grade": assessment.Result.Grade, "findings": findings, "threat_matrix": assessment.Result.ThreatMatrix, "rules_evaluated": assessment.Result.EvaluatedRule, "unknown_evidence_count": assessment.UnknownEvidence, "metadata_exposure": assessment.MetadataExposure, "recommendations": recommendations}
+			if risk != nil {
+				if value, scoreErr := risk.Score(r.Context(), assessment.ID); scoreErr == nil {
+					section["risk_score"] = value
+				}
+				if value, breakdownErr := risk.Breakdown(r.Context(), assessment.ID); breakdownErr == nil {
+					section["risk_breakdown"] = value
+				}
+				if value, overridesErr := risk.Overrides(r.Context(), assessment.ID); overridesErr == nil {
+					section["critical_overrides"] = value
+				}
+			}
+		}
+		result["security"] = section
+	}
+
+	if ml != nil {
+		section := map[string]any{}
+		if inferenceID, predictions, explanations, sectionErr := ml.LatestForAnalysis(r.Context(), analysisID); sectionErr == nil {
+			section["inference_id"], section["predictions"], section["explanations"] = inferenceID, predictions, explanations
+		}
+		if worker, sectionErr := ml.WorkerStatus(r.Context()); sectionErr == nil {
+			section["worker"] = worker
+		}
+		result["ml"] = section
+	}
+
+	writeJSON(w, http.StatusOK, result)
 }
 
 func uploadPCAP(w http.ResponseWriter, r *http.Request, input *coreinput.Service, workspace *coreworkspace.Service) {

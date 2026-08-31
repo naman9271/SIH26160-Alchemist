@@ -40,6 +40,7 @@ The existing dashboard uses these HTTP endpoints through
 | Upload classic PCAP | `POST /api/v1/pcap` multipart field `pcap` | Enforces a 4 GiB limit, stores the upload temporarily, SHA-256 hashes it, parses it with the Sensor pipeline, and returns packet/IPsec counters. |
 | Run offline analysis | `POST /api/v1/analyses` | Starts passive-PCAP processing with Fusion, security, metadata-exposure analysis, and optionally ML. |
 | Poll progress/result | `GET /api/v1/analyses/{analysisID}` | Returns lifecycle state, current pipeline stage, counters, a compact protocol/ML/security summary, and a failure reason if needed. |
+| Open analyst pages | `GET /api/v1/analyses/{analysisID}/insights` | Browser-safe, read-only bundle of real protocol, flow/ML, Fusion, security, risk, evidence, and availability data for the multi-page dashboard. |
 | Create executive PDF | `POST /api/v1/analyses/{analysisID}/report` | Asynchronously creates an executive PDF with timeline, threat matrix, and evidence chain options enabled. |
 | Poll/download report | `GET /api/v1/reports/{reportID}` and `/download` | Returns report state, then streams the ready PDF. Reports expire after 24 hours. |
 
@@ -259,13 +260,13 @@ ML or an LLM to decide severity:
 ## Important frontend integration gap
 
 The Go server listens on native gRPC port `50052`, but the dashboard cannot
-use it directly. The only browser-ready Core endpoints today are the health
-endpoints and the six REST workflow endpoints listed above.
+use it directly. The browser-ready Core endpoints are the health endpoints,
+the workflow endpoints above, and the read-only `insights` composition route.
 
-Therefore most rich features are **implemented in Go but not yet reachable by
-the current dashboard**. To expose them safely, add a narrow Go HTTP API (or
-Next.js server-side gRPC client) that returns browser-oriented JSON. Do not
-ship a generic public gRPC proxy.
+The `insights` route exposes the high-value analysis results for the current
+dashboard. Less common operational/admin gRPC methods remain trusted-client
+only. Add narrow Go HTTP routes (or a Next.js server-side gRPC client) for
+future browser needs; do not ship a generic public gRPC proxy.
 
 ## Frontend roadmap
 
