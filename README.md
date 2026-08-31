@@ -97,9 +97,9 @@ Automatic evaluation of:
 
 ```text
 .
-├── backend/        # Go-based API, services, and analysis logic
-├── frontend/       # Next.js dashboard and user interface
-├── ml-service/     # Python traffic classifier, UNKNOWN, SHAP and anomaly experiment
+├── backend/        # Go API plus the separately containerized Python ML worker
+│   └── ml-service/ # Traffic classifier, UNKNOWN, SHAP and anomaly experiment
+├── frontend/       # Next.js dashboard and user interface (no Docker configuration)
 ├── ipsec_esp/      # Legacy insecure parser fixtures; never ML training data
 └── README.md       # Project overview and documentation
 ```
@@ -136,6 +136,18 @@ cd backend
 ML_GRPC_ADDRESS=127.0.0.1:50051 go run ./src/cmd/server
 ```
 
+Build the Go backend container from its dedicated context:
+
+```bash
+docker build -t sih-backend:local ./backend
+```
+
+The Python worker is owned by the backend and remains a separate process/image:
+
+```bash
+docker build -t sih-ml-service:local ./backend/ml-service
+```
+
 In another terminal:
 
 ```bash
@@ -160,6 +172,7 @@ The long-term goal is to provide a practical assistant for security analysts tha
 ## Documentation
 
 - [Backend README](backend/README.md)
+- [ML worker README](backend/ml-service/README.md)
 - [Frontend README](frontend/README.md)
 - [Submission guide](docs/SUBMISSION_GUIDE.md)
 - [ML validation protocol](docs/MODEL_VALIDATION.md)

@@ -1778,7 +1778,7 @@ This is a real process boundary. Go Core is the gRPC client; the Python ML
 Worker is the gRPC server. The frontend never calls this worker directly.
 
 The canonical source is
-`ml-service/proto/ml/v1/traffic_classifier.proto`; `backend/Makefile` generates
+`backend/ml-service/proto/ml/v1/traffic_classifier.proto`; `backend/Makefile` generates
 the Go client from that same file.
 
 ```protobuf
@@ -2541,7 +2541,7 @@ Do not allow every package to mutate maps independently.
 ```text
 backend/
 ├── api/proto/core/v1/
-├── gen/go/ml/v1/ # generated from ../ml-service/proto/ml/v1
+├── gen/go/ml/v1/ # generated from ml-service/proto/ml/v1
 ├── src/cmd/server/main.go
 ├── src/internal/
 │   ├── transport/grpc/
@@ -2559,7 +2559,7 @@ backend/
 └── tests/
 ```
 
-`../ml-service/proto/ml/v1/traffic_classifier.proto` is the shared gRPC
+`backend/ml-service/proto/ml/v1/traffic_classifier.proto` is the shared gRPC
 contract for the external Python ML process and generates the Go client.
 
 ---

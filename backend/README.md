@@ -56,3 +56,20 @@ The only v1 process-boundary gRPC contracts are:
 Only Core services are registered on the external Go gRPC server. Sensor and
 Fusion remain internal Go packages. See
 [`src/internal/docs/ARCHITECTURE_MVP.md`](src/internal/docs/ARCHITECTURE_MVP.md).
+
+## Containers
+
+The backend owns both server-side containers, but each has an isolated build
+context and runtime:
+
+```bash
+# From the repository root: Go API only
+docker build -t sih-backend:local ./backend
+
+# Python inference worker only
+docker build -t sih-ml-service:local ./backend/ml-service
+```
+
+The Go image is defined by this directory's `Dockerfile`; its `.dockerignore`
+excludes `ml-service/`. The worker's image and runtime configuration live under
+[`ml-service/`](ml-service/). The frontend is intentionally not containerized.

@@ -24,6 +24,9 @@ coverage.out
 *.md
 !README.md
 
+# The Python worker has its own image and Docker build context.
+ml-service/
+
 # Local config (use env vars in production)
 config.yaml
 config.local.yaml

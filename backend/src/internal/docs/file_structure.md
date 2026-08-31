@@ -26,9 +26,9 @@ The only v1 process-boundary gRPC contracts are:
 
 # 1. Top-level project layout
 
-The Python ML Worker is intentionally outside the Go backend. It has its own
-Python implementation, but it shares a gRPC `.proto` contract with the Go
-server because gRPC is language-neutral.
+The Python ML Worker is owned by the backend and lives under `backend/`, while
+remaining a separate Python process and Docker image. It shares a gRPC `.proto`
+contract with the Go server because gRPC is language-neutral.
 
 ```text
 SIH26160/
@@ -38,6 +38,13 @@ SIH26160/
 │   ├── Makefile
 │   ├── go.mod
 │   ├── go.sum
+│   ├── ml-service/
+│   │   ├── Dockerfile
+│   │   ├── README.md
+│   │   ├── requirements.txt
+│   │   ├── proto/
+│   │   ├── src/
+│   │   └── tests/
 │   ├── api/
 │   │   └── proto/
 │   │       ├── core/v1/
@@ -86,29 +93,16 @@ SIH26160/
 │   │       ├── observability/
 │   │       └── docs/
 │   └── tests/
-├── ml-service/
-│   ├── README.md
-│   ├── requirements.txt
-│   ├── pyproject.toml
-│   ├── src/
-│   │   ├── server.py
-│   │   ├── generated/
-│   │   ├── models/
-│   │   ├── features/
-│   │   ├── inference/
-│   │   ├── explain/
-│   │   └── config/
-│   └── tests/
 └── frontend/
     └── app/
 ```
 
 `backend/api/proto/core/v1` is the external Go server API consumed by Next.js.
-`ml-service/proto/ml/v1/traffic_classifier.proto` is the shared process-boundary
+`backend/ml-service/proto/ml/v1/traffic_classifier.proto` is the shared process-boundary
 contract. It is outside the three Go blocks and generates:
 
 - a Go client in `backend/gen/go/ml/v1`
-- Python server/message stubs in `ml-service/proto`
+- Python server/message stubs in `backend/ml-service/proto`
 
 This is required because the Python ML Worker is a real separate process.
 `.proto` files describe the wire contract; they do not mean the worker is
