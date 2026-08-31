@@ -12,8 +12,13 @@ import (
 	"time"
 
 	coresystemv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/system"
+	coreanalysis "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/analysis"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/dependencies"
+	coreinput "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/input"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/localsensor"
+	coreprotocol "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/protocolread"
+	corerisk "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/risk"
+	coresecurity "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/security"
 	coresystem "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/system"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/workspace"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/fusion"
@@ -38,6 +43,11 @@ func main() {
 		Metrics:      provider,
 		Workspace:    workspaceService,
 	})
+	protocolService := coreprotocol.New(coreprotocol.WorkspaceRunResolver{Workspace: workspaceService}, fusionRuntime.Query, sensorServices)
+	inputService := coreinput.New(sensorServices)
+	analysisService := coreanalysis.New(inputService, fusionRuntime.Sessions, workspaceService)
+	securityService := coresecurity.New(protocolService)
+	riskService := corerisk.New(securityService)
 
 	grpcServer := grpc.NewServer()
 	coretransport.RegisterCoreServices(
@@ -45,6 +55,11 @@ func main() {
 		coretransport.NewSystemHandler(systemService),
 		coretransport.NewWorkspaceHandler(workspaceService),
 		coretransport.NewLocalSensorHandler(localsensor.New(provider)),
+		coretransport.NewInputHandler(inputService, workspaceService),
+		coretransport.NewAnalysisHandler(analysisService),
+		coretransport.NewProtocolReadHandler(protocolService),
+		coretransport.NewSecurityHandler(securityService),
+		coretransport.NewRiskHandler(riskService),
 	)
 	grpcAddress := envOrDefault("CORE_GRPC_ADDRESS", "127.0.0.1:50052")
 	grpcListener, err := net.Listen("tcp", grpcAddress)

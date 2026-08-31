@@ -26,3 +26,26 @@ func TestCoreRegistrationDoesNotExposeSensorServices(t *testing.T) {
 		}
 	}
 }
+
+func TestCoreRegistrationIncludesOnlyRequestedCoreServices(t *testing.T) {
+	server := grpc.NewServer()
+	RegisterCoreServices(
+		server,
+		NewSystemHandler(coresystem.New(coresystem.Options{})),
+		NewWorkspaceHandler(workspace.New(workspace.Options{})),
+		NewInputHandler(nil, nil),
+		NewAnalysisHandler(nil),
+		NewProtocolReadHandler(nil),
+		NewSecurityHandler(nil),
+		NewRiskHandler(nil),
+	)
+	services := server.GetServiceInfo()
+	if len(services) != 7 {
+		t.Fatalf("registered services=%v", services)
+	}
+	for name := range services {
+		if strings.HasPrefix(name, "sensor.") {
+			t.Fatalf("internal Sensor service was exposed: %s", name)
+		}
+	}
+}

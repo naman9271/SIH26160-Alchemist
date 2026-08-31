@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package core.protocolread.v1;
+
+import "api/proto/common/v1/evidence.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/protocolread;protocolreadv1";
+
+service ProtocolReadService {
+  rpc GetSummary(GetProtocolSummaryRequest) returns (ProtocolSummary);
+  rpc ListSessions(ListSessionsRequest) returns (ListSessionsResponse);
+  rpc GetSession(GetSessionRequest) returns (VpnSession);
+  rpc ListIkeExchanges(ListIkeExchangesRequest) returns (ListIkeExchangesResponse);
+  rpc ListSecurityAssociations(ListSecurityAssociationsRequest) returns (ListSecurityAssociationsResponse);
+  rpc GetSecurityAssociation(GetSecurityAssociationRequest) returns (SecurityAssociation);
+  rpc ListCryptoProperties(ListCryptoPropertiesRequest) returns (ListCryptoPropertiesResponse);
+  rpc GetNatTraversal(GetNatTraversalRequest) returns (NatTraversalSummary);
+  rpc GetTimeline(GetTimelineRequest) returns (ProtocolTimeline);
+  rpc ListEvidence(ListProtocolEvidenceRequest) returns (ListProtocolEvidenceResponse);
+}
+
+message GetProtocolSummaryRequest { string analysis_id = 1; }
+message ProtocolSummary { string analysis_id = 1; bool ipsec_detected = 2; string ike_version = 3; string data_protocol = 4; string vpn_mode = 5; ipsec.common.v1.EvidenceStatus evidence_status = 6; double confidence = 7; repeated string unavailable_reasons = 8; }
+message ListSessionsRequest { string analysis_id = 1; uint32 page_size = 2; string page_token = 3; }
+message ListSessionsResponse { repeated VpnSession sessions = 1; string next_page_token = 2; }
+message GetSessionRequest { string analysis_id = 1; string session_id = 2; }
+message VpnSession { string session_id = 1; string state = 2; string mode = 3; repeated string flow_ids = 4; repeated string spi_values = 5; repeated string evidence_sources = 6; ipsec.common.v1.EvidenceStatus evidence_status = 7; }
+message ListIkeExchangesRequest { string analysis_id = 1; string session_id = 2; uint32 page_size = 3; string page_token = 4; }
+message IkeExchange { string exchange_id = 1; string session_id = 2; string ike_version = 3; string initiator_spi = 4; string responder_spi = 5; uint32 exchange_type = 6; uint32 message_id = 7; google.protobuf.Timestamp observed_at = 8; ipsec.common.v1.EvidenceStatus evidence_status = 9; double confidence = 10; }
+message ListIkeExchangesResponse { repeated IkeExchange exchanges = 1; string next_page_token = 2; }
+message ListSecurityAssociationsRequest { string analysis_id = 1; string session_id = 2; uint32 page_size = 3; string page_token = 4; }
+message GetSecurityAssociationRequest { string analysis_id = 1; string security_association_id = 2; }
+message SecurityAssociation { string security_association_id = 1; string session_id = 2; string protocol = 3; string mode = 4; repeated string spi_values = 5; string state = 6; ipsec.common.v1.EvidenceStatus evidence_status = 7; double confidence = 8; }
+message ListSecurityAssociationsResponse { repeated SecurityAssociation security_associations = 1; string next_page_token = 2; }
+message ListCryptoPropertiesRequest { string analysis_id = 1; string session_id = 2; uint32 page_size = 3; string page_token = 4; }
+message CryptoProperty { string name = 1; string value = 2; string resource_id = 3; string source = 4; ipsec.common.v1.EvidenceStatus evidence_status = 5; double confidence = 6; string unavailable_reason = 7; }
+message ListCryptoPropertiesResponse { repeated CryptoProperty properties = 1; string next_page_token = 2; }
+message GetNatTraversalRequest { string analysis_id = 1; string session_id = 2; }
+message NatTraversalSummary { bool observed = 1; uint64 nat_t_packets = 2; ipsec.common.v1.EvidenceStatus evidence_status = 3; string unavailable_reason = 4; }
+message GetTimelineRequest { string analysis_id = 1; string session_id = 2; uint32 page_size = 3; string page_token = 4; }
+message TimelineEvent { string event_id = 1; string event_type = 2; string message = 3; google.protobuf.Timestamp observed_at = 4; ipsec.common.v1.EvidenceStatus evidence_status = 5; }
+message ProtocolTimeline { repeated TimelineEvent events = 1; string next_page_token = 2; }
+message ListProtocolEvidenceRequest { string analysis_id = 1; string property_key = 2; string resource_type = 3; string resource_id = 4; uint32 page_size = 5; string page_token = 6; }
+message ProtocolEvidence { string evidence_id = 1; string property_key = 2; string value = 3; string source = 4; ipsec.common.v1.EvidenceStatus evidence_status = 5; double confidence = 6; string resource_type = 7; string resource_id = 8; google.protobuf.Timestamp observed_at = 9; map<string,string> metadata = 10; }
+message ListProtocolEvidenceResponse { repeated ProtocolEvidence evidence = 1; string next_page_token = 2; }

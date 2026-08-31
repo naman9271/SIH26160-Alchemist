@@ -3,6 +3,7 @@ package session
 
 import (
 	"context"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -115,6 +116,22 @@ func (s *Service) Get(ctx context.Context, id string) (Session, error) {
 		return Session{}, shared.NewError(shared.NotFound, "", "sensor session was not found")
 	}
 	return item, nil
+}
+
+// List exposes immutable session snapshots to in-process Core adapters. It
+// does not create a second session registry or change Sensor lifecycle rules.
+func (s *Service) List(ctx context.Context) ([]Session, error) {
+	if err := contextError(ctx); err != nil {
+		return nil, err
+	}
+	s.mu.RLock()
+	items := make([]Session, 0, len(s.sessions))
+	for _, item := range s.sessions {
+		items = append(items, item)
+	}
+	s.mu.RUnlock()
+	sort.Slice(items, func(i, j int) bool { return items[i].ID < items[j].ID })
+	return items, nil
 }
 
 // BeginCapture atomically validates and transitions a live capture session.

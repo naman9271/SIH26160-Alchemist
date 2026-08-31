@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+option go_package = "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/risk;riskv1";
+package core.risk.v1;
+
+service RiskService {
+  rpc Calculate(CalculateRiskRequest) returns (CalculateRiskResponse);
+  rpc GetScore(GetRiskScoreRequest) returns (SecurityScore);
+  rpc GetBreakdown(GetRiskBreakdownRequest) returns (RiskBreakdown);
+  rpc GetCriticalOverrides(GetCriticalOverridesRequest) returns (CriticalOverridesResponse);
+}
+
+message CalculateRiskRequest { string assessment_id = 1; string policy_id = 2; }
+message CalculateRiskResponse { SecurityScore score = 1; }
+message GetRiskScoreRequest { string assessment_id = 1; }
+message SecurityScore { string assessment_id = 1; uint32 score = 2; string risk_level = 3; double confidence = 4; uint64 unknown_evidence_count = 5; }
+message GetRiskBreakdownRequest { string assessment_id = 1; }
+message RiskCategory { uint32 score = 1; uint32 maximum = 2; }
+message RiskBreakdown { RiskCategory cryptography = 1; RiskCategory authentication = 2; RiskCategory key_exchange = 3; RiskCategory pfs = 4; RiskCategory replay = 5; RiskCategory lifecycle = 6; RiskCategory metadata = 7; uint64 unknown_evidence_count = 8; double confidence_penalty = 9; }
+message GetCriticalOverridesRequest { string assessment_id = 1; }
+message CriticalOverride { string rule_id = 1; uint32 score_cap = 2; string reason = 3; }
+message CriticalOverridesResponse { repeated CriticalOverride overrides = 1; }

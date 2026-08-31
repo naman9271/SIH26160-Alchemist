@@ -69,10 +69,13 @@ func (p *Provider) Capabilities(ctx context.Context) (coresystem.Capabilities, e
 		// The capture package can decode an uploaded classic-PCAP stream without
 		// relying on tcpdump or local capture privileges. PCAPNG is intentionally
 		// not advertised until its parser is implemented.
-		PassivePCAP:      true,
-		MLClassification: mlAvailable,
-		SHAP:             mlAvailable,
-		MetadataExposure: true,
+		PassivePCAP:        true,
+		SecurityAssessment: true,
+		RiskScoring:        true,
+		ThreatMatrix:       true,
+		MLClassification:   mlAvailable,
+		SHAP:               mlAvailable,
+		MetadataExposure:   true,
 	}, nil
 }
 

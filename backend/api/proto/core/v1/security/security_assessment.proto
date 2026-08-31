@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package core.security.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/security;securityv1";
+
+service SecurityAssessmentService {
+  rpc Run(RunSecurityAssessmentRequest) returns (RunSecurityAssessmentResponse);
+  rpc Get(GetSecurityAssessmentRequest) returns (SecurityAssessment);
+  rpc ListFindings(ListFindingsRequest) returns (ListFindingsResponse);
+  rpc GetFinding(GetFindingRequest) returns (SecurityFinding);
+  rpc GetThreatMatrix(GetThreatMatrixRequest) returns (ThreatMatrix);
+  rpc ListRecommendations(ListRecommendationsRequest) returns (ListRecommendationsResponse);
+  rpc GetCompliance(GetComplianceRequest) returns (ComplianceSummary);
+  rpc GetMetadataExposure(GetMetadataExposureRequest) returns (MetadataExposureAssessment);
+  rpc Reevaluate(ReevaluateSecurityRequest) returns (ReevaluateSecurityResponse);
+}
+
+enum AssessmentState { ASSESSMENT_STATE_UNSPECIFIED = 0; ASSESSMENT_RUNNING = 1; ASSESSMENT_COMPLETED = 2; ASSESSMENT_FAILED = 3; }
+message RunSecurityAssessmentRequest { string analysis_id = 1; string policy_id = 2; }
+message RunSecurityAssessmentResponse { string assessment_id = 1; AssessmentState state = 2; }
+message GetSecurityAssessmentRequest { string assessment_id = 1; }
+message SecurityAssessment { string assessment_id = 1; string analysis_id = 2; string policy_id = 3; AssessmentState state = 4; uint32 score = 5; string grade = 6; repeated SecurityFinding findings = 7; google.protobuf.Timestamp evaluated_at = 8; string failure_reason = 9; }
+message ListFindingsRequest { string assessment_id = 1; string severity = 2; uint32 page_size = 3; string page_token = 4; }
+message ListFindingsResponse { repeated SecurityFinding findings = 1; string next_page_token = 2; }
+message GetFindingRequest { string assessment_id = 1; string finding_id = 2; }
+message SecurityFinding { string finding_id = 1; string rule_id = 2; string title = 3; string severity = 4; string category = 5; string description = 6; string recommendation = 7; repeated string evidence_properties = 8; }
+message GetThreatMatrixRequest { string assessment_id = 1; }
+message ThreatMatrix { map<string,uint64> severity_counts = 1; repeated SecurityFinding findings = 2; }
+message ListRecommendationsRequest { string assessment_id = 1; }
+message Recommendation { string priority = 1; string text = 2; repeated string rule_ids = 3; }
+message ListRecommendationsResponse { repeated Recommendation recommendations = 1; }
+message GetComplianceRequest { string assessment_id = 1; }
+message ComplianceSummary { string policy_id = 1; uint64 rules_evaluated = 2; uint64 rules_failed = 3; uint64 rules_unknown = 4; uint64 rules_not_applicable = 5; }
+message GetMetadataExposureRequest { string assessment_id = 1; }
+message MetadataExposureAssessment { bool observable = 1; string status = 2; string explanation = 3; }
+message ReevaluateSecurityRequest { string assessment_id = 1; string policy_id = 2; }
+message ReevaluateSecurityResponse { string assessment_id = 1; AssessmentState state = 2; }
