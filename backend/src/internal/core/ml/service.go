@@ -46,12 +46,28 @@ func New(client worker.TrafficClassifierClient, timeout time.Duration, state *wo
 	}
 	return s
 }
+
+// SetTimeout applies a safe runtime timeout change to subsequent worker calls.
+func (s *Service) SetTimeout(timeout time.Duration) {
+	if s == nil || timeout <= 0 {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.timeout = timeout
+	if s.client != nil {
+		s.predictor, _ = mlclient.New(s.client, timeout)
+	}
+}
 func (s *Service) WorkerStatus(ctx context.Context) (*mlv1.MLWorkerStatus, error) {
 	if s == nil || s.client == nil {
 		return &mlv1.MLWorkerStatus{StatusMessage: "ML worker is not configured"}, nil
 	}
+	s.mu.RLock()
+	timeout := s.timeout
+	s.mu.RUnlock()
 	start := time.Now()
-	probe, cancel := context.WithTimeout(ctx, s.timeout)
+	probe, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	status, err := s.client.HealthCheck(probe, &emptypb.Empty{})
 	if err != nil {
@@ -77,7 +93,10 @@ func (s *Service) Start(ctx context.Context, analysisID string, sequence, shap b
 	if sequence {
 		return nil, shared.NewError(shared.FailedPrecondition, "", "the canonical v1 ML worker has no sequence inference RPC")
 	}
-	if s.predictor == nil || s.workspace == nil || s.input == nil || s.flows == nil {
+	s.mu.RLock()
+	predictor := s.predictor
+	s.mu.RUnlock()
+	if predictor == nil || s.workspace == nil || s.input == nil || s.flows == nil {
 		return nil, shared.NewError(shared.FailedPrecondition, "", "ML inference dependencies are not configured")
 	}
 	workspaceRecord, err := s.workspace.Get(ctx, "")
@@ -109,7 +128,7 @@ func (s *Service) Start(ctx context.Context, analysisID string, sequence, shap b
 			if !w.IsMLReady() {
 				continue
 			}
-			result, e := s.predictor.Predict(ctx, flow.ToFeature(w))
+			result, e := predictor.Predict(ctx, flow.ToFeature(w))
 			if e != nil {
 				return s.fail(id, e)
 			}

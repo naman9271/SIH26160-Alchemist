@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package core.runtimeconfig.v1;
+
+import "api/proto/core/v1/workspace/workspace.proto";
+import "google/protobuf/field_mask.proto";
+
+option go_package = "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/runtimeconfig;runtimeconfigv1";
+
+service RuntimeConfigService {
+  rpc Get(GetRuntimeConfigRequest) returns (RuntimeConfig);
+  rpc Update(UpdateRuntimeConfigRequest) returns (RuntimeConfig);
+  rpc RestoreDefaults(RestoreDefaultsRequest) returns (RuntimeConfig);
+}
+message LocalSensorOptions { bool passive_capture_enabled = 1; uint32 packet_buffer_size = 2; }
+message RuntimeConfig {
+  uint64 revision = 1;
+  LocalSensorOptions local_sensor = 2;
+  string ml_endpoint = 3;
+  string fusion_policy_id = 4;
+  uint64 ml_timeout_ms = 5;
+  uint64 fusion_recomputation_timeout_ms = 6;
+  uint32 event_buffer_size = 7;
+  string report_temp_directory = 8;
+  string default_policy_id = 9;
+  core.workspace.v1.AnalysisMode default_analysis_mode = 10;
+}
+message GetRuntimeConfigRequest {}
+message UpdateRuntimeConfigRequest { RuntimeConfig config = 1; google.protobuf.FieldMask update_mask = 2; }
+message RestoreDefaultsRequest {}

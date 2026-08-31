@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package core.report.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/report;reportv1";
+
+// ReportService manages short-lived, generated analysis exports. Download is
+// deliberately streamed so a client never needs to receive a whole report in
+// one gRPC message.
+service ReportService {
+  rpc Generate(GenerateReportRequest) returns (GenerateReportResponse);
+  rpc Get(GetReportRequest) returns (Report);
+  rpc Download(DownloadReportRequest) returns (stream ReportChunk);
+  rpc Delete(DeleteReportRequest) returns (DeleteReportResponse);
+  rpc ListTypes(ListReportTypesRequest) returns (ListReportTypesResponse);
+}
+
+enum ReportType { REPORT_TYPE_UNSPECIFIED = 0; EXECUTIVE = 1; TECHNICAL = 2; JSON = 3; }
+enum ReportFormat { REPORT_FORMAT_UNSPECIFIED = 0; PDF = 1; JSON_FORMAT = 2; }
+enum ReportState { REPORT_STATE_UNSPECIFIED = 0; GENERATING = 1; READY = 2; FAILED = 3; DELETED = 4; }
+
+message GenerateReportRequest {
+  string analysis_id = 1;
+  ReportType type = 2;
+  ReportFormat format = 3;
+  bool include_timeline = 4;
+  bool include_threat_matrix = 5;
+  bool include_shap = 6;
+  bool include_evidence_chain = 7;
+}
+message GenerateReportResponse { string report_id = 1; ReportState state = 2; }
+message GetReportRequest { string report_id = 1; }
+message DownloadReportRequest { string report_id = 1; }
+message DeleteReportRequest { string report_id = 1; }
+message DeleteReportResponse { string report_id = 1; bool deleted = 2; }
+message Report {
+  string report_id = 1;
+  string analysis_id = 2;
+  ReportType type = 3;
+  ReportFormat format = 4;
+  ReportState state = 5;
+  string mime_type = 6;
+  uint64 size_bytes = 7;
+  string failure_reason = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+  google.protobuf.Timestamp expires_at = 11;
+}
+message ReportChunk { bytes data = 1; uint64 offset = 2; bool eof = 3; }
+message ListReportTypesRequest {}
+message ReportTypeDescriptor { string id = 1; ReportType type = 2; ReportFormat format = 3; string display_name = 4; }
+message ListReportTypesResponse { repeated ReportTypeDescriptor types = 1; }

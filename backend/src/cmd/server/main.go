@@ -11,17 +11,22 @@ import (
 	"syscall"
 	"time"
 
+	runtimeconfigv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/runtimeconfig"
 	coresystemv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/system"
 	mlworkerv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/ml/v1"
 	coreanalysis "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/analysis"
+	coreartifact "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/artifact"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/dependencies"
+	coreevents "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/events"
 	corefusion "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/fusion"
 	coreinput "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/input"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/localsensor"
 	coreml "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/ml"
 	corepolicy "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/policy"
 	coreprotocol "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/protocolread"
+	corereport "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/report"
 	corerisk "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/risk"
+	coreruntimeconfig "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/runtimeconfig"
 	coresecurity "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/security"
 	coresystem "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/system"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/workspace"
@@ -51,10 +56,14 @@ func main() {
 	protocolService := coreprotocol.New(coreprotocol.WorkspaceRunResolver{Workspace: workspaceService}, fusionRuntime.Query, sensorServices)
 	inputService := coreinput.New(sensorServices)
 	analysisService := coreanalysis.New(inputService, fusionRuntime.Sessions, workspaceService)
+	runtimeConfigService := coreruntimeconfig.New(coreruntimeconfig.Defaults(envOrDefault("REPORT_TEMP_DIRECTORY", "")))
+	artifactService := coreartifact.New(runtimeConfigService.ReportDirectory)
+	coreEventService := coreevents.New()
 	securityService := coresecurity.New(protocolService)
 	riskService := corerisk.New(securityService)
 	policyService := corepolicy.New(fusionRuntime.Policy)
 	fusionService := corefusion.New(coreprotocol.WorkspaceRunResolver{Workspace: workspaceService}, fusionRuntime.Fusion, fusionRuntime.Provenance, fusionRuntime.Ingest)
+	reportService := corereport.New(analysisService, fusionService, artifactService, workspaceService, coreEventService)
 	mlConnection, mlConnectionErr := grpc.NewClient(provider.MLAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if mlConnectionErr != nil {
 		logger.Warn("ML client initialization failed", "error", mlConnectionErr)
@@ -65,6 +74,12 @@ func main() {
 		mlWorker = mlworkerv1.NewTrafficClassifierClient(mlConnection)
 	}
 	mlService := coreml.New(mlWorker, 2*time.Second, workspaceService, inputService, sensorServices.Flows)
+	// Apply safe runtime changes to the services that own these settings.
+	runtimeConfigService.Subscribe(func(config *runtimeconfigv1.RuntimeConfig) {
+		mlService.SetTimeout(time.Duration(config.GetMlTimeoutMs()) * time.Millisecond)
+		fusionService.SetRecomputationTimeout(time.Duration(config.GetFusionRecomputationTimeoutMs()) * time.Millisecond)
+		coreEventService.SetBufferSize(config.GetEventBufferSize())
+	})
 
 	grpcServer := grpc.NewServer()
 	coretransport.RegisterCoreServices(
@@ -80,6 +95,10 @@ func main() {
 		coretransport.NewPolicyHandler(policyService),
 		coretransport.NewMLHandler(mlService),
 		coretransport.NewFusionHandler(fusionService),
+		coretransport.NewReportHandler(reportService),
+		coretransport.NewArtifactHandler(artifactService),
+		coretransport.NewRuntimeConfigHandler(runtimeConfigService),
+		coretransport.NewEventHandler(workspaceService, fusionRuntime.Events, coreEventService),
 	)
 	grpcAddress := envOrDefault("CORE_GRPC_ADDRESS", "127.0.0.1:50052")
 	grpcListener, err := net.Listen("tcp", grpcAddress)

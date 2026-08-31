@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package core.event.v1;
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/event;eventv1";
+
+service EventService { rpc Subscribe(SubscribeRequest) returns (stream CoreEvent); }
+
+enum CoreEventCategory {
+  CORE_EVENT_CATEGORY_UNSPECIFIED = 0;
+  WORKSPACE_RESET = 1; SENSOR_CONNECTED = 2; SENSOR_DISCONNECTED = 3; SENSOR_MODE_CHANGED = 4;
+  SOURCE_READY = 5; CAPTURE_STARTED = 6; CAPTURE_STATS = 7; CAPTURE_STOPPED = 8;
+  IPSEC_DETECTED = 9; IKE_DETECTED = 10; ESP_DETECTED = 11; SA_DISCOVERED = 12;
+  ANALYSIS_STARTED = 13; ANALYSIS_PROGRESS = 14; ANALYSIS_COMPLETED = 15; ANALYSIS_FAILED = 16;
+  SECURITY_FINDING_CREATED = 17; SECURITY_SCORE_UPDATED = 18; ML_INFERENCE_STARTED = 19;
+  ML_PREDICTION_UPDATED = 20; ML_UNAVAILABLE = 21; FUSION_STARTED = 22;
+  FUSION_CONCLUSION_UPDATED = 23; FUSION_CONFLICT = 24; FUSION_COMPLETED = 25; REPORT_READY = 26;
+}
+message SubscribeRequest {
+  string workspace_id = 1;
+  string analysis_id = 2;
+  repeated CoreEventCategory categories = 3;
+  uint64 after_sequence = 4;
+}
+message CoreEvent {
+  string event_id = 1;
+  uint64 sequence = 2;
+  CoreEventCategory category = 3;
+  string workspace_id = 4;
+  string analysis_id = 5;
+  google.protobuf.Timestamp occurred_at = 6;
+  google.protobuf.Struct payload = 7;
+}

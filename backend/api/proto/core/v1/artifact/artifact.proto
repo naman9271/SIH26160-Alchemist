@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package core.artifact.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/artifact;artifactv1";
+
+service ArtifactService {
+  rpc List(ListArtifactsRequest) returns (ListArtifactsResponse);
+  rpc Get(GetArtifactRequest) returns (Artifact);
+  rpc Delete(DeleteArtifactRequest) returns (DeleteArtifactResponse);
+  rpc Cleanup(CleanupArtifactsRequest) returns (CleanupArtifactsResponse);
+}
+enum ArtifactType { ARTIFACT_TYPE_UNSPECIFIED = 0; PCAP = 1; PCAPNG = 2; REPORT = 3; DEBUG_EXPORT = 4; }
+message Artifact { string artifact_id = 1; ArtifactType type = 2; string name = 3; string mime_type = 4; uint64 size_bytes = 5; string analysis_id = 6; google.protobuf.Timestamp created_at = 7; google.protobuf.Timestamp expires_at = 8; }
+message ListArtifactsRequest { ArtifactType type = 1; string analysis_id = 2; }
+message ListArtifactsResponse { repeated Artifact artifacts = 1; }
+message GetArtifactRequest { string artifact_id = 1; }
+message DeleteArtifactRequest { string artifact_id = 1; }
+message DeleteArtifactResponse { string artifact_id = 1; bool deleted = 2; }
+message CleanupArtifactsRequest { google.protobuf.Timestamp expired_before = 1; bool include_referenced = 2; }
+message CleanupArtifactsResponse { uint64 deleted_count = 1; }

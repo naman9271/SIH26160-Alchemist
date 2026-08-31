@@ -2,13 +2,17 @@ package core
 
 import (
 	analysisv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/analysis"
+	artifactv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/artifact"
+	eventv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/event"
 	fusionv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/fusion"
 	inputv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/input"
 	localsensorv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/localsensor"
 	mlv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/ml"
 	policyv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/policy"
 	protocolreadv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/protocolread"
+	reportv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/report"
 	riskv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/risk"
+	runtimeconfigv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/runtimeconfig"
 	securityv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/security"
 	coresystemv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/system"
 	workspacev1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/workspace"
@@ -55,6 +59,22 @@ func RegisterCoreServices(server grpc.ServiceRegistrar, system *SystemHandler, w
 		case *FusionHandler:
 			if value != nil {
 				fusionv1.RegisterFusionOrchestrationServiceServer(server, value)
+			}
+		case *ReportHandler:
+			if value != nil {
+				reportv1.RegisterReportServiceServer(server, value)
+			}
+		case *ArtifactHandler:
+			if value != nil {
+				artifactv1.RegisterArtifactServiceServer(server, value)
+			}
+		case *RuntimeConfigHandler:
+			if value != nil {
+				runtimeconfigv1.RegisterRuntimeConfigServiceServer(server, value)
+			}
+		case *EventHandler:
+			if value != nil {
+				eventv1.RegisterEventServiceServer(server, value)
 			}
 		}
 	}

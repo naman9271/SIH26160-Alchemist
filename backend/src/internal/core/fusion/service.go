@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
+	"time"
 
 	fusionv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/fusion"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/protocolread"
@@ -21,10 +23,26 @@ type Service struct {
 	engine     *engine.Service
 	provenance *provenance.Service
 	ingest     *ingest.Service
+	mu         sync.RWMutex
+	timeout    time.Duration
 }
 
 func New(resolver protocolread.RunResolver, engineService *engine.Service, provenanceService *provenance.Service, evidence *ingest.Service) *Service {
-	return &Service{resolver: resolver, engine: engineService, provenance: provenanceService, ingest: evidence}
+	return &Service{resolver: resolver, engine: engineService, provenance: provenanceService, ingest: evidence, timeout: 5 * time.Second}
+}
+func (s *Service) SetRecomputationTimeout(timeout time.Duration) {
+	if s == nil || timeout <= 0 {
+		return
+	}
+	s.mu.Lock()
+	s.timeout = timeout
+	s.mu.Unlock()
+}
+func (s *Service) recomputeContext(ctx context.Context) (context.Context, context.CancelFunc) {
+	s.mu.RLock()
+	timeout := s.timeout
+	s.mu.RUnlock()
+	return context.WithTimeout(ctx, timeout)
 }
 func (s *Service) runID(ctx context.Context, analysisID string) (string, error) {
 	if s == nil || s.resolver == nil || s.engine == nil || s.provenance == nil {
@@ -53,7 +71,9 @@ func (s *Service) Run(ctx context.Context, analysisID string, options *fusionv1.
 			}
 		}
 	}
-	value, err := s.engine.Run(ctx, engine.RunRequest{FusionRunID: id})
+	runCtx, cancel := s.recomputeContext(ctx)
+	defer cancel()
+	value, err := s.engine.Run(runCtx, engine.RunRequest{FusionRunID: id})
 	return &fusionv1.RunFusionResponse{FusionRunId: id, State: string(value.State)}, err
 }
 func (s *Service) Status(ctx context.Context, analysisID string) (*fusionv1.FusionStatus, error) {
@@ -126,7 +146,9 @@ func (s *Service) Recompute(ctx context.Context, analysisID string, properties [
 	if err != nil {
 		return nil, err
 	}
-	value, err := s.engine.Recompute(ctx, engine.RecomputeRequest{FusionRunID: id, AffectedProperties: properties})
+	runCtx, cancel := s.recomputeContext(ctx)
+	defer cancel()
+	value, err := s.engine.Recompute(runCtx, engine.RecomputeRequest{FusionRunID: id, AffectedProperties: properties})
 	return &fusionv1.RecomputeFusionResponse{FusionRunId: id, State: string(value.State), ConclusionsUpdated: value.ConclusionsUpdated, AffectedProperties: value.AffectedProperties}, err
 }
 func view(value model.FusedConclusion) *fusionv1.FusedConclusion {
