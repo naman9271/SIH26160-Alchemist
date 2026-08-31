@@ -145,11 +145,12 @@ func main() {
 	})
 	mux.HandleFunc("GET /health", func(response http.ResponseWriter, request *http.Request) {
 		states, readinessErr := systemService.Readiness(request.Context())
+		// Offline PCAP analysis is the baseline supported workflow. Live capture
+		// and ML inference are selected per analysis, so their optional runtime
+		// dependencies must be reported without making the whole Core unavailable.
 		ready := readinessErr == nil &&
 			states.InMemoryStore == coresystemv1.DependencyState_READY &&
 			states.TempStorage == coresystemv1.DependencyState_READY &&
-			states.Sensor == coresystemv1.DependencyState_READY &&
-			states.MLWorker == coresystemv1.DependencyState_READY &&
 			states.FusionEngine == coresystemv1.DependencyState_READY
 		statusCode, status := http.StatusOK, "ready"
 		if !ready {

@@ -1,40 +1,33 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# IPsec PCAP Analyzer dashboard
 
-## Getting Started
+The Next.js dashboard is a browser client for the Go Core HTTP workflow API.
+It never connects directly to Go gRPC or the Python ML gRPC worker.
 
-First, run the development server:
+## Run locally
+
+Start Go Core on port 8080, then:
 
 ```bash
+npm ci
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000`. Set `CORE_HTTP_URL` only when Core is not on
+`http://127.0.0.1:8080`. The Docker Compose stack supplies this automatically.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Supported workflow
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Upload a classic `.pcap`/`.cap` file.
+2. Optionally enable ML classification when the worker reports `READY`.
+3. Inspect passive protocol facts, Fusion/security results, and the ML output.
+4. Generate and download the executive PDF after completion.
 
-## Project Documentation
+The browser workflow deliberately rejects PCAPNG. Convert it first:
 
-- [Dashboard UI/UX Overview](docs/dashboard-ui-ux-overview.md)
+```bash
+editcap -F libpcap input.pcapng output.pcap
+```
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+`UNKNOWN` ML output is a low-confidence abstention, not a failed analysis or
+a security finding. A high security score and a low risk level are compatible:
+the score measures security posture, while the risk level summarizes exposure.

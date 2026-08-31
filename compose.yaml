@@ -1,0 +1,27 @@
+services:
+  ml:
+    build:
+      context: ./ml-service
+
+  core:
+    build:
+      context: ./backend
+    depends_on:
+      - ml
+    environment:
+      ML_GRPC_ADDRESS: ml:50051
+      CORE_HTTP_ADDRESS: 0.0.0.0:8080
+      CORE_GRPC_ADDRESS: 0.0.0.0:50052
+    ports:
+      - "8080:8080"
+      - "50052:50052"
+
+  frontend:
+    build:
+      context: ./frontend
+    depends_on:
+      - core
+    environment:
+      CORE_HTTP_URL: http://core:8080
+    ports:
+      - "3000:3000"

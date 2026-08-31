@@ -114,24 +114,44 @@ Automatic evaluation of:
 
 ## Getting Started
 
-This repository is organized as a full-stack project with separate frontend and backend applications.
+For the reproducible submission demo, use Docker Compose:
 
-### Backend
+```bash
+make up
+# Open http://localhost:3000 in a browser.
+make demo
+make down
+```
+
+The demo uploads the checked-in classic PCAP sample, runs passive/Fusion/
+security/ML analysis, and verifies completion through the Go Core HTTP API.
+
+### Manual development
+
+This repository is organized as a full-stack project with separate frontend,
+backend, and ML applications. Use Python 3.11+ for the ML worker.
 
 ```bash
 cd backend
-go run ./src/cmd/server
+ML_GRPC_ADDRESS=127.0.0.1:50051 go run ./src/cmd/server
 ```
 
-### Frontend
+In another terminal:
 
 ```bash
-cd frontend
-npm install
-npm run dev
+cd ml-service
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install -r requirements-runtime.txt
+python -m src.grpc_server
 ```
 
-The frontend development server typically runs at `http://localhost:3000`.
+Then run `npm ci && npm run dev` in `frontend/`. The browser UI accepts classic
+PCAP (`.pcap`/`.cap`) uploads. Convert PCAPNG before uploading:
+
+```bash
+editcap -F libpcap input.pcapng output.pcap
+```
 
 ## Project Vision
 
@@ -141,10 +161,17 @@ The long-term goal is to provide a practical assistant for security analysts tha
 
 - [Backend README](backend/README.md)
 - [Frontend README](frontend/README.md)
+- [Submission guide](docs/SUBMISSION_GUIDE.md)
+- [ML validation protocol](docs/MODEL_VALIDATION.md)
+- [Linux Deep Assessment validation](docs/DEEP_ASSESSMENT_LAB.md)
 
 ## Status
 
-The packet/flow and ML foundations are under active development. A calibrated
-production model, complete testbed coverage, Fusion/security/risk/report APIs,
-and the interactive dashboard are not yet complete and must not be advertised
-as production-ready.
+The offline PCAP workflow is implemented and demonstrable: passive protocol
+facts, optional ML flow classification, Fusion, security/risk, and PDF reports.
+It is an MVP, not a production security appliance. Live capture requires host
+permissions; VICI/XFRM Deep Assessment requires an authorised Linux/StrongSwan
+lab; and ML accuracy claims require the independent validation described above.
+
+This project uses conventional tree-based ML for flow metadata classification.
+It does not include an LLM and never decrypts ESP payloads.

@@ -2,6 +2,8 @@
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.venv/
+ml-service/.venv/
 
 # Public datasets and generated ML products stay local.
 ml-service/data/external/
