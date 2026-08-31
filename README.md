@@ -164,6 +164,7 @@ The long-term goal is to provide a practical assistant for security analysts tha
 - [Submission guide](docs/SUBMISSION_GUIDE.md)
 - [ML validation protocol](docs/MODEL_VALIDATION.md)
 - [Linux Deep Assessment validation](docs/DEEP_ASSESSMENT_LAB.md)
+- [Backend capability and frontend feature map](docs/BACKEND_FRONTEND_FEATURE_MAP.md)
 
 ## Status
 
