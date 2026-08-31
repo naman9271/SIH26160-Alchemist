@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	analysisv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/analysis"
+	eventv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/event"
 	inputv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/input"
 	workspacev1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/workspace"
 	coreinput "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/input"
@@ -47,6 +48,10 @@ type Service struct {
 	records   map[string]*Record
 	pipeline  PipelineRunner
 	cancels   map[string]context.CancelFunc
+	views     ReadModels
+	events    interface {
+		Publish(context.Context, string, eventv1.CoreEventCategory)
+	}
 }
 
 func New(source SourceProvider, fusion FusionRuns, workspace *workspace.Service) *Service {
@@ -55,6 +60,13 @@ func New(source SourceProvider, fusion FusionRuns, workspace *workspace.Service)
 func (s *Service) SetPipeline(pipeline PipelineRunner) {
 	s.mu.Lock()
 	s.pipeline = pipeline
+	s.mu.Unlock()
+}
+func (s *Service) SetEvents(events interface {
+	Publish(context.Context, string, eventv1.CoreEventCategory)
+}) {
+	s.mu.Lock()
+	s.events = events
 	s.mu.Unlock()
 }
 func (s *Service) Start(ctx context.Context, sourceID string, mode workspacev1.AnalysisMode, policyID string, options *analysisv1.AnalysisOptions) (Record, error) {
@@ -143,6 +155,7 @@ func (s *Service) Cancel(ctx context.Context, id string) (Record, error) {
 	stored.UpdatedAt = time.Now().UTC()
 	out := *stored
 	s.mu.Unlock()
+	s.publish(id, eventv1.CoreEventCategory_ANALYSIS_CANCELLED)
 	return out, nil
 }
 func (s *Service) execute(ctx context.Context, pipeline PipelineRunner, record Record) {
@@ -161,6 +174,14 @@ func (s *Service) execute(ctx context.Context, pipeline PipelineRunner, record R
 	delete(s.cancels, record.ID)
 	s.mu.Unlock()
 }
+func (s *Service) publish(analysisID string, category eventv1.CoreEventCategory) {
+	s.mu.RLock()
+	events := s.events
+	s.mu.RUnlock()
+	if events != nil {
+		events.Publish(context.Background(), analysisID, category)
+	}
+}
 func (s *Service) advance(id string, stage analysisv1.AnalysisStage) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -170,7 +191,6 @@ func (s *Service) advance(id string, stage analysisv1.AnalysisStage) {
 }
 func (s *Service) fail(id string, err error) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	if current := s.records[id]; current != nil && current.State == analysisv1.AnalysisState_ANALYSIS_STATE_RUNNING {
 		current.State, current.Stage, current.Failure, current.UpdatedAt = analysisv1.AnalysisState_ANALYSIS_STATE_FAILED, analysisv1.AnalysisStage_FAILED, err.Error(), time.Now().UTC()
 	}
@@ -178,6 +198,8 @@ func (s *Service) fail(id string, err error) {
 		cancel()
 		delete(s.cancels, id)
 	}
+	s.mu.Unlock()
+	s.publish(id, eventv1.CoreEventCategory_ANALYSIS_FAILED)
 }
 func (s *Service) Progress(ctx context.Context, id string) (Record, error) { return s.Get(ctx, id) }
 func (s *Service) Retry(ctx context.Context, id string) (Record, error) {

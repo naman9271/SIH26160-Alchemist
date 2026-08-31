@@ -58,10 +58,20 @@ type PacketMetadata struct {
 	IKEVersion                        string
 	IKEExchangeType, IKEFlags         uint8
 	IKEMessageID                      uint32
-	IKE, NATT, EncapsulatedESP        bool
-	NATKeepalive                      bool
-	Length                            uint64
-	SeenAt                            time.Time
+	// The following fields are extracted only from clear-text IKE payloads.
+	// Encrypted IKE payloads are deliberately never inspected.
+	IKEEncryptionAlgorithms    []string
+	IKEIntegrityAlgorithms     []string
+	IKEPRFs                    []string
+	IKEDHGroups                []string
+	IKEAuthMethods             []string
+	IKECertificateTypes        []string
+	IKETrafficSelectors        []string
+	IKEPayloadEncrypted        bool
+	IKE, NATT, EncapsulatedESP bool
+	NATKeepalive               bool
+	Length                     uint64
+	SeenAt                     time.Time
 }
 
 type PacketObserver func(context.Context, PacketMetadata) error

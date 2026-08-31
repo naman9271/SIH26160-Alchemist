@@ -9,6 +9,8 @@ import (
 	analysisv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/analysis"
 	eventv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/event"
 	flowv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/sensor/v1/flow"
+	viciv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/sensor/v1/vici"
+	xfrmv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/sensor/v1/xfrm"
 	coreevents "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/events"
 	coreinput "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/input"
 	coreml "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/ml"
@@ -35,6 +37,13 @@ type Pipeline struct {
 	Security *coresecurity.Service
 	Risk     *corerisk.Service
 	Events   *coreevents.Service
+	VICI     interface {
+		Snapshot(context.Context, string) (*viciv1.GatewaySnapshot, error)
+	}
+	XFRM interface {
+		Snapshot(context.Context) (*xfrmv1.KernelSnapshot, error)
+	}
+	VICIURI string
 }
 
 func (p *Pipeline) Run(ctx context.Context, record Record, advance func(analysisv1.AnalysisStage)) error {
@@ -53,10 +62,11 @@ func (p *Pipeline) Run(ctx context.Context, record Record, advance func(analysis
 	if _, err := p.Ingest.MarkSourceComplete(ctx, ingest.MarkSourceRequest{FusionRunID: record.FusionRunID, Source: model.SourceFlowAnalyzer}); err != nil {
 		return err
 	}
-	for _, source := range []model.Source{model.SourceVICI, model.SourceXFRM} {
-		if _, err := p.Ingest.MarkSourceUnavailable(ctx, ingest.MarkSourceUnavailableRequest{FusionRunID: record.FusionRunID, Source: source, ReasonCode: "NOT_CONFIGURED"}); err != nil {
-			return err
-		}
+	if err := p.collectVICI(ctx, record); err != nil {
+		return err
+	}
+	if err := p.collectXFRM(ctx, record); err != nil {
+		return err
 	}
 	advance(analysisv1.AnalysisStage_FEATURE_EXTRACTION)
 	if record.Options.GetEnableMl() && p.ML != nil {
@@ -85,6 +95,7 @@ func (p *Pipeline) Run(ctx context.Context, record Record, advance func(analysis
 	if _, err := p.Fusion.Run(ctx, engine.RunRequest{FusionRunID: record.FusionRunID}); err != nil {
 		return err
 	}
+	p.publish(ctx, record.ID, eventv1.CoreEventCategory_FUSION_COMPLETED)
 	if record.Options.GetEnableSecurity() && p.Security != nil {
 		advance(analysisv1.AnalysisStage_SECURITY_ANALYSIS)
 		assessment, err := p.Security.Run(ctx, record.ID, record.PolicyID)
@@ -95,9 +106,66 @@ func (p *Pipeline) Run(ctx context.Context, record Record, advance func(analysis
 			_, _ = p.Risk.Score(ctx, assessment.ID)
 			p.publish(ctx, record.ID, eventv1.CoreEventCategory_SECURITY_SCORE_UPDATED)
 		}
+		for range assessment.Result.Findings {
+			p.publish(ctx, record.ID, eventv1.CoreEventCategory_SECURITY_FINDING_CREATED)
+		}
 	}
 	p.publish(ctx, record.ID, eventv1.CoreEventCategory_ANALYSIS_COMPLETED)
 	return nil
+}
+
+func (p *Pipeline) collectVICI(ctx context.Context, record Record) error {
+	p.publish(ctx, record.ID, eventv1.CoreEventCategory_VICI_COLLECTION_STARTED)
+	if p.VICI == nil {
+		_, err := p.Ingest.MarkSourceUnavailable(ctx, ingest.MarkSourceUnavailableRequest{FusionRunID: record.FusionRunID, Source: model.SourceVICI, ReasonCode: "VICI_NOT_CONFIGURED"})
+		p.publish(ctx, record.ID, eventv1.CoreEventCategory_VICI_COLLECTION_COMPLETED)
+		return err
+	}
+	snapshot, err := p.VICI.Snapshot(ctx, p.VICIURI)
+	if err != nil {
+		_, markErr := p.Ingest.MarkSourceUnavailable(ctx, ingest.MarkSourceUnavailableRequest{FusionRunID: record.FusionRunID, Source: model.SourceVICI, ReasonCode: "VICI_UNAVAILABLE"})
+		if markErr != nil {
+			return markErr
+		}
+		p.publish(ctx, record.ID, eventv1.CoreEventCategory_VICI_COLLECTION_COMPLETED)
+		return nil
+	}
+	items := VICIEvidence(snapshot)
+	if len(items) > 0 {
+		if _, err = p.Ingest.AddBatch(ctx, ingest.AddBatchRequest{FusionRunID: record.FusionRunID, Evidence: items}); err != nil {
+			return err
+		}
+	}
+	_, err = p.Ingest.MarkSourceComplete(ctx, ingest.MarkSourceRequest{FusionRunID: record.FusionRunID, Source: model.SourceVICI})
+	p.publish(ctx, record.ID, eventv1.CoreEventCategory_VICI_COLLECTION_COMPLETED)
+	return err
+}
+
+func (p *Pipeline) collectXFRM(ctx context.Context, record Record) error {
+	p.publish(ctx, record.ID, eventv1.CoreEventCategory_XFRM_COLLECTION_STARTED)
+	if p.XFRM == nil {
+		_, err := p.Ingest.MarkSourceUnavailable(ctx, ingest.MarkSourceUnavailableRequest{FusionRunID: record.FusionRunID, Source: model.SourceXFRM, ReasonCode: "XFRM_NOT_CONFIGURED"})
+		p.publish(ctx, record.ID, eventv1.CoreEventCategory_XFRM_COLLECTION_COMPLETED)
+		return err
+	}
+	snapshot, err := p.XFRM.Snapshot(ctx)
+	if err != nil {
+		_, markErr := p.Ingest.MarkSourceUnavailable(ctx, ingest.MarkSourceUnavailableRequest{FusionRunID: record.FusionRunID, Source: model.SourceXFRM, ReasonCode: "XFRM_UNAVAILABLE"})
+		if markErr != nil {
+			return markErr
+		}
+		p.publish(ctx, record.ID, eventv1.CoreEventCategory_XFRM_COLLECTION_COMPLETED)
+		return nil
+	}
+	items := XFRMEvidence(snapshot)
+	if len(items) > 0 {
+		if _, err = p.Ingest.AddBatch(ctx, ingest.AddBatchRequest{FusionRunID: record.FusionRunID, Evidence: items}); err != nil {
+			return err
+		}
+	}
+	_, err = p.Ingest.MarkSourceComplete(ctx, ingest.MarkSourceRequest{FusionRunID: record.FusionRunID, Source: model.SourceXFRM})
+	p.publish(ctx, record.ID, eventv1.CoreEventCategory_XFRM_COLLECTION_COMPLETED)
+	return err
 }
 
 func (p *Pipeline) publish(ctx context.Context, analysisID string, category eventv1.CoreEventCategory) {
@@ -119,6 +187,13 @@ func (p *Pipeline) exportSensor(ctx context.Context, record Record) error {
 	}
 	items := make([]ingest.EvidenceInput, 0)
 	for _, packet := range p.Sensor.Observations.List(ctx, source.SessionID) {
+		if packet.IKE {
+			p.publish(ctx, record.ID, eventv1.CoreEventCategory_IKE_DETECTED)
+			p.publish(ctx, record.ID, eventv1.CoreEventCategory_IPSEC_DETECTED)
+		}
+		if packet.Protocol == 50 || packet.EncapsulatedESP {
+			p.publish(ctx, record.ID, eventv1.CoreEventCategory_ESP_DETECTED)
+		}
 		items = append(items, packetEvidence(packet)...)
 	}
 	if err := p.Sensor.Flows.StopForSession(ctx, source.SessionID); err != nil {
@@ -131,6 +206,9 @@ func (p *Pipeline) exportSensor(ctx context.Context, record Record) error {
 	for _, item := range flows {
 		v := flow.ToProto(item)
 		items = append(items, numberEvidence("traffic.packet_count", float64(v.GetPacketCount()), "FLOW", v.GetFlowId(), v.GetLastSeen().AsTime()), numberEvidence("traffic.bytes", float64(v.GetByteCount()), "FLOW", v.GetFlowId(), v.GetLastSeen().AsTime()))
+	}
+	if len(flows) > 0 {
+		p.publish(ctx, record.ID, eventv1.CoreEventCategory_SA_DISCOVERED)
 	}
 	if len(items) == 0 {
 		return nil
@@ -163,6 +241,7 @@ func (p *Pipeline) ingestML(ctx context.Context, record Record, inferenceID stri
 			return err
 		}
 	}
+	p.publish(ctx, record.ID, eventv1.CoreEventCategory_ML_PREDICTION_UPDATED)
 	if _, err := p.Ingest.MarkSourceComplete(ctx, ingest.MarkSourceRequest{FusionRunID: record.FusionRunID, Source: model.SourceMLClassifier}); err != nil {
 		return err
 	}
@@ -179,6 +258,29 @@ func packetEvidence(packet capture.PacketMetadata) []ingest.EvidenceInput {
 	ikeID := fmt.Sprintf("%016x-%016x", packet.IKEInitiatorSPI, packet.IKEResponderSPI)
 	if packet.IKE && packet.IKEVersion != "" {
 		items = append(items, stringEvidence("ike.version", packet.IKEVersion, "IKE_SA", ikeID, at, meta), stringEvidence("ike.initiator_spi", fmt.Sprintf("0x%016x", packet.IKEInitiatorSPI), "IKE_SA", ikeID, at, meta), stringEvidence("ike.responder_spi", fmt.Sprintf("0x%016x", packet.IKEResponderSPI), "IKE_SA", ikeID, at, meta))
+	}
+	if packet.IKE {
+		for _, value := range packet.IKEEncryptionAlgorithms {
+			items = append(items, stringEvidence("ike.encryption", value, "IKE_SA", ikeID, at, meta))
+		}
+		for _, value := range packet.IKEIntegrityAlgorithms {
+			items = append(items, stringEvidence("ike.integrity", value, "IKE_SA", ikeID, at, meta))
+		}
+		for _, value := range packet.IKEPRFs {
+			items = append(items, stringEvidence("ike.prf", value, "IKE_SA", ikeID, at, meta))
+		}
+		for _, value := range packet.IKEDHGroups {
+			items = append(items, stringEvidence("ike.dh_group", value, "IKE_SA", ikeID, at, meta))
+		}
+		for _, value := range packet.IKEAuthMethods {
+			items = append(items, stringEvidence("ike.authentication_method", value, "IKE_SA", ikeID, at, meta))
+		}
+		for _, value := range packet.IKECertificateTypes {
+			items = append(items, stringEvidence("ike.certificate.type", value, "IKE_SA", ikeID, at, meta))
+		}
+		for _, value := range packet.IKETrafficSelectors {
+			items = append(items, stringEvidence("child.traffic_selector", value, "IKE_SA", ikeID, at, meta))
+		}
 	}
 	if packet.Protocol == 50 || packet.EncapsulatedESP {
 		id := fmt.Sprintf("0x%08x", packet.SPI)

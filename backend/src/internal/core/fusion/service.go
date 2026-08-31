@@ -151,6 +151,30 @@ func (s *Service) Recompute(ctx context.Context, analysisID string, properties [
 	value, err := s.engine.Recompute(runCtx, engine.RecomputeRequest{FusionRunID: id, AffectedProperties: properties})
 	return &fusionv1.RecomputeFusionResponse{FusionRunId: id, State: string(value.State), ConclusionsUpdated: value.ConclusionsUpdated, AffectedProperties: value.AffectedProperties}, err
 }
+
+// FusedConclusions is the model-level boundary used by Security/Risk. It
+// exposes only Fusion winners, never raw candidate evidence.
+func (s *Service) FusedConclusions(ctx context.Context, analysisID string) ([]model.FusedConclusion, error) {
+	id, err := s.runID(ctx, analysisID)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]model.FusedConclusion, 0)
+	token := ""
+	for {
+		page, pageErr := s.engine.ListConclusions(ctx, engine.ListConclusionsRequest{FusionRunID: id, PageSize: 1000, PageToken: token})
+		if pageErr != nil {
+			return nil, pageErr
+		}
+		for _, item := range page.Conclusions {
+			result = append(result, item.Clone())
+		}
+		if page.NextPageToken == "" {
+			return result, nil
+		}
+		token = page.NextPageToken
+	}
+}
 func view(value model.FusedConclusion) *fusionv1.FusedConclusion {
 	out := &fusionv1.FusedConclusion{ConclusionId: value.ID, PropertyKey: value.PropertyKey, ResourceType: value.ResourceType, ResourceId: value.ResourceID, Confidence: value.Confidence, EvidenceStatus: value.Status, ConflictId: value.ConflictID, RationaleCode: value.RationaleCode, ComputedAt: timestamppb.New(value.ComputedAt)}
 	if value.Value != nil {

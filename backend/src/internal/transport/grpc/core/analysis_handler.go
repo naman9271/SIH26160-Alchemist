@@ -47,22 +47,18 @@ func (h *AnalysisHandler) GetProgress(ctx context.Context, r *analysisv1.GetAnal
 	if e := h.valid(); e != nil {
 		return nil, shared.ToGRPC(e)
 	}
-	v, e := h.service.Progress(ctx, r.GetAnalysisId())
-	return &analysisv1.AnalysisProgress{AnalysisId: v.ID, Stage: v.Stage, Percent: progress(v.Stage)}, shared.ToGRPC(e)
+	v, e := h.service.ProgressDetails(ctx, r.GetAnalysisId())
+	if e == nil {
+		v.Percent = progress(v.GetStage())
+	}
+	return v, shared.ToGRPC(e)
 }
 func (h *AnalysisHandler) GetSummary(ctx context.Context, r *analysisv1.GetAnalysisSummaryRequest) (*analysisv1.AnalysisSummary, error) {
 	if e := h.valid(); e != nil {
 		return nil, shared.ToGRPC(e)
 	}
-	v, e := h.service.Get(ctx, r.GetAnalysisId())
-	if e != nil {
-		return nil, shared.ToGRPC(e)
-	}
-	state := analysisv1.AvailabilityState_UNAVAILABLE
-	if v.State == analysisv1.AnalysisState_ANALYSIS_STATE_COMPLETED {
-		state = analysisv1.AvailabilityState_AVAILABLE
-	}
-	return &analysisv1.AnalysisSummary{AnalysisId: v.ID, Mode: v.Mode, Traffic: &analysisv1.TrafficSummary{State: state}, Security: &analysisv1.SecuritySummary{State: state}, FusionState: state}, nil
+	v, e := h.service.SummaryDetails(ctx, r.GetAnalysisId())
+	return v, shared.ToGRPC(e)
 }
 func (h *AnalysisHandler) Retry(ctx context.Context, r *analysisv1.RetryAnalysisRequest) (*analysisv1.RetryAnalysisResponse, error) {
 	if e := h.valid(); e != nil {

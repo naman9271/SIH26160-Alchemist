@@ -18,6 +18,7 @@ import (
 	shared "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/domain/sensor"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/mlclient"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/sensor/flow"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -36,6 +37,7 @@ type job struct {
 	predictions                    map[string]*mlv1.TrafficPrediction
 	explanations                   map[string]*mlv1.PredictionExplanation
 	created                        time.Time
+	cancel                         context.CancelFunc
 }
 
 func New(client worker.TrafficClassifierClient, timeout time.Duration, state *workspace.Service, input *coreinput.Service, flows *flow.Service) *Service {
@@ -117,49 +119,105 @@ func (s *Service) Start(ctx context.Context, analysisID string, sequence, shap b
 	s.mu.Lock()
 	s.jobs[id] = item
 	s.mu.Unlock()
-	flows, _, err := s.flows.List(ctx, &flowv1.ListFlowsRequest{SensorSessionId: source.SessionID, PageSize: 1000})
+	jobContext, cancel := context.WithCancel(ctx)
+	s.mu.Lock()
+	item.cancel = cancel
+	s.mu.Unlock()
+	defer cancel()
+	flows, _, err := s.flows.List(jobContext, &flowv1.ListFlowsRequest{SensorSessionId: source.SessionID, PageSize: 1000})
 	if err != nil {
 		return s.fail(id, err)
 	}
+	type inferenceWork struct{ feature *flowv1.FeatureWindow }
+	work := make([]inferenceWork, 0)
 	for _, f := range flows {
-		windows, _, e := s.flows.Windows(ctx, flow.ToProto(f).GetFlowId(), 1000, "")
+		windows, _, e := s.flows.Windows(jobContext, flow.ToProto(f).GetFlowId(), 1000, "")
 		if e != nil {
 			return s.fail(id, e)
 		}
 		for _, w := range windows {
-			if !w.IsMLReady() {
-				continue
+			if w.IsMLReady() {
+				work = append(work, inferenceWork{feature: proto.Clone(flow.ToFeature(w)).(*flowv1.FeatureWindow)})
 			}
-			var result *worker.PredictionResult
-			if shap {
-				result, e = predictor.PredictWithExplanations(ctx, flow.ToFeature(w))
-			} else {
-				result, e = predictor.Predict(ctx, flow.ToFeature(w))
-			}
-			if e != nil {
-				return s.fail(id, e)
-			}
-			p := &mlv1.TrafficPrediction{PredictionId: id + ":" + result.GetFlowId(), FlowId: result.GetFlowId(), TrafficClass: result.GetPredictedClass().String(), Confidence: result.GetConfidence(), IsUnknown: result.GetIsUnknown(), ModelVersion: result.GetModelVersion(), FeatureSchemaVersion: "flow.v2", InferenceTimeMs: result.GetInferenceTimeMs(), ClassProbabilities: map[string]float64{}}
-			for _, top := range result.GetTopPredictions() {
-				p.ClassProbabilities[top.GetTrafficClass().String()] = top.GetConfidence()
-			}
-			item.predictions[p.PredictionId] = p
-			explanation := &mlv1.PredictionExplanation{PredictionId: p.PredictionId}
-			if shap && len(result.GetTopExplanations()) > 0 {
-				explanation.Method = "SHAP"
-				for _, feature := range result.GetTopExplanations() {
-					explanation.Features = append(explanation.Features, &mlv1.FeatureAttribution{FeatureName: feature.GetFeature(), Value: feature.GetValue(), Attribution: feature.GetImpact()})
+		}
+	}
+	workers := 4
+	if len(work) < workers {
+		workers = len(work)
+	}
+	if workers > 0 {
+		jobs := make(chan inferenceWork, len(work))
+		for _, task := range work {
+			jobs <- task
+		}
+		close(jobs)
+		errCh := make(chan error, 1)
+		var wg sync.WaitGroup
+		for n := 0; n < workers; n++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				for task := range jobs {
+					if jobContext.Err() != nil {
+						return
+					}
+					var result *worker.PredictionResult
+					var e error
+					if shap {
+						result, e = predictor.PredictWithExplanations(jobContext, task.feature)
+					} else {
+						result, e = predictor.Predict(jobContext, task.feature)
+					}
+					if e != nil {
+						select {
+						case errCh <- e:
+							cancel()
+						default:
+						}
+						return
+					}
+					s.storeResult(id, result, shap)
 				}
-			} else {
-				explanation.UnavailableReason = "SHAP was disabled or the ML worker returned no explanation"
-			}
-			item.explanations[p.PredictionId] = explanation
+			}()
+		}
+		wg.Wait()
+		select {
+		case e := <-errCh:
+			return s.fail(id, e)
+		default:
+		}
+		if err := jobContext.Err(); err != nil {
+			return s.fail(id, err)
 		}
 	}
 	s.mu.Lock()
 	item.state = "COMPLETED"
 	s.mu.Unlock()
 	return &mlv1.RunInferenceResponse{InferenceId: id, State: "COMPLETED"}, nil
+}
+func (s *Service) storeResult(id string, result *worker.PredictionResult, shap bool) {
+	if result == nil {
+		return
+	}
+	p := &mlv1.TrafficPrediction{PredictionId: id + ":" + result.GetFlowId(), FlowId: result.GetFlowId(), TrafficClass: result.GetPredictedClass().String(), Confidence: result.GetConfidence(), IsUnknown: result.GetIsUnknown(), ModelVersion: result.GetModelVersion(), FeatureSchemaVersion: "flow.v2", InferenceTimeMs: result.GetInferenceTimeMs(), ClassProbabilities: map[string]float64{}}
+	for _, top := range result.GetTopPredictions() {
+		p.ClassProbabilities[top.GetTrafficClass().String()] = top.GetConfidence()
+	}
+	explanation := &mlv1.PredictionExplanation{PredictionId: p.PredictionId}
+	if shap && len(result.GetTopExplanations()) > 0 {
+		explanation.Method = "SHAP"
+		for _, feature := range result.GetTopExplanations() {
+			explanation.Features = append(explanation.Features, &mlv1.FeatureAttribution{FeatureName: feature.GetFeature(), Value: feature.GetValue(), Attribution: feature.GetImpact()})
+		}
+	} else {
+		explanation.UnavailableReason = "SHAP was disabled or the ML worker returned no explanation"
+	}
+	s.mu.Lock()
+	if item := s.jobs[id]; item != nil && item.state == "RUNNING" {
+		item.predictions[p.PredictionId] = p
+		item.explanations[p.PredictionId] = explanation
+	}
+	s.mu.Unlock()
 }
 func (s *Service) fail(id string, e error) (*mlv1.RunInferenceResponse, error) {
 	s.mu.Lock()
@@ -175,6 +233,8 @@ func (s *Service) Status(_ context.Context, id string) (*mlv1.InferenceStatus, e
 	if err != nil {
 		return nil, err
 	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return &mlv1.InferenceStatus{InferenceId: item.id, AnalysisId: item.analysisID, State: item.state, FailureReason: item.failure}, nil
 }
 func (s *Service) Predictions(_ context.Context, id string, size uint32, token string) ([]*mlv1.TrafficPrediction, string, error) {
@@ -182,9 +242,11 @@ func (s *Service) Predictions(_ context.Context, id string, size uint32, token s
 	if err != nil {
 		return nil, "", err
 	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	out := make([]*mlv1.TrafficPrediction, 0, len(item.predictions))
 	for _, p := range item.predictions {
-		out = append(out, p)
+		out = append(out, proto.Clone(p).(*mlv1.TrafficPrediction))
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].GetPredictionId() < out[j].GetPredictionId() })
 	if size == 0 {
@@ -212,8 +274,10 @@ func (s *Service) Prediction(_ context.Context, inferenceID, predictionID string
 	if err != nil {
 		return nil, err
 	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	if value := item.predictions[predictionID]; value != nil {
-		return value, nil
+		return proto.Clone(value).(*mlv1.TrafficPrediction), nil
 	}
 	return nil, shared.NewError(shared.NotFound, "", "prediction was not found")
 }
@@ -225,8 +289,10 @@ func (s *Service) Explanation(_ context.Context, inferenceID, predictionID strin
 	if err != nil {
 		return nil, err
 	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	if explanation := item.explanations[predictionID]; explanation != nil {
-		return explanation, nil
+		return proto.Clone(explanation).(*mlv1.PredictionExplanation), nil
 	}
 	return nil, shared.NewError(shared.NotFound, "", "prediction explanation was not found")
 }
@@ -238,6 +304,9 @@ func (s *Service) Cancel(_ context.Context, id string) (*mlv1.CancelInferenceRes
 	s.mu.Lock()
 	if item.state == "RUNNING" {
 		item.state = "CANCELLED"
+		if item.cancel != nil {
+			item.cancel()
+		}
 	}
 	state := item.state
 	s.mu.Unlock()
@@ -275,10 +344,10 @@ func (s *Service) LatestForAnalysis(_ context.Context, analysisID string) (strin
 	predictions := make([]*mlv1.TrafficPrediction, 0, len(selected.predictions))
 	explanations := make(map[string]*mlv1.PredictionExplanation, len(selected.explanations))
 	for _, value := range selected.predictions {
-		predictions = append(predictions, value)
+		predictions = append(predictions, proto.Clone(value).(*mlv1.TrafficPrediction))
 	}
 	for id, value := range selected.explanations {
-		explanations[id] = value
+		explanations[id] = proto.Clone(value).(*mlv1.PredictionExplanation)
 	}
 	id := selected.id
 	s.mu.RUnlock()

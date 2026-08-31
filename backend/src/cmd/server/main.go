@@ -32,6 +32,8 @@ import (
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/workspace"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/fusion"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/sensor/acquisition"
+	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/sensor/vici"
+	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/sensor/xfrm"
 	coretransport "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/transport/grpc/core"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -40,6 +42,26 @@ import (
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	sensorServices := acquisition.New(nil, nil, nil)
+	var viciBackend vici.Backend = vici.NewRealBackend(3 * time.Second)
+	if path := os.Getenv("VICI_FIXTURE_PATH"); path != "" {
+		fixture, err := vici.LoadFixture(path)
+		if err != nil {
+			logger.Error("invalid VICI fixture", "path", path, "error", err)
+			os.Exit(1)
+		}
+		viciBackend = fixture
+	}
+	viciService := vici.New(viciBackend)
+	xfrmProvider := xfrm.NewRealProvider()
+	if path := os.Getenv("XFRM_FIXTURE_PATH"); path != "" {
+		fixture, err := xfrm.LoadFixture(path)
+		if err != nil {
+			logger.Error("invalid XFRM fixture", "path", path, "error", err)
+			os.Exit(1)
+		}
+		xfrmProvider = fixture
+	}
+	xfrmService := xfrm.New(xfrmProvider)
 	fusionRuntime := fusion.NewRuntime(fusion.RuntimeOptions{})
 	fusionReadiness, fusionReadinessErr := fusionRuntime.System.Readiness(context.Background())
 	workspaceService := workspace.New(workspace.Options{})
@@ -47,6 +69,7 @@ func main() {
 		Sensor:          sensorServices,
 		MLAddress:       envOrDefault("ML_GRPC_ADDRESS", "127.0.0.1:50051"),
 		FusionAvailable: fusionReadinessErr == nil && fusionReadiness.Ready,
+		VICI:            viciService, XFRM: xfrmService,
 	}
 	systemService := coresystem.New(coresystem.Options{
 		Dependencies: provider,
@@ -59,10 +82,11 @@ func main() {
 	runtimeConfigService := coreruntimeconfig.New(coreruntimeconfig.Defaults(envOrDefault("REPORT_TEMP_DIRECTORY", "")))
 	artifactService := coreartifact.New(runtimeConfigService.ReportDirectory)
 	coreEventService := coreevents.New()
-	securityService := coresecurity.New(protocolService)
-	riskService := corerisk.New(securityService)
+	analysisService.SetEvents(coreEventService)
 	policyService := corepolicy.New(fusionRuntime.Policy)
 	fusionService := corefusion.New(coreprotocol.WorkspaceRunResolver{Workspace: workspaceService}, fusionRuntime.Fusion, fusionRuntime.Provenance, fusionRuntime.Ingest)
+	securityService := coresecurity.New(fusionService)
+	riskService := corerisk.New(securityService)
 	mlConnection, mlConnectionErr := grpc.NewClient(provider.MLAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if mlConnectionErr != nil {
 		logger.Warn("ML client initialization failed", "error", mlConnectionErr)
@@ -73,8 +97,9 @@ func main() {
 		mlWorker = mlworkerv1.NewTrafficClassifierClient(mlConnection)
 	}
 	mlService := coreml.New(mlWorker, 2*time.Second, workspaceService, inputService, sensorServices.Flows)
+	analysisService.SetReadModels(coreanalysis.ReadModels{Fusion: fusionService, Security: securityService, Risk: riskService, ML: mlService})
 	reportService := corereport.New(analysisService, fusionService, artifactService, workspaceService, securityService, riskService, mlService, coreEventService)
-	analysisService.SetPipeline(&coreanalysis.Pipeline{Sensor: sensorServices, Input: inputService, Ingest: fusionRuntime.Ingest, Fusion: fusionRuntime.Fusion, ML: mlService, Security: securityService, Risk: riskService, Events: coreEventService})
+	analysisService.SetPipeline(&coreanalysis.Pipeline{Sensor: sensorServices, Input: inputService, Ingest: fusionRuntime.Ingest, Fusion: fusionRuntime.Fusion, ML: mlService, Security: securityService, Risk: riskService, Events: coreEventService, VICI: viciService, XFRM: xfrmService, VICIURI: envOrDefault("VICI_SOCKET_URI", vici.DefaultSocketURI)})
 	// Apply safe runtime changes to the services that own these settings.
 	runtimeConfigService.Subscribe(func(config *runtimeconfigv1.RuntimeConfig) {
 		mlService.SetTimeout(time.Duration(config.GetMlTimeoutMs()) * time.Millisecond)

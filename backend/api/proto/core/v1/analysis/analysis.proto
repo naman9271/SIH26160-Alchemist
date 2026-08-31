@@ -28,12 +28,12 @@ message CancelAnalysisResponse { string analysis_id = 1; AnalysisState state = 2
 message GetAnalysisRequest { string analysis_id = 1; }
 message Analysis { string analysis_id = 1; string source_id = 2; core.workspace.v1.AnalysisMode mode = 3; string policy_id = 4; AnalysisOptions options = 5; AnalysisState state = 6; string failure_reason = 7; google.protobuf.Timestamp created_at = 8; google.protobuf.Timestamp updated_at = 9; }
 message GetAnalysisProgressRequest { string analysis_id = 1; }
-message AnalysisProgress { string analysis_id = 1; AnalysisStage stage = 2; uint32 percent = 3; uint64 packets_processed = 4; uint64 flows_processed = 5; uint64 sessions_found = 6; uint64 sas_found = 7; uint64 findings_generated = 8; }
+message AnalysisProgress { string analysis_id = 1; AnalysisStage stage = 2; uint32 percent = 3; uint64 packets_processed = 4; uint64 flows_processed = 5; uint64 sessions_found = 6; uint64 sas_found = 7; uint64 findings_generated = 8; uint64 bytes_processed = 9; uint64 evidence_count = 10; AvailabilityState vici_state = 11; AvailabilityState xfrm_state = 12; uint64 ml_predictions = 13; }
 message GetAnalysisSummaryRequest { string analysis_id = 1; }
 message ProtocolSummary { string ike_version = 1; string data_protocol = 2; string vpn_mode = 3; }
 message TrafficSummary { string traffic_class = 1; double confidence = 2; AvailabilityState state = 3; }
 message SecuritySummary { uint32 score = 1; string risk_level = 2; AvailabilityState state = 3; }
 message FindingCounts { uint64 critical = 1; uint64 high = 2; uint64 medium = 3; uint64 low = 4; }
-message AnalysisSummary { string analysis_id = 1; bool ipsec_detected = 2; core.workspace.v1.AnalysisMode mode = 3; ProtocolSummary protocol = 4; TrafficSummary traffic = 5; SecuritySummary security = 6; FindingCounts finding_counts = 7; AvailabilityState fusion_state = 8; }
+message AnalysisSummary { string analysis_id = 1; bool ipsec_detected = 2; core.workspace.v1.AnalysisMode mode = 3; ProtocolSummary protocol = 4; TrafficSummary traffic = 5; SecuritySummary security = 6; FindingCounts finding_counts = 7; AvailabilityState fusion_state = 8; repeated string protocols = 9; repeated string traffic_classes = 10; uint64 flow_count = 11; uint64 session_count = 12; uint64 sa_count = 13; uint64 evidence_count = 14; uint64 packet_count = 15; uint64 byte_count = 16; AvailabilityState vici_state = 17; AvailabilityState xfrm_state = 18; string ml_result = 19; }
 message RetryAnalysisRequest { string analysis_id = 1; }
 message RetryAnalysisResponse { string analysis_id = 1; AnalysisState state = 2; }

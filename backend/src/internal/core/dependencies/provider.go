@@ -12,6 +12,8 @@ import (
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/localsensor"
 	coresystem "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/system"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/sensor/acquisition"
+	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/sensor/vici"
+	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/sensor/xfrm"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -21,6 +23,8 @@ type Provider struct {
 	Sensor          acquisition.Services
 	MLAddress       string
 	FusionAvailable bool
+	VICI            *vici.Service
+	XFRM            *xfrm.Service
 }
 
 func (p *Provider) Dependencies(ctx context.Context) (coresystem.Dependencies, error) {
@@ -134,11 +138,27 @@ func (p *Provider) SensorProbe(ctx context.Context) (localsensor.Probe, error) {
 	if live {
 		reason = ""
 	}
+	viciDependency := localsensor.Dependency{Reason: "StrongSwan VICI is unavailable"}
+	if p.VICI != nil {
+		if probe, err := p.VICI.Probe(ctx, vici.DefaultSocketURI); err == nil && probe.GetAvailable() {
+			viciDependency = localsensor.Dependency{Available: true}
+		} else if err != nil {
+			viciDependency.Reason = err.Error()
+		}
+	}
+	xfrmDependency := localsensor.Dependency{Reason: "Linux XFRM provider is unavailable"}
+	if p.XFRM != nil {
+		if capabilities, err := p.XFRM.Capabilities(ctx); err == nil && capabilities.GetAvailable() {
+			xfrmDependency = localsensor.Dependency{Available: true}
+		} else if err != nil {
+			xfrmDependency.Reason = err.Error()
+		}
+	}
 	return localsensor.Probe{
 		PassiveLive: localsensor.Dependency{Available: live, Reason: reason},
 		PassivePCAP: localsensor.Dependency{Available: true, Reason: "classic PCAP decoding is available; PCAPNG is not supported by the Go decoder yet"},
-		VICI:        localsensor.Dependency{Reason: "StrongSwan VICI decoder is not configured"},
-		XFRM:        localsensor.Dependency{Reason: "Linux XFRM provider is not configured"},
+		VICI:        viciDependency,
+		XFRM:        xfrmDependency,
 	}, nil
 }
 

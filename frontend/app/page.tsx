@@ -1,83 +1,104 @@
-const trafficClasses = [
-  { label: "Web", value: 10, color: "#58a6ff" },
-  { label: "Video", value: 10, color: "#b392f0" },
-  { label: "VoIP", value: 10, color: "#f778ba" },
-  { label: "Email", value: 10, color: "#f2cc60" },
-  { label: "File transfer", value: 10, color: "#3fb950" },
-  { label: "Messaging", value: 10, color: "#39c5cf" },
-  { label: "ICMP", value: 10, color: "#ff7b72" },
-];
+"use client";
 
-const corpusRoles = [
-  { label: "Known traffic", value: 70, color: "#58a6ff" },
-  { label: "Protocol validation", value: 5, color: "#b392f0" },
-  { label: "OOD / UNKNOWN", value: 4, color: "#f2cc60" },
-  { label: "Anomaly evaluation", value: 3, color: "#ff7b72" },
-];
+import { useCallback, useEffect, useState } from "react";
 
-const profileCoverage = [
-  { label: "IKEv1", value: 33, color: "#f778ba" },
-  { label: "IKEv2", value: 49, color: "#58a6ff" },
-  { label: "Tunnel mode", value: 66, color: "#3fb950" },
-  { label: "Transport mode", value: 16, color: "#f2cc60" },
-  { label: "IPv6", value: 15, color: "#b392f0" },
-];
+type StatusPayload = {
+  checkedAt: string;
+  latencyMs: number;
+  live: boolean;
+  ready: boolean;
+  status: string;
+  dependencies: Record<string, string>;
+  error?: string;
+};
 
-type ChartItem = { label: string; value: number; color: string };
+const labels: Record<string, string> = {
+  memory: "In-memory store",
+  temp_storage: "Temporary storage",
+  sensor: "Sensor capture",
+  ml: "ML worker",
+  fusion: "Fusion engine",
+};
 
-function BarChart({ title, items, maximum }: { title: string; items: ChartItem[]; maximum: number }) {
-  return (
-    <figure className="panel chart-panel">
-      <figcaption>{title}</figcaption>
-      <div className="bar-list">
-        {items.map((item) => (
-          <div className="bar-row" key={item.label}>
-            <span>{item.label}</span>
-            <div className="bar-track" aria-label={`${item.label}: ${item.value}`}>
-              <div className="bar-fill" style={{ width: `${(item.value / maximum) * 100}%`, background: item.color }} />
-            </div>
-            <strong>{item.value}</strong>
-          </div>
-        ))}
-      </div>
-    </figure>
-  );
-}
-
-function Donut({ value, label, color }: { value: number; label: string; color: string }) {
-  return (
-    <figure className="panel donut-panel">
-      <div className="donut" style={{ background: `conic-gradient(${color} ${value}%, #202b3b 0)` }} aria-label={`${label}: ${value}%`}>
-        <div className="donut-center"><strong>{value}%</strong><span>{label}</span></div>
-      </div>
-    </figure>
-  );
+function tone(value: string | boolean) {
+  const normalized = String(value).toLowerCase();
+  return normalized === "ready" || normalized === "true" || normalized === "alive"
+    ? "good"
+    : normalized === "unavailable" || normalized === "false"
+      ? "bad"
+      : "warn";
 }
 
 export default function Home() {
+  const [data, setData] = useState<StatusPayload | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await fetch("/api/backend-status", { cache: "no-store" });
+      setData(await response.json());
+    } catch {
+      setData({ checkedAt: new Date().toISOString(), latencyMs: 0, live: false, ready: false, status: "offline", dependencies: {}, error: "The dashboard could not reach its status proxy." });
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const initial = window.setTimeout(() => void refresh(), 0);
+    const interval = window.setInterval(() => void refresh(), 5000);
+    return () => {
+      window.clearTimeout(initial);
+      window.clearInterval(interval);
+    };
+  }, [refresh]);
+
+  const dependencies = Object.entries(data?.dependencies ?? {});
   return (
-    <main className="dashboard">
-      <header className="topbar">
-        <div><p className="eyebrow">SIH 26160 · Team Alchemist</p><h1>IPsec VPN Analyzer</h1></div>
-        <div className="status-chip">Dataset figures · model not trained</div>
+    <main className="monitor-shell">
+      <header className="monitor-header">
+        <div>
+          <p className="eyebrow">SIH 26160 · Team Alchemist</p>
+          <h1>IPsec Core Monitor</h1>
+          <p className="subtitle">Live backend observability for the Go Core service.</p>
+        </div>
+        <button className="refresh-button" onClick={() => void refresh()} disabled={loading}>
+          {loading ? "Refreshing…" : "Refresh now"}
+        </button>
       </header>
-      <section className="metric-grid" aria-label="Corpus summary">
-        <article className="panel metric"><span>Validated PCAPs</span><strong>82</strong></article>
-        <article className="panel metric"><span>Traffic classes</span><strong>7</strong></article>
-        <article className="panel metric"><span>Known captures</span><strong>70</strong></article>
-        <article className="panel metric warning"><span>Calibrated models</span><strong>0</strong></article>
-      </section>
-      <section className="chart-grid">
-        <BarChart title="Known captures per traffic class" items={trafficClasses} maximum={10} />
-        <BarChart title="Capture corpus by role" items={corpusRoles} maximum={82} />
-        <BarChart title="IPsec profile coverage" items={profileCoverage} maximum={82} />
-        <div className="donut-grid">
-          <Donut value={100} label="hashes verified" color="#3fb950" />
-          <Donut value={0} label="model readiness" color="#ff7b72" />
-          <Donut value={40} label="final corpus target" color="#f2cc60" />
+
+      <section className="hero-status panel" aria-live="polite">
+        <div className={`status-orb ${tone(data?.live ?? false)}`} />
+        <div>
+          <span>Core process</span>
+          <strong>{data?.live ? "Alive" : "Unavailable"}</strong>
+          <p>{data?.error ?? "The process is accepting status requests."}</p>
+        </div>
+        <div className="hero-side">
+          <span className={`status-pill ${tone(data?.ready ?? false)}`}>{data?.ready ? "Ready for analysis" : "Degraded"}</span>
+          <small>{data ? `Updated ${new Date(data.checkedAt).toLocaleTimeString()} · ${data.latencyMs} ms` : "Checking backend…"}</small>
         </div>
       </section>
-      <footer>Figures are static repository-state indicators. Live capture, predictions, risk scores, and reports appear here only after the Core analysis API and trained ML model are available.</footer>
+
+      <section className="summary-grid" aria-label="Backend summary">
+        <article className="panel summary-card"><span>Process</span><strong className={data?.live ? "text-good" : "text-bad"}>{data?.live ? "Alive" : "Offline"}</strong></article>
+        <article className="panel summary-card"><span>Readiness</span><strong className={data?.ready ? "text-good" : "text-warn"}>{data?.ready ? "Ready" : "Degraded"}</strong></article>
+        <article className="panel summary-card"><span>Dependencies ready</span><strong>{dependencies.filter(([, value]) => value === "READY").length}/{dependencies.length || "–"}</strong></article>
+        <article className="panel summary-card"><span>Status latency</span><strong>{data ? `${data.latencyMs} ms` : "–"}</strong></article>
+      </section>
+
+      <section className="panel dependency-panel">
+        <div className="section-heading"><div><h2>Backend dependencies</h2><p>Values are reported directly by <code>GET /health</code>.</p></div><span className="auto-refresh">Auto-refreshes every 5 seconds</span></div>
+        {dependencies.length > 0 ? <div className="dependency-list">
+          {dependencies.map(([key, value]) => <article className="dependency-row" key={key}><div><strong>{labels[key] ?? key}</strong><span>{key}</span></div><span className={`status-pill ${tone(value)}`}>{value.toLowerCase()}</span></article>)}
+        </div> : <div className="empty-state">No dependency state is available yet. Start the Go Core service and refresh this page.</div>}
+      </section>
+
+      <section className="panel check-panel">
+        <h2>What this confirms</h2>
+        <ul><li>The Go Core process is reachable.</li><li>Fusion, storage, sensor, and ML dependency readiness are visible.</li><li>A degraded state is reported honestly instead of being displayed as healthy.</li></ul>
+      </section>
     </main>
   );
 }

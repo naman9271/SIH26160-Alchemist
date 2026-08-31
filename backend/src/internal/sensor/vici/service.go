@@ -10,10 +10,12 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	viciv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/sensor/v1/vici"
 	shared "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/domain/sensor"
 	govici "github.com/strongswan/govici/vici"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const DefaultSocketURI = "unix:///var/run/charon.vici"
@@ -59,6 +61,9 @@ func (s *Service) Probe(ctx context.Context, uri string) (*viciv1.ProbeViciRespo
 	if e != nil {
 		return nil, e
 	}
+	if _, fixture := s.backend.(*FixtureBackend); fixture {
+		return &viciv1.ProbeViciResponse{Available: true, SocketUri: uri, CharonReachable: true}, nil
+	}
 	c, e := s.dial(ctx, uri)
 	if e == nil {
 		_ = c.Close()
@@ -98,6 +103,46 @@ func (s *Service) Backend(ctx context.Context, uri string) (Backend, string, err
 	}
 	return s.backend, uri, nil
 }
+
+// Snapshot collects every sanitized VICI view used by evidence mapping. A
+// component failure is recorded without discarding the other available views.
+func (s *Service) Snapshot(ctx context.Context, uri string) (*viciv1.GatewaySnapshot, error) {
+	backend, resolved, err := s.Backend(ctx, uri)
+	if err != nil {
+		return nil, err
+	}
+	out := &viciv1.GatewaySnapshot{SchemaVersion: FixtureSchemaVersion, SnapshotTimestamp: timestamppb.New(time.Now().UTC())}
+	type collection struct {
+		name string
+		run  func() error
+	}
+	collections := []collection{
+		{"daemon_stats", func() error { out.DaemonStats, err = backend.DaemonStats(ctx, resolved); return err }},
+		{"ike_sas", func() error { out.IkeSas, err = backend.IkeSas(ctx, resolved); return err }},
+		{"child_sas", func() error { out.ChildSas, err = backend.ChildSas(ctx, resolved); return err }},
+		{"connections", func() error { out.Connections, err = backend.Connections(ctx, resolved); return err }},
+		{"policies", func() error { out.Policies, err = backend.Policies(ctx, resolved); return err }},
+		{"algorithms", func() error { out.Algorithms, err = backend.Algorithms(ctx, resolved); return err }},
+		{"counters", func() error { out.Counters, err = backend.Counters(ctx, resolved, "", true); return err }},
+		{"certificates", func() error { out.Certificates, err = backend.Certificates(ctx, resolved); return err }},
+		{"authorities", func() error { out.Authorities, err = backend.Authorities(ctx, resolved); return err }},
+	}
+	available := 0
+	for _, item := range collections {
+		itemErr := item.run()
+		status := &viciv1.SourceAvailability{Source: item.name, Available: itemErr == nil}
+		if itemErr != nil {
+			status.Message = itemErr.Error()
+		} else {
+			available++
+		}
+		out.PerSourceAvailability = append(out.PerSourceAvailability, status)
+	}
+	if available == 0 {
+		return nil, shared.NewError(shared.Unavailable, shared.VICIUnavailable, "VICI returned no usable telemetry")
+	}
+	return out, nil
+}
 func FilterIke(in []*viciv1.IkeSa, r *viciv1.ListIkeSasRequest) ([]*viciv1.IkeSa, string, error) {
 	out := make([]*viciv1.IkeSa, 0, len(in))
 	for _, x := range in {
@@ -112,7 +157,7 @@ func FilterIke(in []*viciv1.IkeSa, r *viciv1.ListIkeSasRequest) ([]*viciv1.IkeSa
 		}
 		out = append(out, x)
 	}
-	return page(out, r.GetPageSize(), r.GetPageToken(), func(x *viciv1.IkeSa) string { return x.GetName() + "/" + strconv(x.GetUniqueId()) })
+	return page(out, r.GetPageSize(), r.GetPageToken(), func(x *viciv1.IkeSa) string { return x.GetName() + "/" + sortableID(x.GetUniqueId()) })
 }
 func FilterChild(in []*viciv1.ChildSa, r *viciv1.ListChildSasRequest) ([]*viciv1.ChildSa, string, error) {
 	out := make([]*viciv1.ChildSa, 0, len(in))
@@ -125,9 +170,9 @@ func FilterChild(in []*viciv1.ChildSa, r *viciv1.ListChildSasRequest) ([]*viciv1
 		}
 		out = append(out, x)
 	}
-	return page(out, r.GetPageSize(), r.GetPageToken(), func(x *viciv1.ChildSa) string { return x.GetName() + "/" + strconv(x.GetUniqueId()) })
+	return page(out, r.GetPageSize(), r.GetPageToken(), func(x *viciv1.ChildSa) string { return x.GetName() + "/" + sortableID(x.GetUniqueId()) })
 }
-func strconv(v uint64) string { return fmt.Sprintf("%020d", v) }
+func sortableID(v uint64) string { return fmt.Sprintf("%020d", v) }
 func page[T any](in []T, size uint32, token string, key func(T) string) ([]T, string, error) {
 	if size == 0 {
 		size = 100

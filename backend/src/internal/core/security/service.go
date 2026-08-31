@@ -17,9 +17,9 @@ import (
 	rules "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/security"
 )
 
-// EvidenceProvider returns only normalized evidence associated with an analysis.
-type EvidenceProvider interface {
-	EvidenceItems(context.Context, string) ([]model.EvidenceItem, error)
+// ConclusionProvider returns Fusion's winning conclusions for an analysis.
+type ConclusionProvider interface {
+	FusedConclusions(context.Context, string) ([]model.FusedConclusion, error)
 }
 
 type Record struct {
@@ -32,18 +32,18 @@ type Record struct {
 	Failure                  string
 }
 type Service struct {
-	mu       sync.RWMutex
-	evidence EvidenceProvider
-	records  map[string]*Record
+	mu          sync.RWMutex
+	conclusions ConclusionProvider
+	records     map[string]*Record
 }
 
-func New(evidence EvidenceProvider) *Service {
-	return &Service{evidence: evidence, records: map[string]*Record{}}
+func New(conclusions ConclusionProvider) *Service {
+	return &Service{conclusions: conclusions, records: map[string]*Record{}}
 }
 
 func (s *Service) Run(ctx context.Context, analysisID, policyID string) (Record, error) {
-	if s == nil || s.evidence == nil {
-		return Record{}, shared.NewError(shared.Internal, "", "security evidence provider is not configured")
+	if s == nil || s.conclusions == nil {
+		return Record{}, shared.NewError(shared.Internal, "", "security Fusion conclusion provider is not configured")
 	}
 	if strings.TrimSpace(analysisID) == "" {
 		return Record{}, shared.NewError(shared.InvalidArgument, "", "analysis_id is required")
@@ -120,7 +120,7 @@ func (s *Service) evaluate(ctx context.Context, id string) (Record, error) {
 	if err != nil {
 		return Record{}, err
 	}
-	items, err := s.evidence.EvidenceItems(ctx, record.AnalysisID)
+	items, err := s.conclusions.FusedConclusions(ctx, record.AnalysisID)
 	if err != nil {
 		s.fail(id, err)
 		return s.Get(ctx, id)
@@ -202,19 +202,19 @@ func priority(severity rules.Severity) string {
 		return "P3"
 	}
 }
-func facts(items []model.EvidenceItem) (rules.Facts, uint64, bool) {
-	latest := map[string]model.EvidenceItem{}
+func facts(items []model.FusedConclusion) (rules.Facts, uint64, bool) {
+	winners := map[string]model.FusedConclusion{}
 	for _, item := range items {
 		if item.Status == commonv1.EvidenceStatus_UNKNOWN {
 			continue
 		}
-		if old, ok := latest[item.PropertyKey]; !ok || item.ObservedAt.After(old.ObservedAt) {
-			latest[item.PropertyKey] = item
+		if old, ok := winners[item.PropertyKey]; !ok || item.Confidence > old.Confidence || item.Confidence == old.Confidence && item.ID < old.ID {
+			winners[item.PropertyKey] = item
 		}
 	}
 	get := func(names ...string) string {
 		for _, name := range names {
-			if item, ok := latest[name]; ok {
+			if item, ok := winners[name]; ok {
 				return scalar(item)
 			}
 		}
@@ -222,7 +222,7 @@ func facts(items []model.EvidenceItem) (rules.Facts, uint64, bool) {
 	}
 	parseBool := func(names ...string) *bool {
 		for _, name := range names {
-			if item, ok := latest[name]; ok {
+			if item, ok := winners[name]; ok {
 				value := strings.EqualFold(scalar(item), "true") || scalar(item) == "1"
 				return &value
 			}
@@ -237,13 +237,13 @@ func facts(items []model.EvidenceItem) (rules.Facts, uint64, bool) {
 	}
 	unknown := uint64(0)
 	for _, property := range []string{"ike.version", "child.encryption_algorithm", "child.integrity_algorithm", "ike.dh_group", "child.pfs", "replay.enabled"} {
-		if _, ok := latest[property]; !ok {
+		if _, ok := winners[property]; !ok {
 			unknown++
 		}
 	}
 	return facts, unknown, facts.MetadataExposure
 }
-func scalar(item model.EvidenceItem) string {
+func scalar(item model.FusedConclusion) string {
 	if item.Value == nil {
 		return ""
 	}

@@ -1042,6 +1042,7 @@ type KernelSnapshot struct {
 	ReplayProtection  []*ReplayProtection      `protobuf:"bytes,3,rep,name=replay_protection,json=replayProtection,proto3" json:"replay_protection,omitempty"`
 	SnapshotTimestamp *timestamppb.Timestamp   `protobuf:"bytes,4,opt,name=snapshot_timestamp,json=snapshotTimestamp,proto3" json:"snapshot_timestamp,omitempty"`
 	Availability      []*ComponentAvailability `protobuf:"bytes,5,rep,name=availability,proto3" json:"availability,omitempty"`
+	SchemaVersion     string                   `protobuf:"bytes,6,opt,name=schema_version,json=schemaVersion,proto3" json:"schema_version,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -1109,6 +1110,13 @@ func (x *KernelSnapshot) GetAvailability() []*ComponentAvailability {
 		return x.Availability
 	}
 	return nil
+}
+
+func (x *KernelSnapshot) GetSchemaVersion() string {
+	if x != nil {
+		return x.SchemaVersion
+	}
+	return ""
 }
 
 var File_api_proto_sensor_v1_xfrm_xfrm_proto protoreflect.FileDescriptor
@@ -1204,13 +1212,14 @@ const file_api_proto_sensor_v1_xfrm_xfrm_proto_rawDesc = "" +
 	"\tavailable\x18\x02 \x01(\bR\tavailable\x12\x1d\n" +
 	"\n" +
 	"error_code\x18\x03 \x01(\tR\terrorCode\x12\x18\n" +
-	"\amessage\x18\x04 \x01(\tR\amessage\"\xe0\x02\n" +
+	"\amessage\x18\x04 \x01(\tR\amessage\"\x87\x03\n" +
 	"\x0eKernelSnapshot\x121\n" +
 	"\x06states\x18\x01 \x03(\v2\x19.sensor.xfrm.v1.XfrmStateR\x06states\x126\n" +
 	"\bpolicies\x18\x02 \x03(\v2\x1a.sensor.xfrm.v1.XfrmPolicyR\bpolicies\x12M\n" +
 	"\x11replay_protection\x18\x03 \x03(\v2 .sensor.xfrm.v1.ReplayProtectionR\x10replayProtection\x12I\n" +
 	"\x12snapshot_timestamp\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\x11snapshotTimestamp\x12I\n" +
-	"\favailability\x18\x05 \x03(\v2%.sensor.xfrm.v1.ComponentAvailabilityR\favailability2\xc4\x04\n" +
+	"\favailability\x18\x05 \x03(\v2%.sensor.xfrm.v1.ComponentAvailabilityR\favailability\x12%\n" +
+	"\x0eschema_version\x18\x06 \x01(\tR\rschemaVersion2\xc4\x04\n" +
 	"\x11KernelXfrmService\x12_\n" +
 	"\x0fGetCapabilities\x12*.sensor.xfrm.v1.GetXfrmCapabilitiesRequest\x1a .sensor.xfrm.v1.XfrmCapabilities\x12[\n" +
 	"\n" +

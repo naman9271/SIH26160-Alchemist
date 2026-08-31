@@ -2492,6 +2492,7 @@ type GatewaySnapshot struct {
 	Authorities           []*Authority            `protobuf:"bytes,9,rep,name=authorities,proto3" json:"authorities,omitempty"`
 	SnapshotTimestamp     *timestamppb.Timestamp  `protobuf:"bytes,10,opt,name=snapshot_timestamp,json=snapshotTimestamp,proto3" json:"snapshot_timestamp,omitempty"`
 	PerSourceAvailability []*SourceAvailability   `protobuf:"bytes,11,rep,name=per_source_availability,json=perSourceAvailability,proto3" json:"per_source_availability,omitempty"`
+	SchemaVersion         string                  `protobuf:"bytes,12,opt,name=schema_version,json=schemaVersion,proto3" json:"schema_version,omitempty"`
 	unknownFields         protoimpl.UnknownFields
 	sizeCache             protoimpl.SizeCache
 }
@@ -2601,6 +2602,13 @@ func (x *GatewaySnapshot) GetPerSourceAvailability() []*SourceAvailability {
 		return x.PerSourceAvailability
 	}
 	return nil
+}
+
+func (x *GatewaySnapshot) GetSchemaVersion() string {
+	if x != nil {
+		return x.SchemaVersion
+	}
+	return ""
 }
 
 type StreamViciEventsRequest struct {
@@ -2977,7 +2985,7 @@ const file_api_proto_sensor_v1_vici_vici_proto_rawDesc = "" +
 	"\amessage\x18\x04 \x01(\tR\amessage\":\n" +
 	"\x19GetGatewaySnapshotRequest\x12\x1d\n" +
 	"\n" +
-	"socket_uri\x18\x01 \x01(\tR\tsocketUri\"\xd9\x05\n" +
+	"socket_uri\x18\x01 \x01(\tR\tsocketUri\"\x80\x06\n" +
 	"\x0fGatewaySnapshot\x12B\n" +
 	"\fdaemon_stats\x18\x01 \x01(\v2\x1f.sensor.vici.v1.ViciDaemonStatsR\vdaemonStats\x12.\n" +
 	"\aike_sas\x18\x02 \x03(\v2\x15.sensor.vici.v1.IkeSaR\x06ikeSas\x124\n" +
@@ -2992,7 +3000,8 @@ const file_api_proto_sensor_v1_vici_vici_proto_rawDesc = "" +
 	"\vauthorities\x18\t \x03(\v2\x19.sensor.vici.v1.AuthorityR\vauthorities\x12I\n" +
 	"\x12snapshot_timestamp\x18\n" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\x11snapshotTimestamp\x12Z\n" +
-	"\x17per_source_availability\x18\v \x03(\v2\".sensor.vici.v1.SourceAvailabilityR\x15perSourceAvailability\"Y\n" +
+	"\x17per_source_availability\x18\v \x03(\v2\".sensor.vici.v1.SourceAvailabilityR\x15perSourceAvailability\x12%\n" +
+	"\x0eschema_version\x18\f \x01(\tR\rschemaVersion\"Y\n" +
 	"\x17StreamViciEventsRequest\x12\x1d\n" +
 	"\n" +
 	"socket_uri\x18\x01 \x01(\tR\tsocketUri\x12\x1f\n" +

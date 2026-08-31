@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"io"
+	"strings"
 	"testing"
 	"time"
 )
@@ -158,6 +159,41 @@ func TestReadOfflinePCAPUsesTheLivePacketDecoder(t *testing.T) {
 	}
 	if result.FirstSeen.Unix() != 7 || result.LastSeen.Nanosecond() != 500_000_000 {
 		t.Fatalf("offline time range = %+v", result)
+	}
+}
+
+func TestDecodeIKEv2CleartextPayloadsAndEncryptedBoundary(t *testing.T) {
+	// A bounded SA proposal followed by an AUTH payload. The parser may expose
+	// proposal metadata but must never interpret an encrypted body.
+	proposal := make([]byte, 16)
+	binary.BigEndian.PutUint16(proposal[2:4], uint16(len(proposal)))
+	proposal[4], proposal[5], proposal[7] = 1, 1, 1
+	binary.BigEndian.PutUint16(proposal[10:12], 8)
+	proposal[12] = 1 // encryption transform
+	binary.BigEndian.PutUint16(proposal[14:16], 12)
+	sa := append([]byte{39, 0, 0, 20}, proposal...)
+	auth := []byte{0, 0, 0, 5, 2}
+	ike := make([]byte, 28)
+	binary.BigEndian.PutUint64(ike[:8], 1)
+	ike[16], ike[17], ike[18] = 33, 0x20, 34
+	binary.BigEndian.PutUint32(ike[24:28], uint32(len(ike)+len(sa)+len(auth)))
+	ike = append(ike, sa...)
+	ike = append(ike, auth...)
+	metadata, ok := decodePacketMetadata(ipv4UDPFrame(500, 500, ike), uint64(len(ike)), time.Now())
+	if !ok || !metadata.IKE || len(metadata.IKEEncryptionAlgorithms) != 1 || metadata.IKEEncryptionAlgorithms[0] != "ENCR_12" || len(metadata.IKEAuthMethods) != 1 || metadata.IKEPayloadEncrypted {
+		t.Fatalf("clear-text IKE parsing = %+v, ok=%v", metadata, ok)
+	}
+	ike[19] = 0x20 // encrypted IKEv2 body flag
+	metadata, ok = decodePacketMetadata(ipv4UDPFrame(500, 500, ike), uint64(len(ike)), time.Now())
+	if !ok || !metadata.IKEPayloadEncrypted {
+		t.Fatalf("encrypted IKE payload was not marked: %+v", metadata)
+	}
+}
+
+func TestReadOfflinePCAPExplainsPCAPNGUnsupported(t *testing.T) {
+	_, err := ReadOfflinePCAP(context.Background(), bytes.NewReader(append([]byte{0x0a, 0x0d, 0x0d, 0x0a}, make([]byte, 20)...)), "session", nil)
+	if err == nil || !strings.Contains(err.Error(), "PCAPNG is not supported") {
+		t.Fatalf("PCAPNG error = %v", err)
 	}
 }
 

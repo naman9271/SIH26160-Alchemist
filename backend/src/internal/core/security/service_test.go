@@ -3,7 +3,6 @@ package security_test
 import (
 	"context"
 	"testing"
-	"time"
 
 	commonv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/common/v1"
 	corerisk "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/risk"
@@ -12,18 +11,17 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-type evidenceFixture []model.EvidenceItem
+type conclusionFixture []model.FusedConclusion
 
-func (f evidenceFixture) EvidenceItems(context.Context, string) ([]model.EvidenceItem, error) {
+func (f conclusionFixture) FusedConclusions(context.Context, string) ([]model.FusedConclusion, error) {
 	return f, nil
 }
 
 func TestAssessmentAndRiskReuseDeterministicRules(t *testing.T) {
-	now := time.Now().UTC()
-	service := coresecurity.New(evidenceFixture{
-		{PropertyKey: "ike.version", Value: structpb.NewStringValue("IKEv1"), Status: commonv1.EvidenceStatus_OBSERVED, ObservedAt: now},
-		{PropertyKey: "child.encryption_algorithm", Value: structpb.NewStringValue("3DES"), Status: commonv1.EvidenceStatus_VERIFIED_GATEWAY, ObservedAt: now},
-		{PropertyKey: "metadata.exposure", Value: structpb.NewStringValue("observed"), Status: commonv1.EvidenceStatus_DERIVED, ObservedAt: now},
+	service := coresecurity.New(conclusionFixture{
+		{ID: "c1", PropertyKey: "ike.version", Value: structpb.NewStringValue("IKEv1"), Status: commonv1.EvidenceStatus_OBSERVED, Confidence: .9},
+		{ID: "c2", PropertyKey: "child.encryption_algorithm", Value: structpb.NewStringValue("3DES"), Status: commonv1.EvidenceStatus_VERIFIED_GATEWAY, Confidence: 1},
+		{ID: "c3", PropertyKey: "metadata.exposure", Value: structpb.NewStringValue("observed"), Status: commonv1.EvidenceStatus_DERIVED, Confidence: .8},
 	})
 	record, err := service.Run(context.Background(), "analysis", "policy")
 	if err != nil || record.Result.Score >= 100 || len(record.Result.Findings) < 2 {

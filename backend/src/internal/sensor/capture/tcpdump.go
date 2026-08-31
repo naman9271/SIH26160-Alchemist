@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"io"
 	"net/netip"
 	"os"
@@ -232,6 +233,9 @@ func ReadOfflinePCAP(ctx context.Context, reader io.Reader, sessionID string, ob
 	}
 	format, ok := pcapFormatForMagic(header[:4])
 	if !ok {
+		if bytes.Equal(header[:4], []byte{0x0a, 0x0d, 0x0d, 0x0a}) {
+			return OfflineResult{}, shared.NewError(shared.InvalidArgument, shared.InvalidPCAP, "PCAPNG is not supported by this build")
+		}
 		return OfflineResult{}, shared.NewError(shared.InvalidArgument, shared.InvalidPCAP, "unsupported PCAP format")
 	}
 	result := OfflineResult{}
@@ -290,7 +294,7 @@ func decodePacketMetadata(packet []byte, length uint64, seenAt time.Time) (Packe
 		switch {
 		case m.SourcePort == 500 || m.DestinationPort == 500:
 			m.IKE = true
-			setIKESPIs(&m, udpPayload)
+			parseIKE(&m, udpPayload)
 		case m.SourcePort == 4500 || m.DestinationPort == 4500:
 			m.NATT = true
 			switch {
@@ -298,7 +302,7 @@ func decodePacketMetadata(packet []byte, length uint64, seenAt time.Time) (Packe
 				m.NATKeepalive = true
 			case len(udpPayload) >= 4 && bytes.Equal(udpPayload[:4], []byte{0, 0, 0, 0}):
 				m.IKE = true
-				setIKESPIs(&m, udpPayload[4:])
+				parseIKE(&m, udpPayload[4:])
 			case len(udpPayload) >= 4:
 				m.EncapsulatedESP = true
 				m.SPI = binary.BigEndian.Uint32(udpPayload[:4])
@@ -334,6 +338,235 @@ func setIKESPIs(metadata *PacketMetadata, payload []byte) {
 	metadata.IKEFlags = payload[19]
 	metadata.IKEMessageID = binary.BigEndian.Uint32(payload[20:24])
 }
+
+// parseIKE recognizes the clear-text, length-delimited portion of IKEv1/v2.
+// It is intentionally conservative: malformed payloads simply stop parsing
+// and encrypted payload bodies are never read.
+func parseIKE(metadata *PacketMetadata, payload []byte) {
+	setIKESPIs(metadata, payload)
+	if len(payload) < 28 {
+		return
+	}
+	declared := int(binary.BigEndian.Uint32(payload[24:28]))
+	if declared < 28 || declared > len(payload) {
+		return
+	}
+	major := payload[17] >> 4
+	firstPayload := payload[16]
+	if major == 2 {
+		if payload[19]&0x20 != 0 { // IKEv2 header: encrypted flag is set only with SK.
+			metadata.IKEPayloadEncrypted = true
+		}
+		parseIKEv2Payloads(metadata, firstPayload, payload[28:declared])
+		return
+	}
+	if major == 1 {
+		if payload[19]&0x01 != 0 { // IKEv1 encrypted flag.
+			metadata.IKEPayloadEncrypted = true
+			return
+		}
+		parseIKEv1Payloads(metadata, firstPayload, payload[28:declared])
+	}
+}
+
+func parseIKEv2Payloads(metadata *PacketMetadata, kind uint8, body []byte) {
+	for len(body) >= 4 && kind != 0 {
+		next, length := body[0], int(binary.BigEndian.Uint16(body[2:4]))
+		if length < 4 || length > len(body) {
+			return
+		}
+		payload := body[4:length]
+		switch kind {
+		case 33: // SA
+			parseIKEv2SA(metadata, payload)
+		case 39: // AUTH
+			if len(payload) > 0 {
+				metadata.IKEAuthMethods = appendUnique(metadata.IKEAuthMethods, ikeAuthName(payload[0]))
+			}
+		case 37: // CERT
+			if len(payload) > 0 {
+				metadata.IKECertificateTypes = appendUnique(metadata.IKECertificateTypes, certificateName(payload[0]))
+			}
+		case 44, 45: // TSi/TSr
+			parseTrafficSelectors(metadata, payload)
+		case 46, 53: // SK/SKF: ciphertext begins after its generic header.
+			metadata.IKEPayloadEncrypted = true
+			return
+		}
+		kind, body = next, body[length:]
+	}
+}
+
+func parseIKEv2SA(metadata *PacketMetadata, body []byte) {
+	for len(body) >= 8 {
+		next, length := body[0], int(binary.BigEndian.Uint16(body[2:4]))
+		if length < 8 || length > len(body) {
+			return
+		}
+		spiSize := int(body[6])
+		transforms := int(body[7])
+		if 8+spiSize > length {
+			return
+		}
+		part := body[8+spiSize : length]
+		for i := 0; i < transforms && len(part) >= 8; i++ {
+			tNext, tLen := part[0], int(binary.BigEndian.Uint16(part[2:4]))
+			if tLen < 8 || tLen > len(part) {
+				return
+			}
+			transformType, transformID := part[4], binary.BigEndian.Uint16(part[6:8])
+			addTransform(metadata, transformType, transformID)
+			part = part[tLen:]
+			if tNext == 0 && i+1 < transforms {
+				return
+			}
+		}
+		body = body[length:]
+		if next == 0 {
+			return
+		}
+	}
+}
+
+func parseIKEv1Payloads(metadata *PacketMetadata, kind uint8, body []byte) {
+	for len(body) >= 4 && kind != 0 {
+		next, length := body[0], int(binary.BigEndian.Uint16(body[2:4]))
+		if length < 4 || length > len(body) {
+			return
+		}
+		payload := body[4:length]
+		switch kind {
+		case 1:
+			parseIKEv1SA(metadata, payload)
+		case 6:
+			if len(payload) > 0 {
+				metadata.IKECertificateTypes = appendUnique(metadata.IKECertificateTypes, certificateName(payload[0]))
+			}
+		case 8, 9:
+			metadata.IKEAuthMethods = appendUnique(metadata.IKEAuthMethods, "IKEv1_AUTH")
+		}
+		kind, body = next, body[length:]
+	}
+}
+
+func parseIKEv1SA(metadata *PacketMetadata, body []byte) {
+	if len(body) < 8 {
+		return
+	} // DOI and situation.
+	body = body[8:]
+	for len(body) >= 8 {
+		next, length := body[0], int(binary.BigEndian.Uint16(body[2:4]))
+		if length < 8 || length > len(body) {
+			return
+		}
+		// ISAKMP proposal payload: proposal #, protocol, SPI size, transform count.
+		spiSize, transforms := int(body[6]), int(body[7])
+		if 8+spiSize > length {
+			return
+		}
+		part := body[8+spiSize : length]
+		for i := 0; i < transforms && len(part) >= 8; i++ {
+			tNext, tLen := part[0], int(binary.BigEndian.Uint16(part[2:4]))
+			if tLen < 8 || tLen > len(part) {
+				return
+			}
+			// Transform # / transform ID. Attribute decoding is bounded below.
+			metadata.IKEEncryptionAlgorithms = appendUnique(metadata.IKEEncryptionAlgorithms, "IKEv1_TRANSFORM_"+strconv.Itoa(int(binary.BigEndian.Uint16(part[6:8]))))
+			parseIKEv1Attributes(metadata, part[8:tLen])
+			part = part[tLen:]
+			if tNext == 0 && i+1 < transforms {
+				return
+			}
+		}
+		body = body[length:]
+		if next == 0 {
+			return
+		}
+	}
+}
+
+func parseIKEv1Attributes(metadata *PacketMetadata, attributes []byte) {
+	for len(attributes) >= 4 {
+		typeAndFlag, value := binary.BigEndian.Uint16(attributes[:2]), binary.BigEndian.Uint16(attributes[2:4])
+		attributeType := typeAndFlag & 0x7fff
+		if typeAndFlag&0x8000 == 0 { // variable length attribute
+			length := int(value)
+			if length > len(attributes)-4 {
+				return
+			}
+			attributes = attributes[4+length:]
+			continue
+		}
+		switch attributeType {
+		case 2:
+			metadata.IKEEncryptionAlgorithms = appendUnique(metadata.IKEEncryptionAlgorithms, "IKEv1_ENCR_"+strconv.Itoa(int(value)))
+		case 3:
+			metadata.IKEIntegrityAlgorithms = appendUnique(metadata.IKEIntegrityAlgorithms, "IKEv1_HASH_"+strconv.Itoa(int(value)))
+		case 4:
+			metadata.IKEAuthMethods = appendUnique(metadata.IKEAuthMethods, "IKEv1_AUTH_"+strconv.Itoa(int(value)))
+		case 5:
+			metadata.IKEDHGroups = appendUnique(metadata.IKEDHGroups, "DH_"+strconv.Itoa(int(value)))
+		}
+		attributes = attributes[4:]
+	}
+}
+
+func parseTrafficSelectors(metadata *PacketMetadata, body []byte) {
+	if len(body) < 4 {
+		return
+	}
+	count := int(body[0])
+	body = body[4:]
+	for i := 0; i < count && len(body) >= 8; i++ {
+		typeID, protocol, length := body[0], body[1], int(binary.BigEndian.Uint16(body[2:4]))
+		if length < 8 || length > len(body) {
+			return
+		}
+		startPort, endPort := binary.BigEndian.Uint16(body[4:6]), binary.BigEndian.Uint16(body[6:8])
+		addresses := body[8:length]
+		addressLength := 0
+		if typeID == 7 {
+			addressLength = 4
+		} else if typeID == 8 {
+			addressLength = 16
+		}
+		if addressLength > 0 && len(addresses) == 2*addressLength {
+			metadata.IKETrafficSelectors = appendUnique(metadata.IKETrafficSelectors, fmt.Sprintf("proto=%d ports=%d-%d", protocol, startPort, endPort))
+		}
+		body = body[length:]
+	}
+}
+
+func addTransform(metadata *PacketMetadata, transformType uint8, transformID uint16) {
+	value := transformName(transformType, transformID)
+	switch transformType {
+	case 1:
+		metadata.IKEEncryptionAlgorithms = appendUnique(metadata.IKEEncryptionAlgorithms, value)
+	case 2:
+		metadata.IKEPRFs = appendUnique(metadata.IKEPRFs, value)
+	case 3:
+		metadata.IKEIntegrityAlgorithms = appendUnique(metadata.IKEIntegrityAlgorithms, value)
+	case 4:
+		metadata.IKEDHGroups = appendUnique(metadata.IKEDHGroups, value)
+	}
+}
+func appendUnique(values []string, value string) []string {
+	if value == "" {
+		return values
+	}
+	for _, existing := range values {
+		if existing == value {
+			return values
+		}
+	}
+	return append(values, value)
+}
+func transformName(kind uint8, id uint16) string {
+	prefixes := map[uint8]string{1: "ENCR", 2: "PRF", 3: "INTEG", 4: "DH", 5: "ESN"}
+	return prefixes[kind] + "_" + strconv.Itoa(int(id))
+}
+func ikeAuthName(value byte) string     { return "AUTH_" + strconv.Itoa(int(value)) }
+func certificateName(value byte) string { return "CERT_" + strconv.Itoa(int(value)) }
 
 type pcapFormat struct {
 	order      binary.ByteOrder
