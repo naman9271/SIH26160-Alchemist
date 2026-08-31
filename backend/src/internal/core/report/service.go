@@ -21,6 +21,7 @@ import (
 	corefusion "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/fusion"
 	coreworkspace "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/workspace"
 	shared "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/domain/sensor"
+	"google.golang.org/protobuf/proto"
 )
 
 const ttl = 24 * time.Hour
@@ -78,8 +79,8 @@ func (s *Service) Generate(ctx context.Context, request *reportv1.GenerateReport
 	s.records[record.ID] = record
 	s.mu.Unlock()
 	s.bindWorkspace(record, "GENERATING")
-	copy := *request
-	go s.render(record.ID, &copy)
+	requestCopy := proto.Clone(request).(*reportv1.GenerateReportRequest)
+	go s.render(record.ID, requestCopy)
 	return *record, nil
 }
 func (s *Service) render(id string, request *reportv1.GenerateReportRequest) {
