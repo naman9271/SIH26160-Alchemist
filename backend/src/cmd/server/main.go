@@ -164,6 +164,7 @@ func main() {
 			},
 		})
 	})
+	registerWorkflowAPI(mux, inputService, analysisService, reportService, workspaceService)
 	httpAddress := envOrDefault("CORE_HTTP_ADDRESS", "127.0.0.1:8080")
 	httpServer := &http.Server{
 		Addr: httpAddress, Handler: mux,
