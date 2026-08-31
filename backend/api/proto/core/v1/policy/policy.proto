@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package core.policy.v1;
+
+option go_package = "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/policy;policyv1";
+
+service PolicyService {
+  rpc List(ListPoliciesRequest) returns (ListPoliciesResponse);
+  rpc Get(GetPolicyRequest) returns (SecurityPolicy);
+  rpc GetActive(GetActivePolicyRequest) returns (SecurityPolicy);
+  rpc SetActive(SetActivePolicyRequest) returns (SetActivePolicyResponse);
+  rpc Validate(ValidatePolicyRequest) returns (ValidatePolicyResponse);
+  rpc Reload(ReloadPoliciesRequest) returns (ReloadPoliciesResponse);
+}
+
+message ListPoliciesRequest {}
+message GetPolicyRequest { string policy_id = 1; }
+message GetActivePolicyRequest {}
+message SetActivePolicyRequest { string policy_id = 1; }
+message SetActivePolicyResponse { SecurityPolicy policy = 1; }
+message ValidatePolicyRequest { SecurityPolicy policy = 1; }
+message ValidationIssue { string field = 1; string message = 2; }
+message ValidatePolicyResponse { bool valid = 1; repeated ValidationIssue issues = 2; }
+message ReloadPoliciesRequest {}
+message ReloadPoliciesResponse { uint64 policies_loaded = 1; string active_policy_id = 2; }
+message ListPoliciesResponse { repeated SecurityPolicy policies = 1; }
+
+// SecurityPolicy is the public representation of the existing Fusion policy.
+// It intentionally does not invent a separate security-rule policy format.
+message SecurityPolicy {
+  string policy_id = 1;
+  string schema_version = 2;
+  repeated string required_sources = 3;
+  repeated string required_properties = 4;
+  map<string, double> source_trust = 5;
+  uint64 freshness_window_seconds = 6;
+  double minimum_confidence = 7;
+  double conflict_threshold = 8;
+  double correlation_threshold = 9;
+  repeated string status_precedence = 10;
+  map<string, PropertyRule> property_rules = 11;
+}
+message PropertyRule { repeated string source_precedence = 1; uint64 freshness_window_seconds = 2; double minimum_confidence = 3; }

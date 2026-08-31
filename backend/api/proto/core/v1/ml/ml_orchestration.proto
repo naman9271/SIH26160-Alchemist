@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package core.ml.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/ml;mlv1";
+
+service MLOrchestrationService {
+  rpc GetWorkerStatus(GetMLWorkerStatusRequest) returns (MLWorkerStatus);
+  rpc GetModelInfo(GetModelInfoRequest) returns (ModelInfo);
+  rpc RunInference(RunInferenceRequest) returns (RunInferenceResponse);
+  rpc GetInferenceStatus(GetInferenceStatusRequest) returns (InferenceStatus);
+  rpc ListPredictions(ListPredictionsRequest) returns (ListPredictionsResponse);
+  rpc GetPrediction(GetPredictionRequest) returns (TrafficPrediction);
+  rpc GetExplanation(GetPredictionExplanationRequest) returns (PredictionExplanation);
+  rpc CancelInference(CancelInferenceRequest) returns (CancelInferenceResponse);
+}
+
+message GetMLWorkerStatusRequest {}
+message MLWorkerStatus { bool available = 1; double latency_ms = 2; bool model_loaded = 3; string model_version = 4; string feature_schema_version = 5; string status_message = 6; }
+message GetModelInfoRequest {}
+message ModelInfo { string model_name = 1; string model_version = 2; string model_family = 3; repeated string classes = 4; string feature_schema_version = 5; string sequence_schema_version = 6; google.protobuf.Timestamp trained_at = 7; bool supports_shap = 8; }
+message RunInferenceRequest { string analysis_id = 1; bool use_sequence_model = 2; bool enable_shap = 3; }
+message RunInferenceResponse { string inference_id = 1; string state = 2; }
+message GetInferenceStatusRequest { string inference_id = 1; }
+message InferenceStatus { string inference_id = 1; string analysis_id = 2; string state = 3; uint64 windows_total = 4; uint64 windows_processed = 5; uint64 predictions_available = 6; string failure_reason = 7; }
+message ListPredictionsRequest { string inference_id = 1; uint32 page_size = 2; string page_token = 3; }
+message ListPredictionsResponse { repeated TrafficPrediction predictions = 1; string next_page_token = 2; }
+message GetPredictionRequest { string inference_id = 1; string prediction_id = 2; }
+message TrafficPrediction { string prediction_id = 1; string flow_id = 2; string traffic_class = 3; double confidence = 4; map<string,double> class_probabilities = 5; bool is_unknown = 6; string model_version = 7; string feature_schema_version = 8; double inference_time_ms = 9; }
+message GetPredictionExplanationRequest { string inference_id = 1; string prediction_id = 2; }
+message PredictionExplanation { string prediction_id = 1; string method = 2; repeated FeatureAttribution features = 3; string unavailable_reason = 4; }
+message FeatureAttribution { string feature_name = 1; double value = 2; double attribution = 3; }
+message CancelInferenceRequest { string inference_id = 1; }
+message CancelInferenceResponse { string inference_id = 1; string state = 2; }

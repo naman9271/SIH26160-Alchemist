@@ -1545,7 +1545,9 @@ Deprecated critical cipher
 
 # SERVICE 9 — PolicyService
 
-Policies are local versioned YAML/JSON files.
+Policies are local versioned Fusion policy files. The current loader accepts
+strict JSON only (unknown fields are rejected); YAML is reserved until a
+schema-preserving parser is added.
 
 ```protobuf
 service PolicyService {
@@ -1623,9 +1625,11 @@ Reloads disk policy definitions.
 
 # SERVICE 10 — MLOrchestrationService
 
-This is a future Core facade for stored ML results. It is not implemented in
-the current server. It must delegate prediction, confidence, UNKNOWN and SHAP
-to Python without changing their semantics.
+This Core facade exposes worker health/model metadata and inference-job status.
+It delegates prediction, confidence, UNKNOWN and SHAP to Python without
+changing their semantics. The current server reports a failed job when it
+cannot associate finalized Sensor feature windows with an analysis; it never
+fabricates a prediction or changes Python's abstention decision.
 
 ```protobuf
 service MLOrchestrationService {

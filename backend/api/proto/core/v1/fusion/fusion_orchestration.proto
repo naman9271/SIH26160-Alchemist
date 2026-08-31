@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package core.fusion.v1;
+
+import "api/proto/common/v1/evidence.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/fusion;fusionv1";
+
+service FusionOrchestrationService {
+  rpc Run(RunFusionRequest) returns (RunFusionResponse);
+  rpc GetStatus(GetFusionStatusRequest) returns (FusionStatus);
+  rpc GetSummary(GetFusionSummaryRequest) returns (FusionSummary);
+  rpc ListConclusions(ListFusedConclusionsRequest) returns (ListFusedConclusionsResponse);
+  rpc GetConclusion(GetFusedConclusionRequest) returns (FusedConclusion);
+  rpc GetEvidenceChain(GetEvidenceChainRequest) returns (EvidenceChain);
+  rpc Recompute(RecomputeFusionRequest) returns (RecomputeFusionResponse);
+}
+
+message RunFusionRequest { string analysis_id = 1; bool include_passive = 2; bool include_vici = 3; bool include_xfrm = 4; bool include_ml = 5; bool include_security_rules = 6; }
+message RunFusionResponse { string fusion_run_id = 1; string state = 2; }
+message GetFusionStatusRequest { string analysis_id = 1; }
+message FusionStatus { string fusion_run_id = 1; string state = 2; uint64 evidence_count = 3; uint64 conclusion_count = 4; uint64 conflict_count = 5; string failure_reason = 6; }
+message GetFusionSummaryRequest { string analysis_id = 1; }
+message FusionSummary { string fusion_run_id = 1; string state = 2; uint64 evidence_count = 3; uint64 conclusion_count = 4; uint64 unresolved_conflicts = 5; repeated string unavailable_sources = 6; }
+message ListFusedConclusionsRequest { string analysis_id = 1; string property_key = 2; string resource_type = 3; string resource_id = 4; uint32 page_size = 5; string page_token = 6; }
+message ListFusedConclusionsResponse { repeated FusedConclusion conclusions = 1; string next_page_token = 2; }
+message GetFusedConclusionRequest { string analysis_id = 1; string conclusion_id = 2; }
+message FusedConclusion { string conclusion_id = 1; string property_key = 2; string value = 3; string resource_type = 4; string resource_id = 5; double confidence = 6; ipsec.common.v1.EvidenceStatus evidence_status = 7; repeated string winning_sources = 8; string conflict_id = 9; string rationale_code = 10; google.protobuf.Timestamp computed_at = 11; }
+message GetEvidenceChainRequest { string analysis_id = 1; string conclusion_id = 2; }
+message EvidenceChain { FusedConclusion conclusion = 1; repeated EvidenceReference winning_evidence = 2; repeated EvidenceReference supporting_evidence = 3; repeated EvidenceReference conflicting_evidence = 4; }
+message EvidenceReference { string evidence_id = 1; string source = 2; string property_key = 3; string value = 4; ipsec.common.v1.EvidenceStatus evidence_status = 5; double confidence = 6; }
+message RecomputeFusionRequest { string analysis_id = 1; repeated string property_keys = 2; }
+message RecomputeFusionResponse { string fusion_run_id = 1; string state = 2; uint64 conclusions_updated = 3; repeated string affected_properties = 4; }

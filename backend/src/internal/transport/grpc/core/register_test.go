@@ -38,9 +38,12 @@ func TestCoreRegistrationIncludesOnlyRequestedCoreServices(t *testing.T) {
 		NewProtocolReadHandler(nil),
 		NewSecurityHandler(nil),
 		NewRiskHandler(nil),
+		NewPolicyHandler(nil),
+		NewMLHandler(nil),
+		NewFusionHandler(nil),
 	)
 	services := server.GetServiceInfo()
-	if len(services) != 7 {
+	if len(services) != 10 {
 		t.Fatalf("registered services=%v", services)
 	}
 	for name := range services {

@@ -12,10 +12,14 @@ import (
 	"time"
 
 	coresystemv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/system"
+	mlworkerv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/ml/v1"
 	coreanalysis "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/analysis"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/dependencies"
+	corefusion "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/fusion"
 	coreinput "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/input"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/localsensor"
+	coreml "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/ml"
+	corepolicy "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/policy"
 	coreprotocol "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/protocolread"
 	corerisk "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/risk"
 	coresecurity "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/security"
@@ -25,6 +29,7 @@ import (
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/sensor/acquisition"
 	coretransport "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/transport/grpc/core"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 func main() {
@@ -48,6 +53,18 @@ func main() {
 	analysisService := coreanalysis.New(inputService, fusionRuntime.Sessions, workspaceService)
 	securityService := coresecurity.New(protocolService)
 	riskService := corerisk.New(securityService)
+	policyService := corepolicy.New(fusionRuntime.Policy)
+	fusionService := corefusion.New(coreprotocol.WorkspaceRunResolver{Workspace: workspaceService}, fusionRuntime.Fusion, fusionRuntime.Provenance, fusionRuntime.Ingest)
+	mlConnection, mlConnectionErr := grpc.NewClient(provider.MLAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if mlConnectionErr != nil {
+		logger.Warn("ML client initialization failed", "error", mlConnectionErr)
+	}
+	var mlWorker mlworkerv1.TrafficClassifierClient
+	if mlConnectionErr == nil {
+		defer mlConnection.Close()
+		mlWorker = mlworkerv1.NewTrafficClassifierClient(mlConnection)
+	}
+	mlService := coreml.New(mlWorker, 2*time.Second, workspaceService, inputService, sensorServices.Flows)
 
 	grpcServer := grpc.NewServer()
 	coretransport.RegisterCoreServices(
@@ -60,6 +77,9 @@ func main() {
 		coretransport.NewProtocolReadHandler(protocolService),
 		coretransport.NewSecurityHandler(securityService),
 		coretransport.NewRiskHandler(riskService),
+		coretransport.NewPolicyHandler(policyService),
+		coretransport.NewMLHandler(mlService),
+		coretransport.NewFusionHandler(fusionService),
 	)
 	grpcAddress := envOrDefault("CORE_GRPC_ADDRESS", "127.0.0.1:50052")
 	grpcListener, err := net.Listen("tcp", grpcAddress)

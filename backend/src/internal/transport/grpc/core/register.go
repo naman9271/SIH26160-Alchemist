@@ -2,8 +2,11 @@ package core
 
 import (
 	analysisv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/analysis"
+	fusionv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/fusion"
 	inputv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/input"
 	localsensorv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/localsensor"
+	mlv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/ml"
+	policyv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/policy"
 	protocolreadv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/protocolread"
 	riskv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/risk"
 	securityv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/security"
@@ -40,6 +43,18 @@ func RegisterCoreServices(server grpc.ServiceRegistrar, system *SystemHandler, w
 		case *AnalysisHandler:
 			if value != nil {
 				analysisv1.RegisterAnalysisServiceServer(server, value)
+			}
+		case *PolicyHandler:
+			if value != nil {
+				policyv1.RegisterPolicyServiceServer(server, value)
+			}
+		case *MLHandler:
+			if value != nil {
+				mlv1.RegisterMLOrchestrationServiceServer(server, value)
+			}
+		case *FusionHandler:
+			if value != nil {
+				fusionv1.RegisterFusionOrchestrationServiceServer(server, value)
 			}
 		}
 	}
