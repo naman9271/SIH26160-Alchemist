@@ -19,6 +19,9 @@ import (
 	coreanalysis "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/analysis"
 	coreartifact "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/artifact"
 	corefusion "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/fusion"
+	coreml "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/ml"
+	corerisk "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/risk"
+	coresecurity "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/security"
 	coreworkspace "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/workspace"
 	shared "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/domain/sensor"
 	"google.golang.org/protobuf/proto"
@@ -40,15 +43,18 @@ type Service struct {
 	fusion    *corefusion.Service
 	artifacts *coreartifact.Service
 	workspace *coreworkspace.Service
+	security  *coresecurity.Service
+	risk      *corerisk.Service
+	ml        *coreml.Service
 	events    interface {
 		Publish(context.Context, string, eventv1.CoreEventCategory)
 	}
 }
 
-func New(analysis *coreanalysis.Service, fusion *corefusion.Service, artifacts *coreartifact.Service, workspace *coreworkspace.Service, events interface {
+func New(analysis *coreanalysis.Service, fusion *corefusion.Service, artifacts *coreartifact.Service, workspace *coreworkspace.Service, security *coresecurity.Service, risk *corerisk.Service, ml *coreml.Service, events interface {
 	Publish(context.Context, string, eventv1.CoreEventCategory)
 }) *Service {
-	return &Service{records: map[string]*Record{}, analysis: analysis, fusion: fusion, artifacts: artifacts, workspace: workspace, events: events}
+	return &Service{records: map[string]*Record{}, analysis: analysis, fusion: fusion, artifacts: artifacts, workspace: workspace, security: security, risk: risk, ml: ml, events: events}
 }
 func (s *Service) Generate(ctx context.Context, request *reportv1.GenerateReportRequest) (Record, error) {
 	if err := contextError(ctx); err != nil {
@@ -80,15 +86,15 @@ func (s *Service) Generate(ctx context.Context, request *reportv1.GenerateReport
 	s.mu.Unlock()
 	s.bindWorkspace(record, "GENERATING")
 	requestCopy := proto.Clone(request).(*reportv1.GenerateReportRequest)
-	go s.render(record.ID, requestCopy)
+	go s.renderReport(record.ID, requestCopy)
 	return *record, nil
 }
-func (s *Service) render(id string, request *reportv1.GenerateReportRequest) {
+func (s *Service) renderReport(id string, request *reportv1.GenerateReportRequest) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	conclusions, _, err := s.fusion.List(ctx, request.GetAnalysisId(), &fusionv1.ListFusedConclusionsRequest{PageSize: 1000})
 	if err == nil {
-		body, mime, name := render(request, conclusions)
+		body, mime, name := s.render(ctx, request, conclusions)
 		var artifact coreartifact.Record
 		artifact, err = s.artifacts.Create(ctx, request.GetAnalysisId(), name, mime, artifactv1.ArtifactType_REPORT, body, ttl)
 		if err == nil {
@@ -180,8 +186,51 @@ func (s *Service) Artifact(ctx context.Context, id string) (coreartifact.Record,
 func (s *Service) ArtifactOpen(ctx context.Context, id string) (io.ReadCloser, coreartifact.Record, error) {
 	return s.artifacts.Open(ctx, id)
 }
-func render(r *reportv1.GenerateReportRequest, conclusions []*fusionv1.FusedConclusion) ([]byte, string, string) {
-	payload := map[string]interface{}{"analysis_id": r.GetAnalysisId(), "report_type": r.GetType().String(), "generated_at": time.Now().UTC().Format(time.RFC3339), "options": map[string]bool{"include_timeline": r.GetIncludeTimeline(), "include_threat_matrix": r.GetIncludeThreatMatrix(), "include_shap": r.GetIncludeShap(), "include_evidence_chain": r.GetIncludeEvidenceChain()}, "conclusions": conclusions}
+func (s *Service) render(ctx context.Context, r *reportv1.GenerateReportRequest, conclusions []*fusionv1.FusedConclusion) ([]byte, string, string) {
+	payload := map[string]interface{}{"analysis_id": r.GetAnalysisId(), "report_type": r.GetType().String(), "generated_at": time.Now().UTC().Format(time.RFC3339), "options": map[string]bool{"include_timeline": r.GetIncludeTimeline(), "include_threat_matrix": r.GetIncludeThreatMatrix(), "include_shap": r.GetIncludeShap(), "include_evidence_chain": r.GetIncludeEvidenceChain()}, "fused_conclusions": conclusions}
+	if r.GetIncludeTimeline() {
+		timeline := make([]map[string]interface{}, 0, len(conclusions))
+		for _, conclusion := range conclusions {
+			timeline = append(timeline, map[string]interface{}{"time": conclusion.GetComputedAt().AsTime(), "property_key": conclusion.GetPropertyKey(), "resource_id": conclusion.GetResourceId(), "rationale": conclusion.GetRationaleCode()})
+		}
+		payload["fusion_timeline"] = timeline
+	}
+	if s.security != nil {
+		if assessment, err := s.security.LatestForAnalysis(ctx, r.GetAnalysisId()); err == nil {
+			payload["security_assessment"] = assessment.Result
+			payload["unknown_evidence_count"] = assessment.UnknownEvidence
+			payload["metadata_exposure"] = assessment.MetadataExposure
+			if s.risk != nil {
+				if score, scoreErr := s.risk.Score(ctx, assessment.ID); scoreErr == nil {
+					payload["risk_score"] = score
+				}
+				if breakdown, breakdownErr := s.risk.Breakdown(ctx, assessment.ID); breakdownErr == nil {
+					payload["risk_breakdown"] = breakdown
+				}
+				if r.GetIncludeThreatMatrix() {
+					payload["threat_matrix"] = assessment.Result.ThreatMatrix
+				}
+			}
+		}
+	}
+	if r.GetIncludeEvidenceChain() {
+		chains := make(map[string]*fusionv1.EvidenceChain, len(conclusions))
+		for _, conclusion := range conclusions {
+			if chain, err := s.fusion.Chain(ctx, r.GetAnalysisId(), conclusion.GetConclusionId()); err == nil {
+				chains[conclusion.GetConclusionId()] = chain
+			}
+		}
+		payload["evidence_chains"] = chains
+	}
+	if s.ml != nil {
+		if inferenceID, predictions, explanations, err := s.ml.LatestForAnalysis(ctx, r.GetAnalysisId()); err == nil {
+			payload["ml_inference_id"] = inferenceID
+			payload["ml_predictions"] = predictions
+			if r.GetIncludeShap() {
+				payload["shap_explanations"] = explanations
+			}
+		}
+	}
 	raw, _ := json.MarshalIndent(payload, "", "  ")
 	if r.GetFormat() == reportv1.ReportFormat_JSON_FORMAT {
 		return raw, "application/json", "analysis-report.json"
@@ -193,9 +242,6 @@ func minimalPDF(content string) []byte {
 	content = strings.ReplaceAll(content, "(", "\\(")
 	content = strings.ReplaceAll(content, ")", "\\)")
 	content = strings.ReplaceAll(content, "\n", " ")
-	if len(content) > 3000 {
-		content = content[:3000]
-	}
 	stream := "BT /F1 9 Tf 40 780 Td (" + content + ") Tj ET"
 	objects := []string{"<</Type/Catalog/Pages 2 0 R>>", "<</Type/Pages/Count 1/Kids[3 0 R]>>", "<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]/Resources<</Font<</F1 4 0 R>>>>/Contents 5 0 R>>", "<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>", fmt.Sprintf("<</Length %d>>stream\n%s\nendstream", len(stream), stream)}
 	var out bytes.Buffer

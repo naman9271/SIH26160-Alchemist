@@ -3,7 +3,6 @@ package xfrm
 
 import (
 	"context"
-	"runtime"
 	"strings"
 
 	commonv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/common/v1"
@@ -24,7 +23,7 @@ func (s *Service) Capabilities(ctx context.Context) (*xfrmv1.XfrmCapabilities, e
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	if s.provider == nil || runtime.GOOS != "linux" {
+	if s.provider == nil {
 		return &xfrmv1.XfrmCapabilities{}, shared.NewError(shared.Unavailable, shared.XFRMUnavailable, "Linux XFRM Netlink is unavailable on this platform")
 	}
 	return s.provider.Capabilities(ctx)

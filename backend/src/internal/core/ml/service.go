@@ -4,6 +4,7 @@ package ml
 
 import (
 	"context"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -33,6 +34,7 @@ type Service struct {
 type job struct {
 	id, analysisID, state, failure string
 	predictions                    map[string]*mlv1.TrafficPrediction
+	explanations                   map[string]*mlv1.PredictionExplanation
 	created                        time.Time
 }
 
@@ -111,7 +113,7 @@ func (s *Service) Start(ctx context.Context, analysisID string, sequence, shap b
 		return nil, err
 	}
 	id := uuid.NewString()
-	item := &job{id: id, analysisID: analysisID, state: "RUNNING", predictions: map[string]*mlv1.TrafficPrediction{}}
+	item := &job{id: id, analysisID: analysisID, state: "RUNNING", created: time.Now().UTC(), predictions: map[string]*mlv1.TrafficPrediction{}, explanations: map[string]*mlv1.PredictionExplanation{}}
 	s.mu.Lock()
 	s.jobs[id] = item
 	s.mu.Unlock()
@@ -128,7 +130,12 @@ func (s *Service) Start(ctx context.Context, analysisID string, sequence, shap b
 			if !w.IsMLReady() {
 				continue
 			}
-			result, e := predictor.Predict(ctx, flow.ToFeature(w))
+			var result *worker.PredictionResult
+			if shap {
+				result, e = predictor.PredictWithExplanations(ctx, flow.ToFeature(w))
+			} else {
+				result, e = predictor.Predict(ctx, flow.ToFeature(w))
+			}
 			if e != nil {
 				return s.fail(id, e)
 			}
@@ -137,6 +144,16 @@ func (s *Service) Start(ctx context.Context, analysisID string, sequence, shap b
 				p.ClassProbabilities[top.GetTrafficClass().String()] = top.GetConfidence()
 			}
 			item.predictions[p.PredictionId] = p
+			explanation := &mlv1.PredictionExplanation{PredictionId: p.PredictionId}
+			if shap && len(result.GetTopExplanations()) > 0 {
+				explanation.Method = "SHAP"
+				for _, feature := range result.GetTopExplanations() {
+					explanation.Features = append(explanation.Features, &mlv1.FeatureAttribution{FeatureName: feature.GetFeature(), Value: feature.GetValue(), Attribution: feature.GetImpact()})
+				}
+			} else {
+				explanation.UnavailableReason = "SHAP was disabled or the ML worker returned no explanation"
+			}
+			item.explanations[p.PredictionId] = explanation
 		}
 	}
 	s.mu.Lock()
@@ -169,7 +186,26 @@ func (s *Service) Predictions(_ context.Context, id string, size uint32, token s
 	for _, p := range item.predictions {
 		out = append(out, p)
 	}
-	return out, "", nil
+	sort.Slice(out, func(i, j int) bool { return out[i].GetPredictionId() < out[j].GetPredictionId() })
+	if size == 0 {
+		size = 100
+	}
+	if size > 1000 {
+		return nil, "", shared.NewError(shared.InvalidArgument, "", "page_size must not exceed 1000")
+	}
+	start := 0
+	for start < len(out) && token != "" && out[start].GetPredictionId() <= token {
+		start++
+	}
+	end := start + int(size)
+	if end > len(out) {
+		end = len(out)
+	}
+	next := ""
+	if end < len(out) {
+		next = out[end-1].GetPredictionId()
+	}
+	return out[start:end], next, nil
 }
 func (s *Service) Prediction(_ context.Context, inferenceID, predictionID string) (*mlv1.TrafficPrediction, error) {
 	item, err := s.get(inferenceID)
@@ -185,7 +221,14 @@ func (s *Service) Explanation(_ context.Context, inferenceID, predictionID strin
 	if _, err := s.get(inferenceID); err != nil {
 		return nil, err
 	}
-	return &mlv1.PredictionExplanation{PredictionId: predictionID, UnavailableReason: "no cached prediction explanation is available"}, nil
+	item, err := s.get(inferenceID)
+	if err != nil {
+		return nil, err
+	}
+	if explanation := item.explanations[predictionID]; explanation != nil {
+		return explanation, nil
+	}
+	return nil, shared.NewError(shared.NotFound, "", "prediction explanation was not found")
 }
 func (s *Service) Cancel(_ context.Context, id string) (*mlv1.CancelInferenceResponse, error) {
 	item, err := s.get(id)
@@ -211,4 +254,34 @@ func (s *Service) get(id string) (*job, error) {
 		return nil, shared.NewError(shared.NotFound, "", "inference was not found")
 	}
 	return item, nil
+}
+
+// LatestForAnalysis returns a stable snapshot of the newest completed ML job.
+func (s *Service) LatestForAnalysis(_ context.Context, analysisID string) (string, []*mlv1.TrafficPrediction, map[string]*mlv1.PredictionExplanation, error) {
+	if s == nil || strings.TrimSpace(analysisID) == "" {
+		return "", nil, nil, shared.NewError(shared.InvalidArgument, "", "analysis_id is required")
+	}
+	s.mu.RLock()
+	var selected *job
+	for _, candidate := range s.jobs {
+		if candidate.analysisID == analysisID && candidate.state == "COMPLETED" && (selected == nil || candidate.created.After(selected.created)) {
+			selected = candidate
+		}
+	}
+	if selected == nil {
+		s.mu.RUnlock()
+		return "", nil, nil, shared.NewError(shared.NotFound, "", "completed ML inference was not found")
+	}
+	predictions := make([]*mlv1.TrafficPrediction, 0, len(selected.predictions))
+	explanations := make(map[string]*mlv1.PredictionExplanation, len(selected.explanations))
+	for _, value := range selected.predictions {
+		predictions = append(predictions, value)
+	}
+	for id, value := range selected.explanations {
+		explanations[id] = value
+	}
+	id := selected.id
+	s.mu.RUnlock()
+	sort.Slice(predictions, func(i, j int) bool { return predictions[i].GetPredictionId() < predictions[j].GetPredictionId() })
+	return id, predictions, explanations, nil
 }

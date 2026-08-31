@@ -8,19 +8,22 @@ import (
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/sensor/capture"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/sensor/flow"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/sensor/network"
+	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/sensor/observation"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/sensor/session"
 )
 
 type Services struct {
-	Sessions   *session.Service
-	Interfaces *network.Service
-	Captures   *capture.Service
-	Flows      *flow.Service
+	Sessions     *session.Service
+	Interfaces   *network.Service
+	Captures     *capture.Service
+	Flows        *flow.Service
+	Observations *observation.Service
 }
 
 type lifecycleHooks struct {
-	capture *capture.Service
-	flow    *flow.Service
+	capture      *capture.Service
+	flow         *flow.Service
+	observations *observation.Service
 }
 
 func (h lifecycleHooks) StopForSession(ctx context.Context, id string) error {
@@ -33,21 +36,29 @@ func (h lifecycleHooks) ResetForSession(ctx context.Context, id string, remove b
 	if err := h.capture.ResetForSession(ctx, id, remove); err != nil {
 		return err
 	}
-	return h.flow.ResetForSession(ctx, id, remove)
+	if err := h.flow.ResetForSession(ctx, id, remove); err != nil {
+		return err
+	}
+	h.observations.Reset(ctx, id)
+	return nil
 }
 
 func New(engine capture.Engine, counters network.CounterReader, metrics capture.FlowMetrics) Services {
 	sessions := session.New()
 	flows := flow.New(flow.Config{})
+	observations := observation.New()
 	if metrics == nil {
 		metrics = flows
 	}
 	captures := capture.New(sessions, engine, metrics)
 	captures.SetPacketObserver(func(ctx context.Context, packet capture.PacketMetadata) error {
+		if err := observations.Observe(ctx, packet); err != nil {
+			return err
+		}
 		return observePacket(ctx, flows, packet)
 	})
-	sessions.SetLifecycleHooks(lifecycleHooks{capture: captures, flow: flows})
-	return Services{Sessions: sessions, Interfaces: network.New(counters, captures), Captures: captures, Flows: flows}
+	sessions.SetLifecycleHooks(lifecycleHooks{capture: captures, flow: flows, observations: observations})
+	return Services{Sessions: sessions, Interfaces: network.New(counters, captures), Captures: captures, Flows: flows, Observations: observations}
 }
 
 func observePacket(ctx context.Context, flows *flow.Service, p capture.PacketMetadata) error {

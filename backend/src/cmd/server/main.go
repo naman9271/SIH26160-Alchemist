@@ -63,7 +63,6 @@ func main() {
 	riskService := corerisk.New(securityService)
 	policyService := corepolicy.New(fusionRuntime.Policy)
 	fusionService := corefusion.New(coreprotocol.WorkspaceRunResolver{Workspace: workspaceService}, fusionRuntime.Fusion, fusionRuntime.Provenance, fusionRuntime.Ingest)
-	reportService := corereport.New(analysisService, fusionService, artifactService, workspaceService, coreEventService)
 	mlConnection, mlConnectionErr := grpc.NewClient(provider.MLAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if mlConnectionErr != nil {
 		logger.Warn("ML client initialization failed", "error", mlConnectionErr)
@@ -74,6 +73,8 @@ func main() {
 		mlWorker = mlworkerv1.NewTrafficClassifierClient(mlConnection)
 	}
 	mlService := coreml.New(mlWorker, 2*time.Second, workspaceService, inputService, sensorServices.Flows)
+	reportService := corereport.New(analysisService, fusionService, artifactService, workspaceService, securityService, riskService, mlService, coreEventService)
+	analysisService.SetPipeline(&coreanalysis.Pipeline{Sensor: sensorServices, Input: inputService, Ingest: fusionRuntime.Ingest, Fusion: fusionRuntime.Fusion, ML: mlService, Security: securityService, Risk: riskService, Events: coreEventService})
 	// Apply safe runtime changes to the services that own these settings.
 	runtimeConfigService.Subscribe(func(config *runtimeconfigv1.RuntimeConfig) {
 		mlService.SetTimeout(time.Duration(config.GetMlTimeoutMs()) * time.Millisecond)

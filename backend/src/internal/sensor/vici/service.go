@@ -86,8 +86,12 @@ func (s *Service) Backend(ctx context.Context, uri string) (Backend, string, err
 	if e != nil {
 		return nil, "", e
 	}
-	if _, e = s.Probe(ctx, uri); e != nil {
-		return nil, "", e
+	// Recorded fixtures are an explicit test collector and do not require a
+	// host socket. All other backends must pass the read-only probe.
+	if _, fixture := s.backend.(*FixtureBackend); !fixture {
+		if _, e = s.Probe(ctx, uri); e != nil {
+			return nil, "", e
+		}
 	}
 	if s.backend == nil {
 		return nil, "", shared.NewError(shared.Unavailable, shared.VICIPluginDisabled, "VICI command decoder is not configured")

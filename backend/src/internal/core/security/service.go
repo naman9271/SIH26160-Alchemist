@@ -78,6 +78,27 @@ func (s *Service) Get(ctx context.Context, id string) (Record, error) {
 	}
 	return *record, nil
 }
+
+// LatestForAnalysis returns the newest completed assessment for report and
+// dashboard composition without requiring callers to maintain shadow IDs.
+func (s *Service) LatestForAnalysis(ctx context.Context, analysisID string) (Record, error) {
+	if strings.TrimSpace(analysisID) == "" {
+		return Record{}, shared.NewError(shared.InvalidArgument, "", "analysis_id is required")
+	}
+	s.mu.RLock()
+	var selected *Record
+	for _, candidate := range s.records {
+		if candidate.AnalysisID == analysisID && candidate.State == securityv1.AssessmentState_ASSESSMENT_COMPLETED && (selected == nil || candidate.UpdatedAt.After(selected.UpdatedAt)) {
+			copy := *candidate
+			selected = &copy
+		}
+	}
+	s.mu.RUnlock()
+	if selected == nil {
+		return Record{}, shared.NewError(shared.NotFound, "", "completed security assessment was not found")
+	}
+	return *selected, nil
+}
 func (s *Service) Reevaluate(ctx context.Context, id, policyID string) (Record, error) {
 	old, err := s.Get(ctx, id)
 	if err != nil {

@@ -11,6 +11,7 @@ import (
 
 	flowv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/sensor/v1/flow"
 	mlv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/ml/v1"
+	"google.golang.org/grpc/metadata"
 )
 
 const featureSchemaVersion = "flow.v2"
@@ -48,6 +49,16 @@ func New(client mlv1.TrafficClassifierClient, timeout time.Duration) (*Client, e
 // metadata feature, and applies a deadline when the caller has not supplied a
 // shorter one. It never submits identifiers, addresses, SPI, or protocol facts.
 func (c *Client) Predict(ctx context.Context, window *flowv1.FeatureWindow) (*mlv1.PredictionResult, error) {
+	return c.predict(ctx, window, false)
+}
+
+// PredictWithExplanations requests the worker's optional SHAP-style
+// attributions without changing the feature schema or sending identifiers.
+func (c *Client) PredictWithExplanations(ctx context.Context, window *flowv1.FeatureWindow) (*mlv1.PredictionResult, error) {
+	return c.predict(ctx, window, true)
+}
+
+func (c *Client) predict(ctx context.Context, window *flowv1.FeatureWindow, explanations bool) (*mlv1.PredictionResult, error) {
 	if c == nil || c.client == nil {
 		return nil, fmt.Errorf("ML client is not configured")
 	}
@@ -57,6 +68,9 @@ func (c *Client) Predict(ctx context.Context, window *flowv1.FeatureWindow) (*ml
 	}
 	requestCtx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
+	if explanations {
+		requestCtx = metadata.AppendToOutgoingContext(requestCtx, "x-include-explanations", "true")
+	}
 	result, err := c.client.PredictTraffic(requestCtx, request)
 	if err != nil {
 		return nil, err

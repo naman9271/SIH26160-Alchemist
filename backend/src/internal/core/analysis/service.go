@@ -27,6 +27,9 @@ type FusionRuns interface {
 	Create(context.Context, fusionsession.CreateRequest) (model.Run, error)
 	Cancel(context.Context, string) (fusionsession.CancelResponse, error)
 }
+type PipelineRunner interface {
+	Run(context.Context, Record, func(analysisv1.AnalysisStage)) error
+}
 type Record struct {
 	ID, SourceID, PolicyID, FusionRunID string
 	Mode                                workspacev1.AnalysisMode
@@ -42,10 +45,17 @@ type Service struct {
 	fusion    FusionRuns
 	workspace *workspace.Service
 	records   map[string]*Record
+	pipeline  PipelineRunner
+	cancels   map[string]context.CancelFunc
 }
 
 func New(source SourceProvider, fusion FusionRuns, workspace *workspace.Service) *Service {
-	return &Service{source: source, fusion: fusion, workspace: workspace, records: map[string]*Record{}}
+	return &Service{source: source, fusion: fusion, workspace: workspace, records: map[string]*Record{}, cancels: map[string]context.CancelFunc{}}
+}
+func (s *Service) SetPipeline(pipeline PipelineRunner) {
+	s.mu.Lock()
+	s.pipeline = pipeline
+	s.mu.Unlock()
 }
 func (s *Service) Start(ctx context.Context, sourceID string, mode workspacev1.AnalysisMode, policyID string, options *analysisv1.AnalysisOptions) (Record, error) {
 	if s == nil || s.source == nil || s.fusion == nil {
@@ -80,6 +90,18 @@ func (s *Service) Start(ctx context.Context, sourceID string, mode workspacev1.A
 	s.records[record.ID] = record
 	s.mu.Unlock()
 	s.bindWorkspace(ctx, record)
+	s.mu.RLock()
+	pipeline := s.pipeline
+	s.mu.RUnlock()
+	if pipeline == nil {
+		s.fail(record.ID, shared.NewError(shared.FailedPrecondition, "", "analysis pipeline is not configured"))
+		return s.Get(ctx, record.ID)
+	}
+	runCtx, cancel := context.WithCancel(context.Background())
+	s.mu.Lock()
+	s.cancels[record.ID] = cancel
+	s.mu.Unlock()
+	go s.execute(runCtx, pipeline, *record)
 	return *record, nil
 }
 func (s *Service) Get(ctx context.Context, id string) (Record, error) {
@@ -111,6 +133,10 @@ func (s *Service) Cancel(ctx context.Context, id string) (Record, error) {
 		return Record{}, err
 	}
 	s.mu.Lock()
+	if cancel := s.cancels[id]; cancel != nil {
+		cancel()
+		delete(s.cancels, id)
+	}
 	stored := s.records[id]
 	stored.State = analysisv1.AnalysisState_ANALYSIS_STATE_CANCELLED
 	stored.Stage = analysisv1.AnalysisStage_CANCELLED
@@ -118,6 +144,40 @@ func (s *Service) Cancel(ctx context.Context, id string) (Record, error) {
 	out := *stored
 	s.mu.Unlock()
 	return out, nil
+}
+func (s *Service) execute(ctx context.Context, pipeline PipelineRunner, record Record) {
+	err := pipeline.Run(ctx, record, func(stage analysisv1.AnalysisStage) { s.advance(record.ID, stage) })
+	if err != nil {
+		if ctx.Err() != nil {
+			return
+		}
+		s.fail(record.ID, err)
+		return
+	}
+	s.mu.Lock()
+	if current := s.records[record.ID]; current != nil && current.State == analysisv1.AnalysisState_ANALYSIS_STATE_RUNNING {
+		current.State, current.Stage, current.UpdatedAt = analysisv1.AnalysisState_ANALYSIS_STATE_COMPLETED, analysisv1.AnalysisStage_COMPLETED, time.Now().UTC()
+	}
+	delete(s.cancels, record.ID)
+	s.mu.Unlock()
+}
+func (s *Service) advance(id string, stage analysisv1.AnalysisStage) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if current := s.records[id]; current != nil && current.State == analysisv1.AnalysisState_ANALYSIS_STATE_RUNNING {
+		current.Stage, current.UpdatedAt = stage, time.Now().UTC()
+	}
+}
+func (s *Service) fail(id string, err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if current := s.records[id]; current != nil && current.State == analysisv1.AnalysisState_ANALYSIS_STATE_RUNNING {
+		current.State, current.Stage, current.Failure, current.UpdatedAt = analysisv1.AnalysisState_ANALYSIS_STATE_FAILED, analysisv1.AnalysisStage_FAILED, err.Error(), time.Now().UTC()
+	}
+	if cancel := s.cancels[id]; cancel != nil {
+		cancel()
+		delete(s.cancels, id)
+	}
 }
 func (s *Service) Progress(ctx context.Context, id string) (Record, error) { return s.Get(ctx, id) }
 func (s *Service) Retry(ctx context.Context, id string) (Record, error) {

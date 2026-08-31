@@ -78,6 +78,24 @@ func progress(stage analysisv1.AnalysisStage) uint32 {
 	switch stage {
 	case analysisv1.AnalysisStage_INITIALIZING:
 		return 5
+	case analysisv1.AnalysisStage_ACQUIRING:
+		return 15
+	case analysisv1.AnalysisStage_PROTOCOL_PROCESSING:
+		return 30
+	case analysisv1.AnalysisStage_SESSION_RECONSTRUCTION:
+		return 40
+	case analysisv1.AnalysisStage_FLOW_AGGREGATION:
+		return 50
+	case analysisv1.AnalysisStage_FEATURE_EXTRACTION:
+		return 60
+	case analysisv1.AnalysisStage_ML_INFERENCE:
+		return 70
+	case analysisv1.AnalysisStage_FUSION:
+		return 82
+	case analysisv1.AnalysisStage_SECURITY_ANALYSIS:
+		return 92
+	case analysisv1.AnalysisStage_FINALIZING:
+		return 98
 	case analysisv1.AnalysisStage_COMPLETED:
 		return 100
 	default:
