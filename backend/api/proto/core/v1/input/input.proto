@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package core.input.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/input;inputv1";
+
+service InputService {
+  rpc ListInterfaces(ListInterfacesRequest) returns (ListInterfacesResponse);
+  rpc StartLive(StartLiveInputRequest) returns (StartLiveInputResponse);
+  rpc StopLive(StopLiveInputRequest) returns (StopLiveInputResponse);
+  rpc GetLiveStatus(GetLiveStatusRequest) returns (LiveInputStatus);
+  rpc BeginPcapUpload(BeginPcapUploadRequest) returns (BeginPcapUploadResponse);
+  rpc UploadPcapChunk(UploadPcapChunkRequest) returns (UploadPcapChunkResponse);
+  rpc CompletePcapUpload(CompletePcapUploadRequest) returns (CompletePcapUploadResponse);
+  rpc ValidatePcap(ValidatePcapRequest) returns (ValidatePcapResponse);
+  rpc GetSource(GetSourceRequest) returns (InputSource);
+  rpc RemoveSource(RemoveSourceRequest) returns (RemoveSourceResponse);
+}
+
+enum InputMode { INPUT_MODE_UNSPECIFIED = 0; PASSIVE_LIVE = 1; PASSIVE_PCAP = 2; DEEP_ASSESSMENT = 3; }
+enum CaptureFilterMode { CAPTURE_FILTER_MODE_UNSPECIFIED = 0; IPSEC_ONLY = 1; ALL_TRAFFIC = 2; CUSTOM_BPF = 3; }
+enum InputState { INPUT_STATE_UNSPECIFIED = 0; ACQUIRING = 1; CAPTURING = 2; SOURCE_READY = 3; STOPPED = 4; REMOVED = 5; }
+
+message ListInterfacesRequest {}
+message NetworkInterface { string name = 1; int32 index = 2; string mac_address = 3; repeated string addresses = 4; bool up = 5; bool loopback = 6; bool capture_supported = 7; }
+message ListInterfacesResponse { repeated NetworkInterface interfaces = 1; }
+
+message StartLiveInputRequest { InputMode mode = 1; string interface_name = 2; CaptureFilterMode filter_mode = 3; string custom_bpf = 4; bool promiscuous_mode = 5; bool save_pcap = 6; uint64 max_duration_seconds = 7; uint64 max_capture_bytes = 8; bool enable_vici = 9; bool enable_xfrm = 10; }
+message StartLiveInputResponse { string source_id = 1; string capture_id = 2; string sensor_session_id = 3; InputState state = 4; }
+message StopLiveInputRequest { string source_id = 1; }
+message StopLiveInputResponse { string source_id = 1; string capture_id = 2; InputState state = 3; }
+message GetLiveStatusRequest { string source_id = 1; }
+message LiveInputStatus { string source_id = 1; InputState state = 2; uint64 duration_seconds = 3; uint64 packets_total = 4; uint64 bytes_total = 5; uint64 esp_packets = 6; uint64 ike_packets = 7; uint64 ah_packets = 8; uint64 nat_t_packets = 9; uint64 active_flows = 10; uint64 vpn_sessions = 11; uint64 packet_drops = 12; }
+
+message BeginPcapUploadRequest { string filename = 1; uint64 size_bytes = 2; string sha256 = 3; }
+message BeginPcapUploadResponse { string upload_id = 1; uint64 chunk_size_bytes = 2; }
+message UploadPcapChunkRequest { string upload_id = 1; uint64 chunk_index = 2; bytes data = 3; }
+message UploadPcapChunkResponse { bool accepted = 1; uint64 chunk_index = 2; uint64 received_bytes_total = 3; }
+message CompletePcapUploadRequest { string upload_id = 1; }
+message CompletePcapUploadResponse { string source_id = 1; string pcap_id = 2; InputState state = 3; }
+message ValidatePcapRequest { string source_id = 1; }
+message ValidatePcapResponse { bool valid = 1; string format = 2; uint64 packets_total = 3; uint64 bytes_total = 4; uint64 esp_packets = 5; uint64 ike_packets = 6; uint64 ah_packets = 7; uint64 nat_t_packets = 8; string message = 9; }
+message GetSourceRequest { string source_id = 1; }
+message InputSource { string source_id = 1; InputMode mode = 2; InputState state = 3; string sensor_session_id = 4; string capture_id = 5; string pcap_id = 6; string filename = 7; uint64 size_bytes = 8; string sha256 = 9; google.protobuf.Timestamp created_at = 10; google.protobuf.Timestamp updated_at = 11; }
+message RemoveSourceRequest { string source_id = 1; bool delete_temporary_files = 2; }
+message RemoveSourceResponse { string source_id = 1; InputState state = 2; }

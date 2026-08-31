@@ -3,6 +3,7 @@ package capture
 
 import (
 	"context"
+	"io"
 	"net"
 	"strings"
 	"sync"
@@ -32,6 +33,18 @@ type Config struct {
 	MaxDuration     time.Duration
 	MaxCaptureBytes uint64
 	PacketObserver  PacketObserver
+}
+
+// ReadOfflinePCAP reuses the live packet observer for an uploaded classic PCAP.
+// It deliberately does not create a live capture record or require tcpdump.
+func (s *Service) ReadOfflinePCAP(ctx context.Context, reader io.Reader, sessionID string) (OfflineResult, error) {
+	if s == nil {
+		return OfflineResult{}, shared.NewError(shared.Internal, "", "capture service is not configured")
+	}
+	s.mu.RLock()
+	observer := s.observer
+	s.mu.RUnlock()
+	return ReadOfflinePCAP(ctx, reader, sessionID, observer)
 }
 
 // PacketMetadata is a payload-free packet view emitted by capture engines.

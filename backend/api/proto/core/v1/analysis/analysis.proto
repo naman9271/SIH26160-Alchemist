@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package core.analysis.v1;
+
+import "api/proto/core/v1/workspace/workspace.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/analysis;analysisv1";
+
+service AnalysisService {
+  rpc Start(StartAnalysisRequest) returns (StartAnalysisResponse);
+  rpc Cancel(CancelAnalysisRequest) returns (CancelAnalysisResponse);
+  rpc Get(GetAnalysisRequest) returns (Analysis);
+  rpc GetProgress(GetAnalysisProgressRequest) returns (AnalysisProgress);
+  rpc GetSummary(GetAnalysisSummaryRequest) returns (AnalysisSummary);
+  rpc Retry(RetryAnalysisRequest) returns (RetryAnalysisResponse);
+}
+
+enum AnalysisState { ANALYSIS_STATE_UNSPECIFIED = 0; ANALYSIS_STATE_QUEUED = 1; ANALYSIS_STATE_RUNNING = 2; ANALYSIS_STATE_COMPLETED = 3; ANALYSIS_STATE_FAILED = 4; ANALYSIS_STATE_CANCELLED = 5; }
+enum AnalysisStage { ANALYSIS_STAGE_UNSPECIFIED = 0; INITIALIZING = 1; ACQUIRING = 2; PROTOCOL_PROCESSING = 3; SESSION_RECONSTRUCTION = 4; FLOW_AGGREGATION = 5; FEATURE_EXTRACTION = 6; SECURITY_ANALYSIS = 7; ML_INFERENCE = 8; FUSION = 9; FINALIZING = 10; COMPLETED = 11; CANCELLED = 12; FAILED = 13; }
+enum AvailabilityState { AVAILABILITY_STATE_UNSPECIFIED = 0; AVAILABLE = 1; UNAVAILABLE = 2; }
+
+message AnalysisOptions { bool enable_security = 1; bool enable_ml = 2; bool enable_shap = 3; bool enable_metadata_exposure = 4; bool enable_fusion = 5; }
+message StartAnalysisRequest { string source_id = 1; core.workspace.v1.AnalysisMode mode = 2; string policy_id = 3; AnalysisOptions options = 4; }
+message StartAnalysisResponse { string analysis_id = 1; AnalysisState state = 2; }
+message CancelAnalysisRequest { string analysis_id = 1; }
+message CancelAnalysisResponse { string analysis_id = 1; AnalysisState state = 2; }
+message GetAnalysisRequest { string analysis_id = 1; }
+message Analysis { string analysis_id = 1; string source_id = 2; core.workspace.v1.AnalysisMode mode = 3; string policy_id = 4; AnalysisOptions options = 5; AnalysisState state = 6; string failure_reason = 7; google.protobuf.Timestamp created_at = 8; google.protobuf.Timestamp updated_at = 9; }
+message GetAnalysisProgressRequest { string analysis_id = 1; }
+message AnalysisProgress { string analysis_id = 1; AnalysisStage stage = 2; uint32 percent = 3; uint64 packets_processed = 4; uint64 flows_processed = 5; uint64 sessions_found = 6; uint64 sas_found = 7; uint64 findings_generated = 8; }
+message GetAnalysisSummaryRequest { string analysis_id = 1; }
+message ProtocolSummary { string ike_version = 1; string data_protocol = 2; string vpn_mode = 3; }
+message TrafficSummary { string traffic_class = 1; double confidence = 2; AvailabilityState state = 3; }
+message SecuritySummary { uint32 score = 1; string risk_level = 2; AvailabilityState state = 3; }
+message FindingCounts { uint64 critical = 1; uint64 high = 2; uint64 medium = 3; uint64 low = 4; }
+message AnalysisSummary { string analysis_id = 1; bool ipsec_detected = 2; core.workspace.v1.AnalysisMode mode = 3; ProtocolSummary protocol = 4; TrafficSummary traffic = 5; SecuritySummary security = 6; FindingCounts finding_counts = 7; AvailabilityState fusion_state = 8; }
+message RetryAnalysisRequest { string analysis_id = 1; }
+message RetryAnalysisResponse { string analysis_id = 1; AnalysisState state = 2; }
