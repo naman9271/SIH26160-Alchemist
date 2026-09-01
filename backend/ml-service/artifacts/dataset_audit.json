@@ -384,7 +384,7 @@
             "Total Length of Fwd Packet": 0,
             "URG Flag Count": 0
           },
-          "path": "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/ml-service/data/external/cicdarknet2020.parquet",
+          "path": "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/backend/ml-service/data/external/cicdarknet2020.parquet",
           "row_count": 103121,
           "unique_labels": {
             "Label": [
@@ -594,7 +594,7 @@
             "total_fiat": 0,
             "traffic_type": 0
           },
-          "path": "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/ml-service/data/external/consolidated_traffic_data.csv",
+          "path": "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/backend/ml-service/data/external/consolidated_traffic_data.csv",
           "row_count": 59706,
           "unique_labels": {
             "traffic_type": [
@@ -849,7 +849,7 @@
             "traffic_class": 0,
             "traffic_generator": 0
           },
-          "path": "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/ml-service/data/external/ipsec-pcap-lab/metadata.csv",
+          "path": "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/backend/ml-service/data/external/ipsec-pcap-lab/metadata.csv",
           "row_count": 20,
           "unique_labels": {
             "traffic_class": [
@@ -1072,6 +1072,6 @@
       ]
     }
   ],
-  "external_data_root": "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/ml-service/data/external",
+  "external_data_root": "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/backend/ml-service/data/external",
   "generated_at": "2026-08-29T10:07:58.710361+00:00"
 }

@@ -72,9 +72,9 @@ ML --------> Flow metadata -----+
 ## Final pre-submission commands
 
 ```bash
-cd backend && go vet ./... && go test -race ./...
-cd ../ml-service && python3 -m pytest
-cd ../frontend && npm ci && npm run lint && npm run build
+(cd backend && go vet ./... && go test -race ./...)
+(cd backend/ml-service && python3 -m pytest)
+(cd frontend && npm ci && npm run lint && npm run build)
 docker compose config
 make up && make demo && make down
 ```

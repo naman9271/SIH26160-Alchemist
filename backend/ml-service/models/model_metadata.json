@@ -1,8 +1,8 @@
 {
   "artifacts": {
-    "metrics": "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/ml-service/artifacts/training_metrics.json",
-    "random_forest": "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/ml-service/models/random_forest.joblib",
-    "xgboost": "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/ml-service/models/xgboost.joblib"
+    "metrics": "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/backend/ml-service/artifacts/training_metrics.json",
+    "random_forest": "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/backend/ml-service/models/random_forest.joblib",
+    "xgboost": "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/backend/ml-service/models/xgboost.joblib"
   },
   "class_order": [
     "email",
@@ -14,9 +14,9 @@
     "web"
   ],
   "config": {
-    "dataset_path": "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/ml-service/data/processed/training_dataset.parquet",
-    "metrics_path": "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/ml-service/artifacts/training_metrics.json",
-    "models_dir": "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/ml-service/models",
+    "dataset_path": "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/backend/ml-service/data/processed/training_dataset.parquet",
+    "metrics_path": "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/backend/ml-service/artifacts/training_metrics.json",
+    "models_dir": "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/backend/ml-service/models",
     "n_jobs": -1,
     "random_seed": 42,
     "test_fraction": 0.2,
@@ -54,11 +54,11 @@
     "split_group_id"
   ],
   "model_version": "traffic-classifier-291d3300b298",
-  "training_dataset": "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/ml-service/data/processed/training_dataset.parquet",
+  "training_dataset": "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/backend/ml-service/data/processed/training_dataset.parquet",
   "training_dataset_sha256": "291d3300b29857603b91abf67e6944b89c99aaf18617434110fabdd1446835de",
   "unknown_detection": {
     "calibrated_at": "2026-08-30T18:39:12.320135+00:00",
-    "calibration_metrics": "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/ml-service/artifacts/unknown_calibration.json",
+    "calibration_metrics": "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/backend/ml-service/artifacts/unknown_calibration.json",
     "confidence_threshold": 0.85,
     "limitation": "Confidence-threshold rejection is a baseline open-set method and cannot perfectly detect every unknown or out-of-distribution traffic type.",
     "method": "max_class_probability_threshold",

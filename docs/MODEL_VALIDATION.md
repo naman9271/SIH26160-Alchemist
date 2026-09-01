@@ -30,7 +30,7 @@ Do not use private traffic, credentials, payloads, or reusable VPN keys.
 Use Python 3.11 and the full ML dependencies:
 
 ```bash
-cd ml-service
+cd backend/ml-service
 python3 -m venv .venv
 . .venv/bin/activate
 python -m pip install -r requirements.txt

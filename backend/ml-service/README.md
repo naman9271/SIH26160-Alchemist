@@ -101,6 +101,8 @@ The Docker image is inference-only: it includes the selected trained model, mode
 
 Before building, place the selected model (`models/random_forest.joblib` or `models/xgboost.joblib`), `models/model_metadata.json`, and `artifacts/training_metrics.json` in the service directory. The configured UNKNOWN threshold must also be calibrated in `config/model.yaml`.
 
+From the repository root:
+
 ```bash
 docker build -t sih-ml-service:local ./backend/ml-service
 docker run --rm -p 50051:50051 \

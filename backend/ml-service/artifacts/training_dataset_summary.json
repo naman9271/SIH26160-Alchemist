@@ -50,7 +50,7 @@
   "groups_in_multiple_splits": [],
   "input_manifest": [
     {
-      "path": "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/ml-service/data/processed/ipsec-pcap-lab.parquet",
+      "path": "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/backend/ml-service/data/processed/ipsec-pcap-lab.parquet",
       "sha256": "e45cab24bbb102eb759a75b987e98a956c08d38edc2693cfac380f026c17b4be",
       "size_bytes": 83432
     }
@@ -62,7 +62,7 @@
   ],
   "max_records_per_group": 1,
   "minimum_samples_per_class": 20,
-  "output_path": "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/ml-service/data/processed/training_dataset.parquet",
+  "output_path": "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/backend/ml-service/data/processed/training_dataset.parquet",
   "pre_minimum_class_counts": {
     "email": 45,
     "file_transfer": 59,

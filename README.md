@@ -114,22 +114,23 @@ Automatic evaluation of:
 
 ## Getting Started
 
-For the reproducible submission demo, use Docker Compose:
+Docker Compose builds and runs the backend services:
 
 ```bash
 make up
-# Open http://localhost:3000 in a browser.
 make demo
 make down
 ```
 
 The demo uploads the checked-in classic PCAP sample, runs passive/Fusion/
 security/ML analysis, and verifies completion through the Go Core HTTP API.
+The frontend is intentionally kept outside the Docker setup; run it locally with
+`npm ci && npm run dev` from `frontend/` and open `http://localhost:3000`.
 
 ### Manual development
 
-This repository is organized as a full-stack project with separate frontend,
-backend, and ML applications. Use Python 3.11+ for the ML worker.
+This repository is organized as a full-stack project with a standalone frontend
+and backend-owned Go and Python services. Use Python 3.11+ for the ML worker.
 
 ```bash
 cd backend
@@ -151,7 +152,7 @@ docker build -t sih-ml-service:local ./backend/ml-service
 In another terminal:
 
 ```bash
-cd ml-service
+cd backend/ml-service
 python3 -m venv .venv
 . .venv/bin/activate
 python -m pip install -r requirements-runtime.txt

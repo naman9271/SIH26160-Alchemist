@@ -72,4 +72,7 @@ docker build -t sih-ml-service:local ./backend/ml-service
 
 The Go image is defined by this directory's `Dockerfile`; its `.dockerignore`
 excludes `ml-service/`. The worker's image and runtime configuration live under
-[`ml-service/`](ml-service/). The frontend is intentionally not containerized.
+[`ml-service/`](ml-service/). The root `compose.yaml` connects the two services
+and sets `ML_GRPC_ADDRESS=ml:50051` for the Go API. Use
+`docker compose up --build --detach` to run both backend services. The frontend
+is intentionally not containerized.

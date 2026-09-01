@@ -18,7 +18,7 @@
   "model_version": "traffic-classifier-291d3300b298",
   "ood_summary": {
     "datasets": {
-      "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/ml-service/data/processed/ipsec-pcap-lab-ood.parquet": {
+      "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/backend/ml-service/data/processed/ipsec-pcap-lab-ood.parquet": {
         "selected_ood_records": 25,
         "skipped_records": 0
       }

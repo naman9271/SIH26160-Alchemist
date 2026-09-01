@@ -20,6 +20,9 @@
 *.test
 coverage.out
 
+# The Python ML worker has its own image and build context.
+ml-service/
+
 # Documentation
 *.md
 !README.md

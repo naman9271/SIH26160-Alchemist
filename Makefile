@@ -14,5 +14,5 @@ demo:
 
 check:
 	cd backend && go vet ./... && go test ./...
-	cd ml-service && python3 -m pytest
+	cd backend/ml-service && python3 -m pytest
 	cd frontend && npm run lint && npm run build

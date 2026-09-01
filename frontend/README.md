@@ -13,7 +13,7 @@ npm run dev
 ```
 
 Open `http://localhost:3000`. Set `CORE_HTTP_URL` only when Core is not on
-`http://127.0.0.1:8080`. The Docker Compose stack supplies this automatically.
+`http://127.0.0.1:8080`.
 
 ## Supported workflow
 
