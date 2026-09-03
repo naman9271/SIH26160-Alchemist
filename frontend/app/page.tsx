@@ -1,6 +1,65 @@
-import Link from "next/link";
-import { MeshGradientSVG } from "@/components/ui/shader-svg";
+import { HeroAscii } from "@/components/ui/hero-ascii";
+import { LandingFooter } from "@/components/ui/site-chrome";
 
-const features = [["01", "Protocol evidence", "Observe IKE, ESP, AH, NAT-T, SPIs, clear-text proposals, and gateway-verified SA facts without decrypting traffic."], ["02", "Decision-grade security", "Turn deterministic evidence into a score, threat matrix, rule-level findings, and a remediation queue."], ["03", "Metadata intelligence", "Classify eligible encrypted-flow metadata, preserve UNKNOWN, and show exactly how much remains observable."], ["04", "Evidence you can defend", "Trace every conclusion through source, status, confidence, conflict, and rationale rather than relying on a black box."]];
+const stages = [
+  ["01", "OBSERVE", "Read IKE, ESP, AH, NAT-T, packet timing, and transport metadata that are visible without decrypting payloads."],
+  ["02", "DERIVE", "Turn packet observations into deterministic protocol summaries, flow statistics, and source coverage."],
+  ["03", "INFER", "Classify aggregate flow metadata only when ML is available; low confidence remains UNKNOWN."],
+  ["04", "VERIFY", "Show gateway facts only after authorized Deep Assessment establishes their provenance."],
+  ["05", "ASSESS", "Use deterministic rules to explain findings, remediation, threat context, and risk."],
+];
 
-export default function Home() { return <main className="landing-shell"><nav className="landing-nav"><Link href="/" className="brand-mark"><span>Δ</span><i>ALCHEMIST</i></Link><div><a href="#method">Method</a><Link href="/capabilities">Capabilities</Link><Link className="nav-cta" href="/workspace">Open workspace</Link></div></nav><section className="landing-hero"><div className="hero-visual"><div className="hero-visual-orb orb-one" /><div className="hero-visual-orb orb-two" /><MeshGradientSVG /><p><span className="pulse" /> Your evidence companion</p></div><div className="hero-copy"><p className="eyebrow">SIH 26160 · Team Alchemist</p><h1>Read the posture.<br /><em>Not the payload.</em></h1><p className="hero-lead">A disciplined workspace for understanding IPsec VPN traffic: what can be observed, what is verified, what is inferred, and what needs attention.</p><div className="hero-actions"><Link className="primary-button" href="/workspace">Get started <span>→</span></Link><a className="text-button" href="#method">See how it works</a></div><div className="hero-note"><span className="pulse" /> Built for passive analysis · ESP is never decrypted</div></div></section><section id="method" className="method-strip"><p>From capture to clarity</p><div><span>Capture</span><i>→</i><span>Observe</span><i>→</i><span>Fuse</span><i>→</i><span>Assess</span><i>→</i><span>Explain</span></div></section><section className="feature-intro"><p className="eyebrow">One honest interface</p><h2>Useful for analysts. Clear enough for decision-makers.</h2><p>Alchemist separates hard protocol evidence from model inference, and every unknown stays visible instead of becoming a misleading answer.</p></section><section className="feature-grid">{features.map(([number, heading, copy]) => <article key={number}><span>{number}</span><h3>{heading}</h3><p>{copy}</p></article>)}</section><section className="landing-callout"><div><p className="eyebrow">Ready when you are</p><h2>Bring a classic PCAP.<br />Leave with a defensible story.</h2></div><Link className="primary-button" href="/workspace">Start an analysis <span>→</span></Link></section><footer className="landing-footer"><span>IPsec VPN Protocol Analyzer</span><span>Smart India Hackathon 2026</span><span>Passive · Evidence-led · Explainable</span></footer></main>; }
+export default function Home() {
+  return (
+    <main className="bg-black text-white">
+      <HeroAscii />
+
+      <section id="method" className="border-y border-white/15 px-5 py-20 font-mono lg:px-8 lg:py-28">
+        <div className="mx-auto max-w-7xl">
+          <p className="text-[10px] font-bold tracking-[.18em] text-white/50">THE EVIDENCE STORY</p>
+          <div className="mt-5 flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+            <h2 className="max-w-3xl text-3xl font-bold leading-tight tracking-[.04em] sm:text-5xl">Every conclusion keeps its source, status, and limit.</h2>
+            <p className="max-w-sm text-sm leading-7 text-white/60">Alchemist is built for analysts who need a defensible account of what is known, inferred, unavailable, or still unknown.</p>
+          </div>
+          <div className="mt-14 grid border-l border-t border-white/15 sm:grid-cols-2 lg:grid-cols-5">
+            {stages.map(([number, title, copy]) => (
+              <article key={title} className="min-h-64 border-b border-r border-white/15 p-5 lg:p-6">
+                <span className="text-[10px] text-white/45">{number}</span>
+                <h3 className="mt-12 text-lg font-bold tracking-[.1em]">{title}</h3>
+                <p className="mt-5 text-xs leading-6 text-white/60">{copy}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="evidence" className="relative overflow-hidden px-5 py-20 font-mono lg:px-8 lg:py-28">
+        <div aria-hidden="true" className="absolute inset-0 opacity-30 [background-image:linear-gradient(rgba(255,255,255,.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.08)_1px,transparent_1px)] [background-size:42px_42px]" />
+        <div className="relative mx-auto grid max-w-7xl gap-8 lg:grid-cols-[.8fr_1.2fr] lg:gap-16">
+          <div>
+            <p className="text-[10px] font-bold tracking-[.18em] text-white/50">WHAT THE INTERFACE PROTECTS</p>
+            <h2 className="mt-5 text-3xl font-bold leading-tight tracking-[.04em] sm:text-5xl">No black-box certainty.</h2>
+          </div>
+          <div className="grid gap-px bg-white/15 sm:grid-cols-2">
+            <article className="bg-black p-7"><span className="text-[10px] text-sky-300">OBSERVED</span><p className="mt-4 text-sm leading-7 text-white/65">Packet and protocol facts remain tied to captured traffic.</p></article>
+            <article className="bg-black p-7"><span className="text-[10px] text-teal-300">DERIVED</span><p className="mt-4 text-sm leading-7 text-white/65">Computed flow and protocol summaries stay distinct from direct observations.</p></article>
+            <article className="bg-black p-7"><span className="text-[10px] text-amber-300">INFERRED</span><p className="mt-4 text-sm leading-7 text-white/65">ML traffic classification is context, never a protocol fact or security finding.</p></article>
+            <article className="bg-black p-7"><span className="text-[10px] text-emerald-300">VERIFIED GATEWAY</span><p className="mt-4 text-sm leading-7 text-white/65">Authorized Deep Assessment is required before gateway configuration facts appear.</p></article>
+          </div>
+        </div>
+      </section>
+
+      <section id="scope" className="border-t border-white/15 px-5 py-20 font-mono lg:px-8 lg:py-28">
+        <div className="mx-auto max-w-7xl rounded-sm border border-white/25 bg-white px-7 py-10 text-black sm:px-10 lg:flex lg:items-end lg:justify-between lg:px-14 lg:py-14">
+          <div>
+            <p className="text-[10px] font-bold tracking-[.18em] text-black/55">READY WHEN THE CAPTURE IS</p>
+            <h2 className="mt-5 max-w-2xl text-3xl font-bold leading-tight tracking-[.04em] sm:text-5xl">Bring a PCAP. Leave with an evidence-led story.</h2>
+          </div>
+          <a href="/workspace" className="mt-8 inline-flex border border-black px-6 py-3 text-xs font-bold tracking-[.12em] transition hover:bg-black hover:text-white lg:mt-0">OPEN WORKSPACE</a>
+        </div>
+      </section>
+
+      <LandingFooter />
+    </main>
+  );
+}
