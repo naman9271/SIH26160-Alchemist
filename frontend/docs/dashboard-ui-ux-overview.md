@@ -1,10 +1,66 @@
 # Dashboard UI/UX Overview
 
-This document defines the approved dashboard plan for the SIH 2026 IPsec Sentinel Twin frontend. It is a UI/UX planning document only. It does not define implemented React components, routes, API handlers, backend logic, or styling.
+This document defines the approved dashboard plan and the verified frontend integration baseline for the SIH 2026 IPsec Sentinel Twin frontend. It is not an API specification: the checked-in protobuf files and the HTTP handlers named below are authoritative. This document deliberately distinguishes the browser API available today from the richer trusted-client gRPC API, so it can be used safely to build the frontend.
 
 The dashboard must communicate evidence honestly. It must separate packet observations, deterministic derivations, ML inference, authorized gateway verification, unknown values, unavailable sources, security findings, and deterministic risk scoring.
 
-The Next.js frontend communicates only with the Go Server through a Connect or gRPC-Web-compatible API. It never calls the Python ML Worker directly.
+The Next.js frontend communicates only with the Go Server. It never calls the Python ML Worker directly.
+
+## Verified Implementation Baseline (2026-09-03)
+
+### Transport decision
+
+The Go server currently exposes two distinct transports:
+
+| Consumer | Transport actually implemented | Default address | Frontend use |
+| --- | --- | --- | --- |
+| Browser / Next.js server route | JSON over HTTP | `CORE_HTTP_ADDRESS`, default `127.0.0.1:8080` | Use this now for the offline-PCAP workflow and overview data. |
+| Trusted/native client | Native gRPC | `CORE_GRPC_ADDRESS`, default `127.0.0.1:50052` | Full Core service surface; not directly browser-compatible. |
+| Go Core → Python worker | Native gRPC | `ML_GRPC_ADDRESS`, default `127.0.0.1:50051` | Internal only. Never expose it to the browser. |
+
+There is **no checked-in Connect or gRPC-Web handler** and no generic browser gRPC proxy. Do not begin a browser gRPC implementation until the backend adds one. Put all browser requests behind Next.js server routes (or a small server-only API client) so the eventual transport can change without rewriting dashboard components.
+
+### Browser API available now
+
+These are the only browser-oriented workflow endpoints registered by `backend/src/cmd/server/http_api.go`. No authentication, CORS policy, pagination, streaming endpoint, or cancellation endpoint is implemented in this HTTP surface; treat the service as same-origin behind the Next.js server, not as a public browser API.
+
+| Method and path | Request | Response/use | Frontend status |
+| --- | --- | --- | --- |
+| `GET /live` | — | Liveness: `{ status, service }` | Usable |
+| `GET /health` | — | Readiness plus memory, storage, sensor, ML, and fusion dependency states | Usable |
+| `POST /api/v1/pcap` | `multipart/form-data`, field `pcap` | Creates a workspace and uploads/completes one PCAP; returns source IDs and packet counters | Usable; max upload is 4 GiB |
+| `POST /api/v1/analyses` | `{ "source_id": string, "enable_ml": boolean }` | Starts **offline PCAP** analysis with security, fusion, and metadata exposure enabled | Usable |
+| `GET /api/v1/analyses/{analysisID}` | — | State, current stage, progress, and summary | Usable for polling |
+| `GET /api/v1/analyses/{analysisID}/insights` | — | Browser aggregate of protocol, fusion, security/risk, and ML sections when available | Usable, read-only, best-effort sections |
+| `POST /api/v1/analyses/{analysisID}/report` | — | Generates an executive PDF report with timeline, threat matrix, and evidence chain | Usable; options/type are fixed |
+| `GET /api/v1/reports/{reportID}` | — | Report state and download URL | Usable for polling |
+| `GET /api/v1/reports/{reportID}/download` | — | PDF binary when ready | Usable |
+
+The server returns workflow errors as `{ "error": string }`; expect `400`, `404`, `409`, `412`, `413`, `503`, or `504` in addition to successful responses. The HTTP API starts no live capture, does not manage workspaces, does not expose individual flow windows, and cannot cancel/retry an analysis.
+
+### What the full Core API can do—but the browser cannot yet do
+
+The native gRPC Core API has services for workspace, live input/capture, analysis cancel/retry, protocol read models, local-sensor/deep-assessment readiness, ML orchestration, fusion/provenance, security/risk, reports, policies, runtime configuration, artifacts, and server-streamed events. Those protobuf contracts are real and registered, but they are **not usable from the browser with the checked-in server**.
+
+For the first frontend release, build the polished Offline PCAP path around the HTTP endpoints above. Mark Live Capture, Deep Assessment controls, per-flow classification, detailed provenance, workspace selection/reset, report options, and live event streaming as **backend-adapter required**. Do not fake these controls as operational.
+
+### Contract discrepancies that affect UX
+
+| Desired UX rule | Checked-in implementation | Frontend rule until backend changes |
+| --- | --- | --- |
+| Gateway facts appear only for authorized Deep Assessment. | The analysis pipeline attempts VICI/XFRM collection for every analysis, including offline PCAP. | Never label a fact `VERIFIED_GATEWAY` merely because it came from the aggregate response. Require an explicit authorized Deep Assessment mode plus gateway provenance; otherwise show the source as unavailable/not displayed. |
+| `UNAVAILABLE` is an evidence status. | The protobuf `EvidenceStatus` enum contains `OBSERVED`, `DERIVED`, `INFERRED`, `VERIFIED_GATEWAY`, and `UNKNOWN` only. Unavailability is represented separately by source/status fields and reasons. | Render `UNAVAILABLE` as a UI availability state, never serialize it as an evidence status or expect it in an evidence enum. |
+| ML UI has top-three candidates and rich SHAP labels/directions. | The Go ML contract currently provides `class_probabilities`, individual predictions, and basic feature attributions; it does not provide the full future ML frontend-contract shape. | Derive a sorted candidate list from `class_probabilities`; render feature names/attributions conservatively. Do not promise display labels, impact direction, or anomaly status. |
+| Stage story is Observe → Derive → Infer → Verify → Assess. | `AnalysisStage` is operational: protocol processing, feature extraction, ML inference, fusion, security analysis, etc.; verify is not a separate stage. | Use the operational stage enum for progress. Present the five-word story only as explanatory grouping, and label gateway verification as optional. |
+
+### Core contract references
+
+- Browser handlers: `backend/src/cmd/server/http_api.go`
+- Server transport and health endpoints: `backend/src/cmd/server/main.go`
+- Core gRPC contracts: `backend/api/proto/core/v1/`
+- Evidence-status enum: `backend/api/proto/common/v1/evidence.proto`
+- Python-worker contract: `backend/ml-service/proto/ml/v1/traffic_classifier.proto`
+- ML display guidance (partly aspirational): `backend/ml-service/docs/ML_FRONTEND_CONTRACT.md`
 
 ## Dashboard Purpose
 
@@ -57,6 +113,24 @@ Status definitions:
 - **Planned** means needed for the dashboard experience but not yet backed by a complete checked-in frontend implementation.
 
 The current checked-in frontend is a starter Next.js scaffold, so the dashboard screens above are not marked **Implemented**.
+
+### Page-to-contract build map
+
+Use this matrix when sequencing frontend work. “Aggregate only” means the current `insights` endpoint is enough for a summary card but not for a paginated/detail page.
+
+| Dashboard view | Data available to the browser now | What is still needed for the intended page |
+| --- | --- | --- |
+| Overview Dashboard | `/health`, analysis status, and `insights` aggregate | Workspace selector and durable workspace list/reset APIs |
+| PCAP Upload and Analysis Setup | Full happy path: upload, start, poll | Pre-upload validation, SHA-256 field, upload progress/resume, and selectable analysis options |
+| Analysis Progress View | Poll status/progress/summary | Cancel, retry, and event stream; polling is the correct current fallback |
+| VPN Session Explorer | Aggregate sessions, IKE exchanges, SAs, timeline, and protocol evidence in `insights` | Stable documented JSON schema, pagination, individual detail routes, and filter parameters |
+| Flow Explorer | Aggregate counts only | A browser flow-list/detail API with feature windows; the native Sensor flow API is not externally registered |
+| Traffic Classification Details | Predictions and explanations may appear in `insights` after ML succeeds | Prediction paging/detail routes and a stable JSON mapping for `class_probabilities`/attributions |
+| Evidence and Provenance | Protocol evidence plus fused conclusions may appear in `insights` | Evidence-chain endpoint, filters, source-coverage schema, conflicts, and pagination |
+| Security Findings / Risk Matrix | Assessment, findings, recommendations, threat matrix, risk score/breakdown may appear in `insights` | Independent filters/detail routes and documented response schema |
+| Gateway Verification | Availability only through Core gRPC today | Browser adapter for local-sensor status and explicit authorization/mode provenance |
+| Reports and Exports | Executive PDF generation, status, and download | Technical/JSON selection, SHAP option, report list/delete |
+| System Health | `/health` | Full Core capability/version/runtime/local-sensor status adapter |
 
 ## Global Application Layout
 
@@ -140,7 +214,7 @@ UNAVAILABLE
 
 ## Evidence Status Design System
 
-Use these evidence states exactly:
+Use these evidence labels in the UI:
 
 ```text
 OBSERVED
@@ -150,6 +224,8 @@ VERIFIED_GATEWAY
 UNKNOWN
 UNAVAILABLE
 ```
+
+`UNAVAILABLE` is a presentation-only availability label. It is not currently a value in the backend `EvidenceStatus` protobuf enum; derive it from an unavailable source, dependency state, reason field, or missing optional section.
 
 | Status | User-Facing Label | Suggested Colour Family | Icon Style | Tooltip Text | Correct Usage | Incorrect Usage |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -164,7 +240,7 @@ UNAVAILABLE
 
 `UNKNOWN` is not an error. `UNAVAILABLE` is not a passing security result. Neither should appear as a vulnerability, a passing result, or a low-severity security finding.
 
-Gateway verification must always say that it is available only in authorized Deep Assessment mode.
+Product requirement: gateway verification must always say that it is available only in authorized Deep Assessment mode. The current pipeline does not yet enforce that restriction, so the frontend must apply the guard described in “Contract discrepancies that affect UX” until the backend is corrected.
 
 ## Typography and Font System
 
@@ -337,17 +413,17 @@ When analysis fails or is cancelled:
 
 ## Strict Accuracy Rules
 
-- The Next.js frontend communicates only with the Go Server through a Connect or gRPC-Web-compatible API. It never calls the Python ML Worker directly.
+- The Next.js frontend communicates only with the Go Server. With the checked-in server, use its JSON HTTP workflow API through Next.js server routes; native Core gRPC is not browser-compatible yet. It never calls the Python ML Worker directly.
 - The system never decrypts ESP payloads.
 - ML classifies only aggregate flow metadata.
 - ML does not determine IKE version, cipher suite, DH group, PFS, SPI, or security findings.
 - ML results must be labelled `INFERRED`.
-- Gateway facts can be labelled `VERIFIED_GATEWAY` only during authorized Deep Assessment.
+- Gateway facts can be labelled `VERIFIED_GATEWAY` only during authorized Deep Assessment with explicit gateway provenance. The frontend must guard this because the current pipeline still attempts gateway collection outside Deep Assessment.
 - The deterministic Go Security/Risk Engine owns findings, severity, and risk scores.
 - Risk score is not ML confidence.
 - Packet values, flow values, and model confidence values in mockups must be labelled as sample data until backed by real analysis output.
 - `UNKNOWN` must not be shown as a vulnerability, passing result, or low-severity security finding.
-- `UNAVAILABLE` must not be shown as a vulnerability, passing result, or low-severity security finding.
+- `UNAVAILABLE` is a UI availability state, not a backend `EvidenceStatus` enum value, and must not be shown as a vulnerability, passing result, or low-severity security finding.
 - Missing ML, SHAP, VICI, XFRM, or gateway access must be shown as source coverage status, not as pass/fail posture.
 - ESP payload decryption must never be claimed or implied.
 - A feature may be marked **Implemented** only when backed by checked-in, working code. Otherwise use **In Progress**, **Planned**, or **Specified**.
