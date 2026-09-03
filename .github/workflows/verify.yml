@@ -18,9 +18,11 @@ jobs:
           go-version: "1.22.x"
       - uses: arduino/setup-protoc@v3
         with:
-          version: "27.x"
-      - run: go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.34.2
-      - run: go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.5.1
+          # Keep the generated-code verification reproducible. These versions
+          # match the generator headers in backend/gen/go.
+          version: "33.1"
+      - run: go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.11
+      - run: go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.6.1
       - run: make proto
       - run: git diff --exit-code -- gen
       - run: go vet ./...
