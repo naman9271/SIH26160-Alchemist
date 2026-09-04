@@ -1,41 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import Script from "next/script";
 import { LandingNavigation } from "@/components/ui/site-chrome";
-
-declare global {
-  interface Window {
-    UnicornStudio?: {
-      init?: () => void;
-      isInitialized?: boolean;
-    };
-  }
-}
-
-function initializeUnicornStudio() {
-  if (!window.UnicornStudio || window.UnicornStudio.isInitialized) {
-    return;
-  }
-
-  window.UnicornStudio.init?.();
-  window.UnicornStudio.isInitialized = true;
-}
 
 export function HeroAscii() {
   return (
     <section className="relative min-h-svh overflow-hidden bg-black font-mono text-white">
-      <Script
-        src="https://cdn.jsdelivr.net/gh/hiunicornstudio/unicornstudio.js@v1.4.33/dist/unicornStudio.umd.js"
-        strategy="afterInteractive"
-        onLoad={initializeUnicornStudio}
-        onReady={initializeUnicornStudio}
-      />
-
-      <div aria-hidden="true" className="absolute inset-0 hidden lg:block">
-        <div data-us-project="whwOGlfJ5Rz2rHaEUgHl" className="h-full w-full" />
-      </div>
-      <div aria-hidden="true" className="hero-ascii-grid absolute inset-0 lg:hidden" />
+      <div aria-hidden="true" className="hero-ascii-grid absolute inset-0" />
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_22%_55%,transparent_0,rgba(0,0,0,.2)_36%,rgba(0,0,0,.76)_100%)]" />
 
       <LandingNavigation overlay />
@@ -63,19 +34,19 @@ export function HeroAscii() {
           <div className="mt-7 flex flex-col gap-3 sm:flex-row">
             <Link
               href="/workspace"
-              className="border border-white bg-white px-6 py-3 text-center text-xs font-bold tracking-[.12em] text-black transition hover:bg-transparent hover:text-white"
+              className="border border-sky-300 bg-sky-300 px-6 py-3 text-center text-xs font-bold tracking-[.12em] text-slate-950 transition hover:bg-transparent hover:text-sky-200"
             >
               START ANALYSIS
             </Link>
             <Link
               href="/workspace#workflow"
-              className="border border-white/70 px-6 py-3 text-center text-xs font-bold tracking-[.12em] transition hover:border-white hover:bg-white hover:text-black"
+              className="border border-sky-200/70 px-6 py-3 text-center text-xs font-bold tracking-[.12em] transition hover:border-sky-200 hover:bg-sky-200 hover:text-slate-950"
             >
               VIEW WORKFLOW
             </Link>
           </div>
           <div className="mt-8 flex items-center gap-2 text-[10px] tracking-[.12em] text-white/50">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-300" />
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-sky-300" />
             PASSIVE · EXPLAINABLE · ESP NEVER DECRYPTED
           </div>
         </div>
