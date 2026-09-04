@@ -2,24 +2,52 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-type Insight = Record<string, unknown> & { analysis?: { state?: string; stage?: string } };
+type RecordValue = Record<string, unknown>;
+type Insight = RecordValue & { analysis?: { state?: string; stage?: string; source_id?: string } };
 type Report = { report_id: string; state: string; download_url?: string; failure_reason?: string };
+
+const sectionsForView: Record<string, Array<[string, string[]]>> = {
+  overview: [["Analysis summary", ["summary"]], ["Security posture", ["security", "assessment"]], ["Risk score", ["security", "risk_score"]], ["Fusion coverage", ["fusion", "summary"]]],
+  progress: [["Pipeline progress", ["progress"]], ["Analysis summary", ["summary"]]],
+  sessions: [["VPN sessions", ["protocol", "sessions"]], ["IKE exchanges", ["protocol", "ike_exchanges"]], ["Security associations", ["protocol", "security_associations"]], ["NAT traversal", ["protocol", "nat_traversal"]]],
+  flows: [["Observed flow telemetry", ["flows", "items"]], ["Traffic summary", ["summary", "traffic"]]],
+  classification: [["ML worker", ["ml", "worker"]], ["Traffic predictions", ["ml", "predictions"]], ["Prediction explanations", ["ml", "explanations"]]],
+  evidence: [["Protocol evidence", ["protocol", "evidence"]], ["Fused conclusions", ["fusion", "conclusions"]], ["Fusion status", ["fusion", "status"]]],
+  findings: [["Assessment and findings", ["security", "assessment"]], ["Recommendations", ["security", "assessment", "recommendations"]]],
+  risk: [["Risk score", ["security", "risk_score"]], ["Risk breakdown", ["security", "risk_breakdown"]], ["Critical overrides", ["security", "critical_overrides"]]],
+  gateway: [["Source availability", ["fusion", "summary"]], ["Pipeline progress", ["progress"]]],
+  health: [["ML worker", ["ml", "worker"]], ["Analysis availability", ["summary"]]],
+};
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`/api/core${path}`, { ...init, cache: "no-store" });
-  const body = (await response.json()) as T & { error?: string };
-  if (!response.ok) throw new Error(body.error ?? "Go Server request failed.");
+  const contentType = response.headers.get("content-type") ?? "";
+  const body: (T & { error?: string }) | undefined = contentType.includes("application/json") ? await response.json() : undefined;
+  if (!response.ok) throw new Error(body?.error ?? `Go Server request failed (${response.status}).`);
+  if (!body) throw new Error("Go Server returned an unexpected response.");
   return body;
 }
 
-function sectionCount(insights: Insight | undefined, key: string) {
-  const section = insights?.[key];
-  return section && typeof section === "object" ? Object.keys(section as object).length : 0;
+function atPath(source: unknown, path: string[]): unknown {
+  return path.reduce<unknown>((value, key) => value && typeof value === "object" && !Array.isArray(value) ? (value as RecordValue)[key] : undefined, source);
 }
 
-export function LiveAnalysisPanel() {
+function count(value: unknown): number {
+  if (Array.isArray(value)) return value.length;
+  return value && typeof value === "object" ? Object.keys(value).length : 0;
+}
+
+function DataBlock({ title, value }: { title: string; value: unknown }) {
+  if (value === undefined || value === null || (Array.isArray(value) && value.length === 0) || (typeof value === "object" && !Array.isArray(value) && Object.keys(value).length === 0)) return null;
+  return <details className="border border-white/15 bg-black/20 p-4" open={title === "Analysis summary" || title === "Pipeline progress"}>
+    <summary className="cursor-pointer text-[10px] font-bold tracking-[.13em] text-teal-100">{title.toUpperCase()} <span className="ml-2 text-white/45">{Array.isArray(value) ? `${value.length} RECORDS` : "AVAILABLE"}</span></summary>
+    <pre className="mt-4 max-h-96 overflow-auto whitespace-pre-wrap break-words border-t border-white/10 pt-4 text-[11px] leading-5 text-white/65">{JSON.stringify(value, null, 2)}</pre>
+  </details>;
+}
+
+export function LiveAnalysisPanel({ view = "overview" }: { view?: string }) {
   const search = useSearchParams();
   const analysisId = search.get("analysis");
   const [health, setHealth] = useState<"CHECKING" | "READY" | "UNAVAILABLE">("CHECKING");
@@ -32,22 +60,24 @@ export function LiveAnalysisPanel() {
     try {
       await request("/health");
       setHealth("READY");
-      if (analysisId) setInsights(await request<Insight>(`/api/v1/analyses/${analysisId}/insights`));
+      if (analysisId) setInsights(await request<Insight>(`/api/v1/analyses/${encodeURIComponent(analysisId)}/insights`));
     } catch (requestError) {
       setHealth("UNAVAILABLE");
       setError(requestError instanceof Error ? requestError.message : "Unable to reach Go Server.");
     }
   }, [analysisId]);
 
+  useEffect(() => { void refresh(); }, [refresh]);
   useEffect(() => {
-    const timer = window.setTimeout(() => { void refresh(); }, 0);
-    return () => window.clearTimeout(timer);
-  }, [refresh]);
-
+    const state = insights?.analysis?.state;
+    if (!analysisId || !state || !["QUEUED", "RUNNING"].includes(state)) return;
+    const timer = window.setInterval(() => { void refresh(); }, 1500);
+    return () => window.clearInterval(timer);
+  }, [analysisId, insights?.analysis?.state, refresh]);
   useEffect(() => {
     if (!report || ["READY", "FAILED"].includes(report.state)) return;
     const timer = window.setInterval(async () => {
-      try { setReport(await request<Report>(`/api/v1/reports/${report.report_id}`)); }
+      try { setReport(await request<Report>(`/api/v1/reports/${encodeURIComponent(report.report_id)}`)); }
       catch (requestError) { setError(requestError instanceof Error ? requestError.message : "Report status failed."); }
     }, 1500);
     return () => window.clearInterval(timer);
@@ -55,14 +85,17 @@ export function LiveAnalysisPanel() {
 
   async function generateReport() {
     if (!analysisId) return;
-    try { setReport(await request<Report>(`/api/v1/analyses/${analysisId}/report`, { method: "POST" })); }
+    try { setReport(await request<Report>(`/api/v1/analyses/${encodeURIComponent(analysisId)}/report`, { method: "POST" })); }
     catch (requestError) { setError(requestError instanceof Error ? requestError.message : "Report generation failed."); }
   }
 
+  const dataBlocks = useMemo(() => (sectionsForView[view] ?? sectionsForView.overview).map(([title, path]) => [title, atPath(insights, path)] as const), [insights, view]);
   const analysis = insights?.analysis;
+  const availableSections = ["protocol", "flows", "fusion", "security", "ml"].reduce((total, key) => total + count(insights?.[key]), 0);
+
   return <section className="mt-7 border border-white/15 bg-white/[.025] p-5 sm:p-6">
-    <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] font-bold tracking-[.14em] text-sky-200">LIVE GO SERVER DATA</p><p className="mt-2 text-xs text-white/55">Health and aggregate analysis insights are fetched through the Next.js Go Server proxy.</p></div><button onClick={() => void refresh()} className="border border-white/30 px-3 py-2 text-[9px] font-bold tracking-[.12em] transition hover:bg-white hover:text-black">REFRESH</button></div>
-    {!analysisId ? <div className="mt-5 border-t border-white/10 pt-5 text-sm leading-7 text-white/60">No analysis is selected. <Link className="text-teal-200 underline underline-offset-4" href="/workspace">Upload a PCAP</Link>, then open the completed analysis dashboard.</div> : <><div className="mt-5 grid gap-2 border-t border-white/10 pt-5 sm:grid-cols-4"><div><p className="text-[9px] text-white/40">GO SERVER</p><p className={`mt-2 text-xs font-bold ${health === "READY" ? "text-teal-200" : "text-red-200"}`}>{health}</p></div><div><p className="text-[9px] text-white/40">ANALYSIS STATE</p><p className="mt-2 text-xs font-bold text-white">{analysis?.state ?? "LOADING"}</p></div><div><p className="text-[9px] text-white/40">OPERATIONAL STAGE</p><p className="mt-2 text-xs font-bold text-white">{analysis?.stage ?? "—"}</p></div><div><p className="text-[9px] text-white/40">AVAILABLE SECTIONS</p><p className="mt-2 text-xs font-bold text-white">{sectionCount(insights, "protocol") + sectionCount(insights, "fusion") + sectionCount(insights, "security") + sectionCount(insights, "ml")}</p></div></div><div className="mt-5 flex flex-wrap items-center gap-3"><button onClick={() => void generateReport()} className="border border-teal-200 bg-teal-200 px-3 py-2 text-[9px] font-bold tracking-[.12em] text-slate-950 transition hover:bg-transparent hover:text-teal-100">GENERATE EXECUTIVE PDF</button>{report && <span className="text-[10px] text-white/55">REPORT: {report.state}</span>}{report?.download_url && <a href={`/api/core${report.download_url}`} className="border border-white/40 px-3 py-2 text-[9px] font-bold tracking-[.12em] hover:bg-white hover:text-black">DOWNLOAD PDF</a>}</div></>}
+    <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] font-bold tracking-[.14em] text-sky-200">LIVE GO SERVER DATA</p><p className="mt-2 text-xs text-white/55">Each value below is fetched from the completed analysis through the same-origin Core proxy.</p></div><button onClick={() => void refresh()} className="border border-white/30 px-3 py-2 text-[9px] font-bold tracking-[.12em] transition hover:bg-white hover:text-black">REFRESH</button></div>
+    {!analysisId ? <div className="mt-5 border-t border-white/10 pt-5 text-sm leading-7 text-white/60">No analysis is selected. <Link className="text-teal-200 underline underline-offset-4" href="/workspace">Upload a PCAP</Link>, then open the completed analysis dashboard.</div> : <><div className="mt-5 grid gap-2 border-t border-white/10 pt-5 sm:grid-cols-4"><div><p className="text-[9px] text-white/40">GO SERVER</p><p className={`mt-2 text-xs font-bold ${health === "READY" ? "text-teal-200" : "text-red-200"}`}>{health}</p></div><div><p className="text-[9px] text-white/40">ANALYSIS STATE</p><p className="mt-2 text-xs font-bold text-white">{analysis?.state ?? "LOADING"}</p></div><div><p className="text-[9px] text-white/40">OPERATIONAL STAGE</p><p className="mt-2 text-xs font-bold text-white">{analysis?.stage ?? "—"}</p></div><div><p className="text-[9px] text-white/40">AVAILABLE RECORD GROUPS</p><p className="mt-2 text-xs font-bold text-white">{availableSections}</p></div></div><div className="mt-5 flex flex-wrap items-center gap-3"><button onClick={() => void generateReport()} disabled={analysis?.state !== "COMPLETED"} className="border border-teal-200 bg-teal-200 px-3 py-2 text-[9px] font-bold tracking-[.12em] text-slate-950 transition hover:bg-transparent hover:text-teal-100 disabled:cursor-not-allowed disabled:opacity-40">GENERATE EXECUTIVE PDF</button>{report && <span className="text-[10px] text-white/55">REPORT: {report.state}{report.failure_reason ? ` · ${report.failure_reason}` : ""}</span>}{report?.download_url && <a href={`/api/core${report.download_url}`} className="border border-white/40 px-3 py-2 text-[9px] font-bold tracking-[.12em] hover:bg-white hover:text-black">DOWNLOAD PDF</a>}</div><div className="mt-5 grid gap-3">{dataBlocks.map(([title, value]) => <DataBlock key={title} title={title} value={value} />)}{dataBlocks.every(([, value]) => value === undefined || value === null || (Array.isArray(value) && value.length === 0) || (typeof value === "object" && !Array.isArray(value) && Object.keys(value).length === 0)) && <p className="border border-dashed border-white/20 p-4 text-xs leading-6 text-white/55">This section has no records yet. The analysis may still be running, the capture may not contain this protocol data, or the optional service may be unavailable.</p>}</div></>}
     {error && <p className="mt-5 border border-red-300/50 bg-red-300/10 p-3 text-xs text-red-100">{error}</p>}
   </section>;
 }
