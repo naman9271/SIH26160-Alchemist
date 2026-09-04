@@ -1,19 +1,21 @@
 import Link from "next/link";
 
 export function LandingNavigation({ overlay = false }: { overlay?: boolean }) {
+  const navLinkClass = "rounded-sm border border-transparent px-2.5 py-2 text-[10px] font-bold tracking-[.15em] text-white/68 transition-all duration-300 hover:border-teal-200/35 hover:bg-teal-200/[.055] hover:text-teal-100 hover:shadow-[0_0_24px_rgba(94,234,212,.16)]";
+
   return (
     <header className={`${overlay ? "absolute" : "relative"} inset-x-0 top-0 z-30 border-b border-white/20 bg-black/75 font-mono text-white backdrop-blur-sm`}>
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-5 px-4 py-3 lg:px-8 lg:py-4">
-        <Link href="/" className="shrink-0 text-[9px] font-bold tracking-[.14em] text-white/70 transition hover:text-teal-200">HOME</Link>
-        <nav className="hidden items-center gap-4 text-[9px] font-bold tracking-[.13em] text-white/65 xl:flex" aria-label="Primary navigation">
-          <Link className="transition hover:text-teal-200" href="/#features">CAPABILITIES</Link>
-          <Link className="transition hover:text-teal-200" href="/dashboard">DASHBOARD</Link>
-          <Link className="transition hover:text-teal-200" href="/dashboard/evidence">EVIDENCE</Link>
-          <Link className="transition hover:text-teal-200" href="/dashboard/findings">FINDINGS</Link>
-          <Link className="transition hover:text-teal-200" href="/dashboard/reports">REPORTS</Link>
-          <Link className="transition hover:text-teal-200" href="/teams">TEAM</Link>
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-5 px-4 py-3.5 lg:px-8 lg:py-4">
+        <Link href="/" className="shrink-0 rounded-sm border border-transparent px-2.5 py-2 text-[10px] font-bold tracking-[.16em] text-white/78 transition-all duration-300 hover:border-teal-200/40 hover:bg-teal-200/[.06] hover:text-teal-100 hover:shadow-[0_0_24px_rgba(94,234,212,.18)]">HOME</Link>
+        <nav className="hidden items-center gap-2 xl:flex" aria-label="Primary navigation">
+          <Link className={navLinkClass} href="/#features">CAPABILITIES</Link>
+          <Link className={navLinkClass} href="/dashboard">DASHBOARD</Link>
+          <Link className={navLinkClass} href="/dashboard/evidence">EVIDENCE</Link>
+          <Link className={navLinkClass} href="/dashboard/findings">FINDINGS</Link>
+          <Link className={navLinkClass} href="/dashboard/reports">REPORTS</Link>
+          <Link className={navLinkClass} href="/teams">TEAM</Link>
         </nav>
-        <Link href="/workspace" className="shrink-0 border border-white/70 px-3 py-2 text-[9px] font-bold tracking-[.12em] transition hover:bg-white hover:text-slate-950">OPEN WORKSPACE</Link>
+        <Link href="/workspace" className="group relative shrink-0 overflow-hidden border border-teal-100/65 bg-teal-100/[.045] px-4 py-2.5 text-[10px] font-bold tracking-[.14em] text-teal-50 shadow-[0_0_22px_rgba(94,234,212,.12)] transition-all duration-300 hover:border-teal-100 hover:bg-teal-100 hover:text-slate-950 hover:shadow-[0_0_34px_rgba(94,234,212,.28)]"><span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/35 to-transparent transition-transform duration-700 group-hover:translate-x-full" /><span className="relative">OPEN WORKSPACE</span></Link>
       </div>
     </header>
   );
