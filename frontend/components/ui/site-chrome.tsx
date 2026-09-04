@@ -8,10 +8,12 @@ export function LandingNavigation({ overlay = false }: { overlay?: boolean }) {
           <span className="grid h-7 w-7 place-items-center bg-teal-300 text-base text-slate-950">Δ</span>
           ALCHEMIST
         </Link>
-        <nav className="hidden items-center gap-6 text-[10px] font-bold tracking-[.14em] text-white/65 md:flex" aria-label="Landing navigation">
+        <nav className="hidden items-center gap-4 text-[10px] font-bold tracking-[.14em] text-white/65 xl:flex" aria-label="Primary navigation">
           <Link className="transition hover:text-teal-200" href="/#features">CAPABILITIES</Link>
-          <Link className="transition hover:text-teal-200" href="/#method">EVIDENCE</Link>
-          <Link className="transition hover:text-teal-200" href="/#approach">APPROACH</Link>
+          <Link className="transition hover:text-teal-200" href="/dashboard">DASHBOARD</Link>
+          <Link className="transition hover:text-teal-200" href="/dashboard/evidence">EVIDENCE</Link>
+          <Link className="transition hover:text-teal-200" href="/dashboard/findings">FINDINGS</Link>
+          <Link className="transition hover:text-teal-200" href="/dashboard/reports">REPORTS</Link>
           <Link className="transition hover:text-teal-200" href="/teams">TEAM</Link>
         </nav>
         <Link href="/workspace" className="border border-teal-200/60 px-3 py-2 text-[10px] font-bold tracking-[.12em] transition hover:bg-teal-200 hover:text-slate-950">

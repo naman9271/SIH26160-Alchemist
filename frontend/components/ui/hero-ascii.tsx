@@ -52,6 +52,14 @@ export function HeroAscii() {
             <span className="h-3 w-px bg-white/40 lg:h-4" />
             <span className="text-[8px] text-white/60 lg:text-[10px]">SIH 2026</span>
           </Link>
+          <nav className="hidden items-center gap-4 text-[9px] font-bold tracking-[.13em] text-white/65 xl:flex" aria-label="Primary navigation">
+            <Link className="transition hover:text-teal-200" href="/#features">CAPABILITIES</Link>
+            <Link className="transition hover:text-teal-200" href="/dashboard">DASHBOARD</Link>
+            <Link className="transition hover:text-teal-200" href="/dashboard/evidence">EVIDENCE</Link>
+            <Link className="transition hover:text-teal-200" href="/dashboard/findings">FINDINGS</Link>
+            <Link className="transition hover:text-teal-200" href="/dashboard/reports">REPORTS</Link>
+            <Link className="transition hover:text-teal-200" href="/teams">TEAM</Link>
+          </nav>
           <div className="hidden items-center gap-3 text-[10px] text-white/60 lg:flex"><span>PASSIVE ANALYSIS</span><span className="h-1 w-1 rounded-full bg-white/40" /><span>ESP / IKE</span></div>
         </div>
       </header>
