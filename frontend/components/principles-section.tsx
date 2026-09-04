@@ -47,6 +47,14 @@ export const principles: Principle[] = [
       "Finish with deterministic findings, risk context, remediation guidance, and an executive report grounded in the available evidence.",
     align: "right",
   },
+  {
+    number: "05",
+    title: "REPORT-READY EVIDENCE",
+    highlight: "EVIDENCE",
+    description:
+      "Carry the same status, source, and confidence boundaries into an executive report that can be reviewed without overstating what the capture proves.",
+    align: "left",
+  },
 ];
 
 export function PrinciplesSection({ items = principles }: { items?: Principle[] }) {
@@ -109,7 +117,7 @@ export function PrinciplesSection({ items = principles }: { items?: Principle[] 
       <SectionGrid />
       <div className="relative z-10 mx-auto max-w-[1440px]">
         <header data-principles-header className="mb-24">
-          <p className="font-mono text-[10px] uppercase tracking-[.3em] text-primary">03 / Approach</p>
+          <p className="font-mono text-[10px] uppercase tracking-[.3em] text-primary">APPROACH</p>
           <h2 className="mt-5 uppercase [font-family:var(--serif)] text-4xl font-normal leading-[.92] tracking-[-.06em] md:text-6xl lg:text-7xl">
             HOW IT WORKS
           </h2>

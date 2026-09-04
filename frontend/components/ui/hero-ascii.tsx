@@ -1,62 +1,89 @@
 "use client";
 
 import Link from "next/link";
-import { LandingNavigation } from "@/components/ui/site-chrome";
+import { useEffect } from "react";
+
+declare global {
+  interface Window {
+    UnicornStudio?: { init: () => void; isInitialized?: boolean };
+  }
+}
+
+const signalBars = [7, 15, 10, 22, 14, 28, 18, 9];
 
 export function HeroAscii() {
+  useEffect(() => {
+    if (window.UnicornStudio?.isInitialized) return;
+
+    const existing = document.querySelector<HTMLScriptElement>('script[data-unicorn-studio="true"]');
+    const initialize = () => {
+      if (!window.UnicornStudio?.isInitialized) {
+        window.UnicornStudio?.init();
+        if (window.UnicornStudio) window.UnicornStudio.isInitialized = true;
+      }
+    };
+
+    if (existing) {
+      existing.addEventListener("load", initialize, { once: true });
+      initialize();
+      return () => existing.removeEventListener("load", initialize);
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://cdn.jsdelivr.net/gh/hiunicornstudio/unicornstudio.js@v1.4.33/dist/unicornStudio.umd.js";
+    script.async = true;
+    script.dataset.unicornStudio = "true";
+    script.addEventListener("load", initialize, { once: true });
+    document.head.appendChild(script);
+    return () => script.removeEventListener("load", initialize);
+  }, []);
+
   return (
-    <section className="relative min-h-svh overflow-hidden bg-black font-mono text-white">
-      <div aria-hidden="true" className="hero-ascii-grid absolute inset-0" />
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_22%_55%,transparent_0,rgba(0,0,0,.2)_36%,rgba(0,0,0,.76)_100%)]" />
+    <section className="hero-ascii relative min-h-svh overflow-hidden bg-black font-mono text-white">
+      <div className="absolute inset-0 hidden lg:block" aria-hidden="true">
+        <div data-us-project="whwOGlfJ5Rz2rHaEUgHl" className="h-full w-full min-h-svh" />
+      </div>
+      <div className="hero-ascii-stars absolute inset-0 lg:hidden" aria-hidden="true" />
 
-      <LandingNavigation overlay />
+      <header className="absolute inset-x-0 top-0 z-20 border-b border-white/20">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 lg:px-8 lg:py-4">
+          <Link href="/" className="flex items-center gap-2 lg:gap-4">
+            <span className="text-xl font-bold italic tracking-widest [transform:skewX(-12deg)] lg:text-2xl">ALCHEMIST</span>
+            <span className="h-3 w-px bg-white/40 lg:h-4" />
+            <span className="text-[8px] text-white/60 lg:text-[10px]">SIH 2026</span>
+          </Link>
+          <div className="hidden items-center gap-3 text-[10px] text-white/60 lg:flex"><span>PASSIVE ANALYSIS</span><span className="h-1 w-1 rounded-full bg-white/40" /><span>ESP / IKE</span></div>
+        </div>
+      </header>
 
-      <div aria-hidden="true" className="absolute left-0 top-0 z-20 h-10 w-10 border-l-2 border-t-2 border-white/35 lg:h-14 lg:w-14" />
-      <div aria-hidden="true" className="absolute right-0 top-0 z-20 h-10 w-10 border-r-2 border-t-2 border-white/35 lg:h-14 lg:w-14" />
-      <div aria-hidden="true" className="absolute bottom-[5vh] left-0 z-20 h-10 w-10 border-b-2 border-l-2 border-white/35 lg:h-14 lg:w-14" />
-      <div aria-hidden="true" className="absolute bottom-[5vh] right-0 z-20 h-10 w-10 border-b-2 border-r-2 border-white/35 lg:h-14 lg:w-14" />
+      <div aria-hidden="true" className="absolute left-0 top-0 z-20 h-8 w-8 border-l-2 border-t-2 border-white/30 lg:h-12 lg:w-12" />
+      <div aria-hidden="true" className="absolute right-0 top-0 z-20 h-8 w-8 border-r-2 border-t-2 border-white/30 lg:h-12 lg:w-12" />
+      <div aria-hidden="true" className="absolute bottom-[5vh] left-0 z-20 h-8 w-8 border-b-2 border-l-2 border-white/30 lg:h-12 lg:w-12" />
+      <div aria-hidden="true" className="absolute bottom-[5vh] right-0 z-20 h-8 w-8 border-b-2 border-r-2 border-white/30 lg:h-12 lg:w-12" />
 
-      <section className="relative z-10 mx-auto flex min-h-svh max-w-7xl items-center px-6 pb-28 pt-24 lg:px-16">
-        <div className="max-w-2xl">
-          <div className="mb-4 flex items-center gap-2 text-[10px] tracking-[.16em] text-white/65">
-            <span className="h-px w-8 bg-white" />
-            <span>001</span>
-            <span className="h-px flex-1 bg-white" />
-          </div>
-          <h1 className="border-l border-dashed border-white/45 pl-4 text-4xl font-bold leading-[.94] tracking-[.08em] sm:text-5xl lg:text-7xl">
-            READ THE POSTURE.
-            <span className="mt-3 block text-white/85">NOT THE PAYLOAD.</span>
-          </h1>
-          <div aria-hidden="true" className="my-5 hidden h-px w-64 bg-[radial-gradient(circle,white_1px,transparent_1.5px)] bg-[size:6px_1px] opacity-55 lg:block" />
-          <p className="max-w-xl text-sm leading-7 text-white/75 lg:text-base">
-            Evidence-led IPsec VPN analysis that separates verified protocol facts from inference—without decrypting ESP traffic.
-          </p>
-          <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-            <Link
-              href="/workspace"
-              className="border border-sky-300 bg-sky-300 px-6 py-3 text-center text-xs font-bold tracking-[.12em] text-slate-950 transition hover:bg-transparent hover:text-sky-200"
-            >
-              START ANALYSIS
-            </Link>
-            <Link
-              href="/workspace#workflow"
-              className="border border-sky-200/70 px-6 py-3 text-center text-xs font-bold tracking-[.12em] transition hover:border-sky-200 hover:bg-sky-200 hover:text-slate-950"
-            >
-              VIEW WORKFLOW
-            </Link>
-          </div>
-          <div className="mt-8 flex items-center gap-2 text-[10px] tracking-[.12em] text-white/50">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-sky-300" />
-            PASSIVE · EXPLAINABLE · ESP NEVER DECRYPTED
+      <div className="relative z-10 flex min-h-svh items-center pt-16" style={{ marginTop: "5vh" }}>
+        <div className="mx-auto w-full max-w-7xl px-6 lg:ml-[10%] lg:px-16">
+          <div className="relative max-w-lg">
+            <div className="mb-3 flex items-center gap-2 opacity-60"><span className="h-px w-8 bg-white" /><span className="text-[10px] tracking-wider">001</span><span className="h-px flex-1 bg-white" /></div>
+            <div className="relative">
+              <div aria-hidden="true" className="hero-ascii-dither absolute -left-3 top-0 hidden h-full w-1 opacity-40 lg:block" />
+              <h1 className="mb-3 text-2xl font-bold leading-tight tracking-[.1em] lg:mb-4 lg:text-5xl">READ THE EVIDENCE<span className="mt-1 block opacity-90 lg:mt-2">NOT THE PAYLOAD</span></h1>
+            </div>
+            <div aria-hidden="true" className="mb-3 hidden gap-1 opacity-40 lg:flex">{Array.from({ length: 40 }, (_, index) => <span key={index} className="h-0.5 w-0.5 rounded-full bg-white" />)}</div>
+            <div className="relative"><p className="mb-5 text-xs leading-relaxed text-gray-300/80 lg:mb-6 lg:text-base">Turn passive IPsec VPN captures into explainable protocol facts and deterministic security findings—without decrypting ESP traffic.</p><span aria-hidden="true" className="absolute -right-4 top-1/2 hidden h-3 w-3 -translate-y-1/2 border border-white/30 lg:block" /></div>
+            <div className="flex flex-col gap-3 lg:flex-row lg:gap-4">
+              <Link href="/workspace" className="group relative border border-white px-5 py-2 text-center text-xs transition-all duration-200 hover:bg-white hover:text-black lg:px-6 lg:py-2.5 lg:text-sm"><span className="absolute -left-1 -top-1 hidden h-2 w-2 border-l border-t border-white opacity-0 transition-opacity group-hover:opacity-100 lg:block" />START ANALYSIS</Link>
+              <Link href="/#features" className="border border-white px-5 py-2 text-center text-xs transition-all duration-200 hover:bg-white hover:text-black lg:px-6 lg:py-2.5 lg:text-sm">LEARN MORE</Link>
+            </div>
+            <div className="mt-6 hidden items-center gap-2 opacity-40 lg:flex"><span className="text-[9px]">∞</span><span className="h-px flex-1 bg-white" /><span className="text-[9px]">ALCHEMIST</span></div>
           </div>
         </div>
-      </section>
+      </div>
 
-      <footer className="absolute inset-x-0 bottom-[5vh] z-20 border-y border-white/20 bg-black/35 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-3 text-[9px] tracking-[.13em] text-white/55 lg:px-8">
-          <span>SYSTEM.ACTIVE</span>
-          <span className="hidden sm:inline">IPSEC VPN PROTOCOL ANALYZER</span>
-          <span>FRAME: ∞</span>
+      <footer className="absolute inset-x-0 bottom-[5vh] z-20 border-y border-white/20 bg-black/40 backdrop-blur-sm">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2 text-[8px] text-white/50 lg:px-8 lg:py-3 lg:text-[9px]">
+          <div className="flex items-center gap-3 lg:gap-6"><span className="hidden lg:inline">SYSTEM.ACTIVE</span><span className="lg:hidden">SYS.ACT</span><div className="hidden items-end gap-1 lg:flex">{signalBars.map((height, index) => <span key={index} className="w-1 bg-white/30" style={{ height }} />)}</div><span>V1.0.0</span></div>
+          <div className="flex items-center gap-2 lg:gap-4"><span className="hidden lg:inline">◐ RENDERING</span><span className="flex gap-1"><i className="h-1 w-1 animate-pulse rounded-full bg-white/60" /><i className="h-1 w-1 animate-pulse rounded-full bg-white/40 [animation-delay:200ms]" /><i className="h-1 w-1 animate-pulse rounded-full bg-white/20 [animation-delay:400ms]" /></span><span className="hidden lg:inline">FRAME: ∞</span></div>
         </div>
       </footer>
     </section>
