@@ -1,4 +1,4 @@
-import { LandingFooter, LandingNavigation } from "@/components/ui/site-chrome";
+import { LandingFooter } from "@/components/ui/site-chrome";
 import { NoiseOverlay } from "@/components/ui/noise-overlay";
 import { SectionGrid } from "@/components/ui/section-grid";
 
@@ -35,7 +35,6 @@ export const teamFocus: TeamFocus[] = [
 export default function TeamsPage() {
   return (
     <main className="min-h-svh bg-black text-white">
-      <LandingNavigation />
       <section className="relative isolate overflow-hidden px-5 py-24 font-mono lg:px-8 lg:py-32">
         <SectionGrid opacity={0.35} />
         <NoiseOverlay position="absolute" layer="over" opacity={0.2} />

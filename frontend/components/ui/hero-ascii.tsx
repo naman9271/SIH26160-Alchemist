@@ -45,25 +45,6 @@ export function HeroAscii() {
       </div>
       <div className="hero-ascii-stars absolute inset-0 lg:hidden" aria-hidden="true" />
 
-      <header className="absolute inset-x-0 top-0 z-20 border-b border-white/20">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 lg:px-8 lg:py-4">
-          <Link href="/" className="flex items-center gap-2 lg:gap-4">
-            <span className="text-xl font-bold italic tracking-widest [transform:skewX(-12deg)] lg:text-2xl">ALCHEMIST</span>
-            <span className="h-3 w-px bg-white/40 lg:h-4" />
-            <span className="text-[8px] text-white/60 lg:text-[10px]">SIH 2026</span>
-          </Link>
-          <nav className="hidden items-center gap-4 text-[9px] font-bold tracking-[.13em] text-white/65 lg:flex" aria-label="Primary navigation">
-            <Link className="transition hover:text-teal-200" href="/#features">CAPABILITIES</Link>
-            <Link className="transition hover:text-teal-200" href="/dashboard">DASHBOARD</Link>
-            <Link className="transition hover:text-teal-200" href="/dashboard/evidence">EVIDENCE</Link>
-            <Link className="transition hover:text-teal-200" href="/dashboard/findings">FINDINGS</Link>
-            <Link className="transition hover:text-teal-200" href="/dashboard/reports">REPORTS</Link>
-            <Link className="transition hover:text-teal-200" href="/teams">TEAM</Link>
-          </nav>
-          <div className="hidden items-center gap-3 text-[10px] text-white/60 lg:flex"><span>PASSIVE ANALYSIS</span><span className="h-1 w-1 rounded-full bg-white/40" /><span>ESP / IKE</span></div>
-        </div>
-      </header>
-
       <div aria-hidden="true" className="absolute left-0 top-0 z-20 h-8 w-8 border-l-2 border-t-2 border-white/30 lg:h-12 lg:w-12" />
       <div aria-hidden="true" className="absolute right-0 top-0 z-20 h-8 w-8 border-r-2 border-t-2 border-white/30 lg:h-12 lg:w-12" />
       <div aria-hidden="true" className="absolute bottom-[5vh] left-0 z-20 h-8 w-8 border-b-2 border-l-2 border-white/30 lg:h-12 lg:w-12" />
