@@ -109,7 +109,84 @@ body { overflow-x: clip; }
     transition: grid-template-columns .3s ease;
   }
 
-  .workspace-sidebar-shell:has(.workspace-sidebar:hover) {
+.workspace-sidebar-shell:has(.workspace-sidebar:hover) {
     grid-template-columns: 18rem minmax(0, 1fr);
+  }
+}
+
+.dashboard-shell-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.dashboard-sidebar-label {
+  opacity: 1;
+  transition: opacity .22s ease, transform .28s ease;
+}
+
+.dashboard-sidebar-nav {
+  align-items: stretch;
+}
+
+@media (min-width: 1024px) {
+  .dashboard-shell-grid {
+    grid-template-columns: 4.75rem minmax(0, 1fr);
+    transition: grid-template-columns .32s ease;
+  }
+
+  .dashboard-shell-grid:has(.dashboard-sidebar:hover) {
+    grid-template-columns: 17rem minmax(0, 1fr);
+  }
+
+  .dashboard-sidebar-label {
+    opacity: 0;
+    transform: translateX(-.45rem);
+  }
+
+  .dashboard-sidebar:hover .dashboard-sidebar-label {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  .dashboard-sidebar-brand,
+  .dashboard-sidebar-link {
+    grid-template-columns: 2rem minmax(0, 1fr);
+    width: 100%;
+  }
+
+  .dashboard-sidebar:not(:hover) .dashboard-sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .dashboard-sidebar:not(:hover) .dashboard-sidebar-brand,
+  .dashboard-sidebar:not(:hover) .dashboard-sidebar-link {
+    width: 3rem;
+    min-width: 3rem;
+    max-width: 3rem;
+    place-self: center;
+    grid-template-columns: 1fr;
+    gap: 0;
+    padding-inline: .45rem;
+  }
+
+  .dashboard-sidebar:not(:hover) .dashboard-sidebar-link {
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .dashboard-sidebar:not(:hover) .dashboard-sidebar-link > span:first-child {
+    margin-inline: auto;
+  }
+
+  .dashboard-sidebar:not(:hover) .dashboard-sidebar-label {
+    display: none;
+  }
+
+  .dashboard-sidebar:not(:hover) .dashboard-sidebar-link:hover,
+  .dashboard-sidebar:not(:hover) .dashboard-sidebar-link:focus-visible {
+    border-color: rgba(94, 234, 212, .55);
+    background: rgba(94, 234, 212, .08);
   }
 }

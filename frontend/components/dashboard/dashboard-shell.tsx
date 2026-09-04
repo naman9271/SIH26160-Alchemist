@@ -17,6 +17,21 @@ const navigation = [
   ["gateway", "GATEWAY VERIFICATION"], ["reports", "REPORTS"], ["health", "SYSTEM HEALTH"],
 ] as const;
 
+const navCodes: Record<(typeof navigation)[number][0], string> = {
+  overview: "OV",
+  upload: "UP",
+  progress: "PR",
+  sessions: "SE",
+  flows: "FL",
+  classification: "CL",
+  evidence: "EV",
+  findings: "FI",
+  risk: "RI",
+  gateway: "GW",
+  reports: "RP",
+  health: "HL",
+};
+
 const views: Record<string, View> = {
   overview: { title: "Evidence overview", eyebrow: "WORKSPACE / OVERVIEW", description: "A clear summary of available IPsec evidence. Select an analysis to load its live protocol, Fusion, security, risk, and ML records.", availability: "AVAILABLE", cards: [["OVERALL RISK", "LIVE DATA", "Loaded from the deterministic assessment."], ["EVIDENCE COVERAGE", "LIVE DATA", "Loaded from Fusion conclusions."], ["ML WORKER", "LIVE DATA", "Go Core reports optional ML status."], ["GATEWAY", "AUTHORISED ONLY", "Gateway facts require Deep Assessment."]] },
   upload: { title: "Input and capture", eyebrow: "WORKSPACE / INPUT", description: "The browser-supported workflow accepts classic PCAP or CAP files and starts offline passive analysis.", availability: "AVAILABLE", cards: [["PASSIVE PCAP", "AVAILABLE", "Upload and analyse a classic PCAP."], ["PCAPNG", "CONVERT FIRST", "The current API accepts classic PCAP/CAP."], ["PASSIVE LIVE", "ADAPTER REQUIRED", "No browser capture orchestration endpoint exists."], ["DEEP ASSESSMENT", "ADAPTER REQUIRED", "Requires explicit authorization and local sensor support."]] },
@@ -36,9 +51,24 @@ function StatusBadge({ status }: { status: View["availability"] }) { return <spa
 
 export function DashboardShell({ view = "overview" }: { view?: string }) {
   const current = views[view] ?? views.overview;
-  return <div className="min-h-svh bg-black font-mono text-white"><nav className="flex gap-2 overflow-x-auto border-b border-white/15 bg-black px-5 py-3 lg:hidden" aria-label="Dashboard navigation">{navigation.map(([slug, label]) => <Link key={slug} href={slug === "overview" ? "/dashboard" : `/dashboard/${slug}`} className={`shrink-0 border px-3 py-2 text-[9px] tracking-[.1em] ${slug === view ? "border-teal-200 bg-teal-200 text-slate-950" : "border-white/20 text-white/60"}`}>{label}</Link>)}</nav><div className="mx-auto flex max-w-[1600px]">
-    <aside className="hidden w-64 shrink-0 border-r border-white/10 bg-[#0d1320] px-4 py-8 lg:block"><p className="px-3 text-[10px] font-bold tracking-[.16em] text-white/40">IPSEC SENTINEL TWIN</p><nav className="mt-7 grid gap-1" aria-label="Dashboard navigation">{navigation.map(([slug, label]) => <Link key={slug} href={slug === "overview" ? "/dashboard" : `/dashboard/${slug}`} className={`border-l px-3 py-2.5 text-[10px] tracking-[.11em] transition ${slug === view ? "border-teal-300 bg-white/[.06] text-teal-200" : "border-transparent text-white/55 hover:border-white/30 hover:bg-white/[.03] hover:text-white"}`}>{label}</Link>)}</nav><div className="mt-10 border-t border-white/10 pt-5 text-[9px] leading-6 text-white/45">OBSERVED · DERIVED<br />INFERRED · VERIFIED_GATEWAY<br />UNKNOWN · UNAVAILABLE</div></aside>
-    <main className="min-w-0 flex-1 px-5 py-10 sm:px-8 lg:px-12"><div className="border-l border-dashed border-white/35 pl-5"><div className="flex flex-wrap items-start justify-between gap-4 border-b border-white/10 pb-7"><div><p className="text-[10px] font-bold tracking-[.16em] text-teal-200/80">{current.eyebrow}</p><h1 className="mt-3 text-3xl font-bold tracking-[.06em] sm:text-4xl">{current.title.toUpperCase()}</h1><p className="mt-4 max-w-3xl text-sm leading-7 text-white/60">{current.description}</p></div><StatusBadge status={current.availability} /></div></div>
+  return <div className="min-h-svh bg-black font-mono text-white"><nav className="flex gap-2 overflow-x-auto border-b border-white/15 bg-black px-5 py-3 lg:hidden" aria-label="Dashboard navigation">{navigation.map(([slug, label]) => <Link key={slug} href={slug === "overview" ? "/dashboard" : `/dashboard/${slug}`} className={`shrink-0 border px-3 py-2 text-[9px] tracking-[.1em] ${slug === view ? "border-teal-200 bg-teal-200 text-slate-950" : "border-white/20 text-white/60"}`}>{label}</Link>)}</nav><div className="dashboard-shell-grid mx-auto grid max-w-[1600px]">
+    <aside className="dashboard-sidebar group/sidebar sticky top-0 hidden h-svh overflow-hidden border-r border-teal-200/15 bg-[#05090f]/95 px-3 py-4 shadow-[18px_0_60px_rgba(0,0,0,.25)] backdrop-blur-sm lg:block">
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(94,234,212,.08)_1px,transparent_1px),linear-gradient(90deg,rgba(94,234,212,.06)_1px,transparent_1px)] [background-size:26px_26px] opacity-30" />
+      <div className="relative z-10 flex h-full flex-col">
+        <div className="dashboard-sidebar-brand grid items-center gap-3 border border-white/10 bg-white/[.025] px-2.5 py-2">
+          <span className="grid h-8 w-8 shrink-0 place-items-center border border-teal-200/45 bg-teal-200/10 text-[10px] font-bold text-teal-100 shadow-[0_0_18px_rgba(94,234,212,.12)]">IP</span>
+          <p className="dashboard-sidebar-label whitespace-nowrap text-[10px] font-bold tracking-[.16em] text-white/50">IPSEC SENTINEL TWIN</p>
+        </div>
+        <nav className="dashboard-sidebar-nav mt-4 grid gap-1" aria-label="Dashboard navigation">
+          {navigation.map(([slug, label]) => <Link key={slug} href={slug === "overview" ? "/dashboard" : `/dashboard/${slug}`} className={`dashboard-sidebar-link group/link grid items-center gap-3 border px-2 py-2 text-[10px] tracking-[.11em] transition-all duration-300 ${slug === view ? "border-teal-300/60 bg-teal-200/[.08] text-teal-100 shadow-[0_0_24px_rgba(94,234,212,.08)]" : "border-transparent text-white/50 hover:border-white/15 hover:bg-white/[.04] hover:text-white"}`}><span className={`grid h-7 w-7 place-items-center border text-[9px] font-bold transition ${slug === view ? "border-teal-200/55 bg-teal-200/10 text-teal-100" : "border-white/10 text-white/35 group-hover/link:border-white/25 group-hover/link:text-white/75"}`}>{navCodes[slug]}</span><span className="dashboard-sidebar-label whitespace-nowrap">{label}</span></Link>)}
+        </nav>
+        <div className="relative mt-auto border-t border-white/10 pt-4 text-[9px] leading-6 text-white/45">
+          <div className="grid h-8 w-8 place-items-center border border-white/10 text-[10px] text-teal-100/70">Σ</div>
+          <p className="dashboard-sidebar-label mt-3 whitespace-nowrap">OBSERVED · DERIVED<br />INFERRED · VERIFIED_GATEWAY<br />UNKNOWN · UNAVAILABLE</p>
+        </div>
+      </div>
+    </aside>
+    <main className="min-w-0 px-5 py-10 transition-[padding] duration-300 sm:px-8 lg:px-10"><div className="border-l border-dashed border-white/35 pl-5"><div className="flex flex-wrap items-start justify-between gap-4 border-b border-white/10 pb-7"><div><p className="text-[10px] font-bold tracking-[.16em] text-teal-200/80">{current.eyebrow}</p><h1 className="mt-3 text-3xl font-bold tracking-[.06em] sm:text-4xl">{current.title.toUpperCase()}</h1><p className="mt-4 max-w-3xl text-sm leading-7 text-white/60">{current.description}</p></div><StatusBadge status={current.availability} /></div></div>
       <div className="mt-7 flex flex-wrap gap-2 border-y border-white/10 py-4 text-[10px] text-white/45"><span className="border border-white/15 px-3 py-2">WORKSPACE: NONE SELECTED</span><span className="border border-white/15 px-3 py-2">MODE: PASSIVE PCAP</span><span className="border border-white/15 px-3 py-2">GO SERVER: CHECK ON WORKSPACE</span></div>
       <LiveAnalysisPanel view={view} />
       <div className="mt-7 grid border-l border-t border-white/15 sm:grid-cols-2 xl:grid-cols-4">{current.cards.map(([label, value, body]) => <article key={label} className="min-h-44 border-b border-r border-white/15 bg-white/[.018] p-5 transition duration-300 hover:bg-white/[.055]"><p className="text-[10px] tracking-[.13em] text-white/45">{label}</p><h2 className="mt-8 text-lg font-bold tracking-[.06em] text-teal-100">{value}</h2><p className="mt-3 text-xs leading-6 text-white/55">{body}</p></article>)}</div>
