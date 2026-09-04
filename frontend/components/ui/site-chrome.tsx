@@ -8,7 +8,7 @@ export function LandingNavigation({ overlay = false }: { overlay?: boolean }) {
           <span className="grid h-7 w-7 place-items-center bg-teal-300 text-base text-slate-950">Δ</span>
           ALCHEMIST
         </Link>
-        <nav className="hidden items-center gap-4 text-[10px] font-bold tracking-[.14em] text-white/65 xl:flex" aria-label="Primary navigation">
+        <nav className="hidden items-center gap-4 text-[10px] font-bold tracking-[.14em] text-white/65 lg:flex" aria-label="Primary navigation">
           <Link className="transition hover:text-teal-200" href="/#features">CAPABILITIES</Link>
           <Link className="transition hover:text-teal-200" href="/dashboard">DASHBOARD</Link>
           <Link className="transition hover:text-teal-200" href="/dashboard/evidence">EVIDENCE</Link>
