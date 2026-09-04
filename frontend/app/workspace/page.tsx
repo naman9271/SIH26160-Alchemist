@@ -9,6 +9,13 @@ type Upload = { source_id: string; filename: string; packets: number; esp_packet
 type Analysis = { analysis_id: string; state: string; stage: string; failure_reason?: string };
 type WorkspaceMode = "pcap" | "live" | "deep";
 
+const workspaceSteps = [
+  ["01", "MODE", "Choose PCAP, live, or deep assessment."],
+  ["02", "SOURCE", "Attach a classic capture file."],
+  ["03", "ANALYSE", "Run evidence-first processing."],
+  ["04", "RESULTS", "Open the dashboard report."],
+];
+
 async function coreRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`/api/core${path}`, { ...init, cache: "no-store" });
   const body = (await response.json()) as T & { error?: string };
@@ -94,15 +101,65 @@ export default function WorkspacePage() {
 
   return (
     <div className="min-h-svh bg-black font-mono text-white">
-      <main className="mx-auto max-w-7xl px-5 py-16 lg:px-8 lg:py-24">
-        <div className="max-w-3xl border-l border-dashed border-white/40 pl-5">
-          <p className="text-[10px] font-bold tracking-[.18em] text-white/50">OFFLINE PCAP WORKSPACE · 001</p>
-          <h1 className="mt-5 text-3xl font-bold leading-tight tracking-[.06em] sm:text-5xl">START WITH THE CAPTURE.</h1>
-          <p className="mt-5 max-w-2xl text-sm leading-7 text-white/65">Upload a classic PCAP to begin passive analysis. Protocol evidence, deterministic assessment, and optional metadata-only ML remain clearly separated.</p>
-        </div>
+      <div className="workspace-sidebar-shell mx-auto grid max-w-[1600px]">
+        <aside className="workspace-sidebar group/sidebar relative z-20 overflow-hidden border-b border-white/15 bg-[#060910] px-5 py-6 transition-shadow duration-300 lg:sticky lg:top-0 lg:h-svh lg:w-full lg:border-b-0 lg:border-r lg:px-3 lg:py-2 lg:hover:shadow-[18px_0_46px_rgba(0,0,0,.42)]">
+          <div aria-hidden="true" className="absolute inset-0 opacity-25 [background-image:linear-gradient(rgba(94,234,212,.14)_1px,transparent_1px),linear-gradient(90deg,rgba(94,234,212,.14)_1px,transparent_1px)] [background-size:34px_34px]" />
+          <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(circle_at_20%_0,rgba(94,234,212,.18),transparent_0_18rem),linear-gradient(180deg,rgba(0,0,0,.18),rgba(0,0,0,.86))]" />
+          <div className="relative z-10 flex min-h-full flex-col">
+            <div className="flex items-center gap-3">
+              <div className="grid h-11 w-11 shrink-0 place-items-center border border-teal-200/45 bg-teal-200/[.08] text-xs font-bold tracking-[.16em] text-teal-100 shadow-[0_0_24px_rgba(94,234,212,.12)]">IP</div>
+              <div className="min-w-0 opacity-100 transition-opacity duration-300 lg:w-0 lg:overflow-hidden lg:opacity-0 lg:group-hover/sidebar:w-auto lg:group-hover/sidebar:opacity-100">
+                <p className="whitespace-nowrap text-[9px] font-bold tracking-[.18em] text-teal-100/70">IPSEC SENTINEL TWIN</p>
+                <p className="mt-1 whitespace-nowrap text-[9px] tracking-[.14em] text-white/35">WORKSPACE CONTROL</p>
+              </div>
+            </div>
 
-        <div className="mt-14 grid border-l border-t border-white/20 lg:grid-cols-[1.3fr_.7fr]">
-          <form className="border-b border-r border-white/20 p-6 sm:p-9" onSubmit={startWorkflow}>
+            <div className="mt-4 border-y border-white/10 py-4 opacity-100 transition-opacity duration-300 lg:opacity-0 lg:group-hover/sidebar:opacity-100">
+              <p className="whitespace-nowrap text-[10px] tracking-[.16em] text-white/40">WORKSPACE STATE</p>
+              <div className="mt-4 grid gap-3 text-[10px]">
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-white/45">CORE</span>
+                  <span className={health === "ready" ? "text-teal-200" : health === "checking" ? "text-amber-200" : "text-red-200"}>{health.toUpperCase()}</span>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-white/45">MODE</span>
+                  <span className="text-white/75">{mode.toUpperCase()}</span>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-white/45">PHASE</span>
+                  <span className="text-white/75">{phase.toUpperCase()}</span>
+                </div>
+              </div>
+            </div>
+
+            <nav className="mt-4 grid gap-2" aria-label="Workspace steps">
+              {workspaceSteps.map(([number, label, detail]) => (
+                <a key={label} href={label === "RESULTS" ? "#analysis-state" : "#workspace-input"} className="group block overflow-hidden border border-white/10 bg-black/30 p-3 transition-all duration-300 hover:border-teal-200/60 hover:bg-teal-200/[.055]">
+                  <span className="flex min-h-8 items-center gap-3">
+                    <span className="min-w-0 whitespace-nowrap text-[10px] font-bold tracking-[.12em] text-teal-100/70 transition group-hover:text-teal-100">{label}</span>
+                    <span className="hidden whitespace-nowrap text-[9px] tracking-[.12em] text-white/30 opacity-0 transition-opacity duration-300 lg:inline lg:group-hover/sidebar:opacity-100">{number}</span>
+                  </span>
+                  <span className="block max-h-0 overflow-hidden text-[10px] leading-5 text-white/45 opacity-0 transition-all duration-300 group-hover:mt-2 group-hover:max-h-16 group-hover:text-white/65 group-hover:opacity-100">{detail}</span>
+                </a>
+              ))}
+            </nav>
+
+            <div className="mt-auto hidden border border-dashed border-teal-200/25 bg-teal-200/[.035] p-4 text-[10px] leading-5 text-white/48 opacity-0 transition-opacity duration-300 lg:block lg:group-hover/sidebar:opacity-100">
+              <p className="font-bold tracking-[.14em] text-teal-100/75">NO PAYLOAD DECRYPTION</p>
+              <p className="mt-3">Workspace actions stay limited to passive capture evidence unless Deep Assessment is explicitly authorized.</p>
+            </div>
+          </div>
+        </aside>
+
+        <main className="min-w-0 px-5 py-16 lg:px-8 lg:py-24">
+          <div className="max-w-3xl border-l border-dashed border-white/40 pl-5">
+            <p className="text-[10px] font-bold tracking-[.18em] text-white/50">OFFLINE PCAP WORKSPACE · 001</p>
+            <h1 className="mt-5 text-3xl font-bold leading-tight tracking-[.06em] sm:text-5xl">START WITH THE CAPTURE.</h1>
+            <p className="mt-5 max-w-2xl text-sm leading-7 text-white/65">Upload a classic PCAP to begin passive analysis. Protocol evidence, deterministic assessment, and optional metadata-only ML remain clearly separated.</p>
+          </div>
+
+          <div id="workspace-input" className="mt-14 grid scroll-mt-24 border-l border-t border-white/20 lg:grid-cols-[1.3fr_.7fr]">
+            <form className="border-b border-r border-white/20 p-6 sm:p-9" onSubmit={startWorkflow}>
             <p className="text-[10px] tracking-[.16em] text-white/45">ANALYSIS MODE</p>
             <div className="mt-5 grid gap-2 sm:grid-cols-3">
               {([['pcap', 'PASSIVE PCAP', 'Upload an offline capture.'], ['live', 'PASSIVE LIVE', 'Observe an authorized interface.'], ['deep', 'DEEP ASSESSMENT', 'Verify authorized gateway facts.']] as const).map(([value, label, detail]) => <label key={value} className={`cursor-pointer border p-3 transition ${mode === value ? "border-teal-200 bg-teal-200/10" : "border-white/20 hover:border-white/55"}`}><input className="sr-only" type="radio" name="mode" value={value} checked={mode === value} onChange={() => { setMode(value); setError(undefined); }} /><span className="block text-[10px] font-bold tracking-[.1em]">{label}</span><span className="mt-2 block text-[10px] leading-4 text-white/50">{detail}</span></label>)}
@@ -119,9 +176,9 @@ export default function WorkspacePage() {
             </label>
             <button className="mt-7 w-full border border-white bg-white px-6 py-3 text-xs font-bold tracking-[.14em] text-black transition hover:bg-black hover:text-white disabled:cursor-not-allowed disabled:opacity-35" type="submit" disabled={!file || busy || health !== "ready" || mode !== "pcap"}>{action}</button>
             {error && <p className="mt-5 border border-red-300/60 bg-red-300/10 p-4 text-xs leading-6 text-red-100">{error}</p>}
-          </form>
+            </form>
 
-          <aside className="border-b border-r border-white/20 p-6 sm:p-9">
+            <aside className="border-b border-r border-white/20 p-6 sm:p-9">
             <p className="text-[10px] tracking-[.16em] text-white/45">SYSTEM COVERAGE</p>
             <dl className="mt-6 space-y-5 text-xs">
               <div className="border-b border-white/15 pb-5"><dt className="text-white">GO SERVER</dt><dd className="mt-2 text-white/55">{health === "ready" ? "READY · browser API reachable" : health === "checking" ? "CHECKING…" : "UNAVAILABLE · start Core or set CORE_HTTP_URL"}</dd></div>
@@ -136,15 +193,16 @@ export default function WorkspacePage() {
               <button className="mt-5 w-full border border-white/20 px-3 py-2 text-[10px] tracking-[.12em] text-white/35" type="button" disabled>START LIVE CAPTURE</button>
               <p className="mt-3 text-[10px] leading-5 text-white/45">Live capture needs the Go Server browser adapter; the current HTTP contract intentionally does not start or stop capture.</p>
             </div>
-          </aside>
-        </div>
+            </aside>
+          </div>
 
-        <section className="mt-10 border border-white/20 p-6 sm:p-9">
+          <section id="analysis-state" className="mt-10 scroll-mt-24 border border-white/20 p-6 sm:p-9">
           <div className="flex flex-col gap-3 border-b border-white/15 pb-5 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-[10px] tracking-[.16em] text-white/45">ANALYSIS STATE</p><h2 className="mt-3 text-lg font-bold tracking-[.08em]">{analysis ? analysis.state.replaceAll("_", " ") : "AWAITING SOURCE"}</h2></div><span className="text-xs text-white/50">{analysis ? `OPERATIONAL STAGE: ${analysis.stage.replaceAll("_", " ")}` : "NO ACTIVE ANALYSIS"}</span></div>
           {upload ? <p className="mt-5 text-xs leading-6 text-white/60">SOURCE ACCEPTED: {upload.filename} · {upload.packets.toLocaleString()} packets received · {upload.esp_packets.toLocaleString()} ESP packets observed. These counters are not security conclusions.</p> : <p className="mt-5 text-xs leading-6 text-white/50">Upload a PCAP to create a workspace and begin the browser-supported workflow.</p>}
           {phase === "complete" && analysis && <Link href={`/dashboard?analysis=${encodeURIComponent(analysis.analysis_id)}`} className="mt-6 inline-block border border-white px-4 py-2 text-[10px] font-bold tracking-[.12em] transition hover:bg-white hover:text-black">OPEN LIVE RESULTS DASHBOARD</Link>}
-        </section>
-      </main>
+          </section>
+        </main>
+      </div>
       <LandingFooter />
     </div>
   );
