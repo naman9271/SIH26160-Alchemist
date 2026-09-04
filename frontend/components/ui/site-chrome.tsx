@@ -4,6 +4,7 @@ export function LandingNavigation({ overlay = false }: { overlay?: boolean }) {
   return (
     <header className={`${overlay ? "absolute" : "relative"} inset-x-0 top-0 z-30 border-b border-white/20 bg-black/75 font-mono text-white backdrop-blur-sm`}>
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-5 px-4 py-3 lg:px-8 lg:py-4">
+        <Link href="/" className="shrink-0 text-[9px] font-bold tracking-[.14em] text-white/70 transition hover:text-teal-200">HOME</Link>
         <nav className="hidden items-center gap-4 text-[9px] font-bold tracking-[.13em] text-white/65 xl:flex" aria-label="Primary navigation">
           <Link className="transition hover:text-teal-200" href="/#features">CAPABILITIES</Link>
           <Link className="transition hover:text-teal-200" href="/dashboard">DASHBOARD</Link>

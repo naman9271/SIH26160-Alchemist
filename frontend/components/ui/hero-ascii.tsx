@@ -13,14 +13,9 @@ const signalBars = [7, 15, 10, 22, 14, 28, 18, 9];
 
 export function HeroAscii() {
   useEffect(() => {
-    if (window.UnicornStudio?.isInitialized) return;
-
     const existing = document.querySelector<HTMLScriptElement>('script[data-unicorn-studio="true"]');
     const initialize = () => {
-      if (!window.UnicornStudio?.isInitialized) {
-        window.UnicornStudio?.init();
-        if (window.UnicornStudio) window.UnicornStudio.isInitialized = true;
-      }
+      window.UnicornStudio?.init();
     };
 
     if (existing) {
@@ -50,8 +45,8 @@ export function HeroAscii() {
       <div aria-hidden="true" className="absolute bottom-[5vh] left-0 z-20 h-8 w-8 border-b-2 border-l-2 border-white/30 lg:h-12 lg:w-12" />
       <div aria-hidden="true" className="absolute bottom-[5vh] right-0 z-20 h-8 w-8 border-b-2 border-r-2 border-white/30 lg:h-12 lg:w-12" />
 
-      <div className="relative z-10 flex min-h-svh items-start pt-[9vh] sm:pt-[9vh] lg:pt-[10vh]">
-        <div className="mx-auto w-full max-w-7xl px-6 lg:ml-[6%] lg:px-16">
+      <div className="relative z-10 flex min-h-svh items-start pt-[6vh] sm:pt-[7vh] lg:pt-[7vh]">
+        <div className="mx-auto w-full max-w-7xl px-5 lg:ml-[2%] lg:px-12">
           <div className="relative max-w-2xl">
             <div className="mb-3 flex items-center gap-2 opacity-60"><span className="h-px w-8 bg-white" /><span className="text-[10px] tracking-wider">001</span><span className="h-px flex-1 bg-white" /></div>
             <div className="relative">
@@ -61,7 +56,7 @@ export function HeroAscii() {
             <div aria-hidden="true" className="mb-3 hidden gap-1 opacity-40 lg:flex">{Array.from({ length: 40 }, (_, index) => <span key={index} className="h-0.5 w-0.5 rounded-full bg-white" />)}</div>
             <div className="relative"><p className="mb-6 max-w-xl text-sm leading-7 text-gray-300/80 lg:mb-8 lg:text-lg lg:leading-8">Turn passive IPsec VPN captures into explainable protocol facts and deterministic security findings—without decrypting ESP traffic.</p><span aria-hidden="true" className="absolute -right-4 top-1/2 hidden h-3 w-3 -translate-y-1/2 border border-white/30 lg:block" /></div>
             <div className="flex flex-col gap-3 lg:flex-row lg:gap-4">
-              <Link href="/workspace" className="group relative border border-white px-5 py-2 text-center text-xs transition-all duration-200 hover:bg-white hover:text-black lg:px-6 lg:py-2.5 lg:text-sm"><span className="absolute -left-1 -top-1 hidden h-2 w-2 border-l border-t border-white opacity-0 transition-opacity group-hover:opacity-100 lg:block" />START ANALYSIS</Link>
+              <Link href="/workspace" className="group relative overflow-hidden border border-white/70 bg-white/10 px-6 py-3 text-center text-xs font-bold tracking-[.16em] text-white shadow-[0_0_28px_rgba(255,255,255,.12)] backdrop-blur-sm transition-all duration-300 hover:border-teal-200 hover:bg-teal-200/15 hover:text-teal-100 hover:shadow-[0_0_38px_rgba(94,234,212,.28)] lg:px-8 lg:py-3.5 lg:text-sm"><span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-teal-100/25 to-transparent transition-transform duration-700 group-hover:translate-x-full" /><span className="absolute -left-1 -top-1 hidden h-3 w-3 border-l border-t border-white/70 group-hover:border-teal-100 lg:block" /><span className="absolute -bottom-1 -right-1 hidden h-3 w-3 border-b border-r border-white/70 group-hover:border-teal-100 lg:block" /><span className="relative">START ANALYSIS</span></Link>
               <Link href="/#features" className="border border-white px-5 py-2 text-center text-xs transition-all duration-200 hover:bg-white hover:text-black lg:px-6 lg:py-2.5 lg:text-sm">LEARN MORE</Link>
             </div>
             <div className="mt-6 hidden items-center gap-2 opacity-40 lg:flex"><span className="text-[9px]">∞</span><span className="h-px flex-1 bg-white" /><span className="text-[9px]">ALCHEMIST</span></div>
