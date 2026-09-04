@@ -125,7 +125,8 @@ make down
 The demo uploads the checked-in classic PCAP sample, runs passive/Fusion/
 security/ML analysis, and verifies completion through the Go Core HTTP API.
 The frontend is intentionally kept outside the Docker setup; run it locally with
-`npm ci && npm run dev` from `frontend/` and open `http://localhost:3000`.
+`pnpm install --frozen-lockfile && pnpm dev` from `frontend/` and open
+`http://localhost:3000`.
 
 ### Manual development
 
@@ -159,8 +160,9 @@ python -m pip install -r requirements-runtime.txt
 python -m src.grpc_server
 ```
 
-Then run `npm ci && npm run dev` in `frontend/`. The browser UI accepts classic
-PCAP (`.pcap`/`.cap`) uploads. Convert PCAPNG before uploading:
+Then run `pnpm install --frozen-lockfile && pnpm dev` in `frontend/`. The
+browser UI accepts classic PCAP (`.pcap`/`.cap`) uploads. Convert PCAPNG before
+uploading:
 
 ```bash
 editcap -F libpcap input.pcapng output.pcap
