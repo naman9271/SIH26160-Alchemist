@@ -67,7 +67,10 @@ export function LiveAnalysisPanel({ view = "overview" }: { view?: string }) {
     }
   }, [analysisId]);
 
-  useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => { void refresh(); }, 0);
+    return () => window.clearTimeout(timer);
+  }, [refresh]);
   useEffect(() => {
     const state = insights?.analysis?.state;
     if (!analysisId || !state || !["QUEUED", "RUNNING"].includes(state)) return;

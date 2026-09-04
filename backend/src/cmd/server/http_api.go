@@ -12,6 +12,7 @@ import (
 	inputv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/input"
 	reportv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/report"
 	workspacev1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/workspace"
+	flowv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/sensor/v1/flow"
 	coreanalysis "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/analysis"
 	corefusion "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/fusion"
 	coreinput "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/input"
@@ -23,16 +24,17 @@ import (
 	coreworkspace "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/workspace"
 	shared "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/domain/sensor"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/fusion/query"
+	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/sensor/flow"
 )
 
 const maxHTTPPCAPBytes = 4 << 30
 
-func registerWorkflowAPI(mux *http.ServeMux, input *coreinput.Service, analysis *coreanalysis.Service, reports *corereport.Service, workspace *coreworkspace.Service, protocol *coreprotocol.Service, fusion *corefusion.Service, security *coresecurity.Service, risk *corerisk.Service, ml *coreml.Service) {
+func registerWorkflowAPI(mux *http.ServeMux, input *coreinput.Service, analysis *coreanalysis.Service, reports *corereport.Service, workspace *coreworkspace.Service, protocol *coreprotocol.Service, fusion *corefusion.Service, security *coresecurity.Service, risk *corerisk.Service, ml *coreml.Service, flows *flow.Service) {
 	mux.HandleFunc("POST /api/v1/pcap", func(w http.ResponseWriter, r *http.Request) { uploadPCAP(w, r, input, workspace) })
 	mux.HandleFunc("POST /api/v1/analyses", func(w http.ResponseWriter, r *http.Request) { startAnalysis(w, r, analysis) })
 	mux.HandleFunc("GET /api/v1/analyses/{analysisID}", func(w http.ResponseWriter, r *http.Request) { getAnalysis(w, r, analysis) })
 	mux.HandleFunc("GET /api/v1/analyses/{analysisID}/insights", func(w http.ResponseWriter, r *http.Request) {
-		getAnalysisInsights(w, r, analysis, protocol, fusion, security, risk, ml)
+		getAnalysisInsights(w, r, input, analysis, protocol, fusion, security, risk, ml, flows)
 	})
 	mux.HandleFunc("POST /api/v1/analyses/{analysisID}/report", func(w http.ResponseWriter, r *http.Request) { generateReport(w, r, reports) })
 	mux.HandleFunc("GET /api/v1/reports/{reportID}", func(w http.ResponseWriter, r *http.Request) { getReport(w, r, reports) })
@@ -43,7 +45,7 @@ func registerWorkflowAPI(mux *http.ServeMux, input *coreinput.Service, analysis 
 // the current analysis. Native gRPC remains the complete trusted-client API;
 // this endpoint exposes the data needed by the dashboard without publishing a
 // generic gRPC proxy to browsers.
-func getAnalysisInsights(w http.ResponseWriter, r *http.Request, analysis *coreanalysis.Service, protocol *coreprotocol.Service, fusion *corefusion.Service, security *coresecurity.Service, risk *corerisk.Service, ml *coreml.Service) {
+func getAnalysisInsights(w http.ResponseWriter, r *http.Request, input *coreinput.Service, analysis *coreanalysis.Service, protocol *coreprotocol.Service, fusion *corefusion.Service, security *coresecurity.Service, risk *corerisk.Service, ml *coreml.Service, flows *flow.Service) {
 	analysisID := r.PathValue("analysisID")
 	record, err := analysis.Get(r.Context(), analysisID)
 	if err != nil {
@@ -132,6 +134,23 @@ func getAnalysisInsights(w http.ResponseWriter, r *http.Request, analysis *corea
 			section["worker"] = worker
 		}
 		result["ml"] = section
+	}
+
+	// Flow telemetry is collected by the in-process Sensor service. Keep it in
+	// this analysis-scoped response so browsers never need direct access to the
+	// Sensor gRPC API or its session identifiers.
+	if input != nil && flows != nil {
+		section := map[string]any{}
+		if source, sourceErr := input.Get(r.Context(), record.SourceID); sourceErr == nil && source.SessionID != "" {
+			if records, next, flowErr := flows.List(r.Context(), &flowv1.ListFlowsRequest{SensorSessionId: source.SessionID, PageSize: 200}); flowErr == nil {
+				items := make([]any, 0, len(records))
+				for _, item := range records {
+					items = append(items, map[string]any{"flow": flow.ToProto(item), "stats": flow.Stats(item)})
+				}
+				section["items"], section["next_page_token"] = items, next
+			}
+		}
+		result["flows"] = section
 	}
 
 	writeJSON(w, http.StatusOK, result)
