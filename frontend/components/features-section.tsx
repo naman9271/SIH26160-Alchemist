@@ -49,28 +49,18 @@ export function FeaturesSection() {
           <p className="hidden max-w-xs text-right font-mono text-xs leading-relaxed text-foreground/50 md:block">The capture-to-report workflow for protocol evidence, bounded inference, and deterministic security assessment.</p>
         </div>
         <div ref={gridRef} className="grid grid-cols-1 auto-rows-[156px] gap-3 sm:grid-cols-2 md:auto-rows-[170px] md:grid-cols-4 md:gap-5">
-          {features.map((feature, index) => <FeatureCard key={feature.title} feature={feature} index={index} persistActive={index === 0} />)}
+          {features.map((feature, index) => <FeatureCard key={feature.title} feature={feature} index={index} />)}
         </div>
       </div>
     </section>
   );
 }
 
-function FeatureCard({ feature, index, persistActive }: { feature: Feature; index: number; persistActive: boolean }) {
+function FeatureCard({ feature, index }: { feature: Feature; index: number }) {
   const cardRef = useRef<HTMLElement>(null);
   const [hovered, setHovered] = useState(false);
-  const [scrollActive, setScrollActive] = useState(false);
 
-  useEffect(() => {
-    const card = cardRef.current;
-    if (!card || !persistActive) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    gsap.registerPlugin(ScrollTrigger);
-    const trigger = ScrollTrigger.create({ trigger: card, start: "top 80%", onEnter: () => setScrollActive(true) });
-    return () => trigger.kill();
-  }, [persistActive]);
-
-  const active = hovered || scrollActive;
+  const active = hovered;
   return (
     <article ref={cardRef} className={`group relative flex cursor-pointer flex-col justify-between overflow-hidden border border-border/40 p-4 transition-all duration-500 md:p-5 ${feature.span} ${active ? "border-primary/60" : ""}`} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
       <div aria-hidden="true" className={`absolute inset-0 bg-primary/5 transition-opacity duration-500 ${active ? "opacity-100" : "opacity-0"}`} />

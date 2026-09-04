@@ -3,7 +3,7 @@ import { LandingNavigation } from "@/components/ui/site-chrome";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Alchemist · IPsec Evidence Workspace",
+  title: "IPsec Sentinel Twin · Evidence Workspace",
   description: "Evidence-led IPsec traffic analysis and security assessment.",
 };
 

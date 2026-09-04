@@ -25,7 +25,7 @@ export function LandingFooter() {
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(94,234,212,.12)_1px,transparent_1px),linear-gradient(90deg,rgba(94,234,212,.12)_1px,transparent_1px)] [background-size:42px_42px]" />
       <div className="relative z-10 mx-auto grid max-w-7xl gap-6 sm:grid-cols-[1fr_auto] sm:items-end">
         <div>
-          <Link href="/" className="text-sm font-bold tracking-[.2em] text-white transition hover:text-teal-200">ALCHEMIST</Link>
+          <Link href="/" className="text-sm font-bold tracking-[.2em] text-white transition hover:text-teal-200">IPSEC SENTINEL</Link>
           <p className="mt-2 max-w-md leading-5">Evidence-led IPsec analysis for passive captures and authorized Deep Assessment.</p>
         </div>
         <nav className="flex flex-wrap gap-x-5 gap-y-3 text-teal-200/80" aria-label="Footer navigation">
@@ -35,7 +35,7 @@ export function LandingFooter() {
           <Link href="/workspace" className="hover:text-teal-100">WORKSPACE</Link>
         </nav>
         <div className="border-t border-sky-200/15 pt-4 sm:col-span-2 sm:flex sm:justify-between">
-          <span>SMART INDIA HACKATHON 2026</span>
+          <span>EVIDENCE WORKSPACE</span>
           <span>PASSIVE · EXPLAINABLE · NO ESP DECRYPTION</span>
         </div>
       </div>

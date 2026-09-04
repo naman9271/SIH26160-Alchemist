@@ -33,7 +33,7 @@ export function EvidenceStorySection() {
           transition={{ duration: 0.55, ease: "easeOut", delay: 0.08 }}
         >
           <h2 className="max-w-3xl text-3xl font-bold leading-tight tracking-[.04em] sm:text-5xl">Every conclusion keeps its source, status, and limit.</h2>
-          <p className="max-w-sm text-sm leading-7 text-white/60">Alchemist gives analysts a defensible account of what is observed, derived, inferred, unavailable, or still unknown.</p>
+          <p className="max-w-sm text-sm leading-7 text-white/60">The workspace gives analysts a defensible account of what is observed, derived, inferred, unavailable, or still unknown.</p>
         </motion.div>
         <div className="mt-10 grid border-l border-t border-sky-200/15 sm:grid-cols-2 lg:grid-cols-5">
           {stages.map(([number, title, copy, glow], index) => (

@@ -31,7 +31,7 @@ export const teamFocus: TeamFocus[] = [
   {
     area: "EVIDENCE UX",
     role: "Frontend & Reporting",
-    description: "Designs the evidence-led workflow, accessible status language, and reports used by analysts and SIH evaluators.",
+    description: "Designs the evidence-led workflow, accessible status language, and reports used by analysts and evaluators.",
   },
 ];
 
@@ -48,7 +48,7 @@ export default function TeamsPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45, ease: "easeOut" }}
           >
-            SIH 2026 / TEAM
+            PROTOCOL TEAM
           </motion.p>
           <motion.div
             className="mt-5 grid gap-8 lg:grid-cols-[.9fr_1.1fr] lg:items-end"
@@ -57,7 +57,7 @@ export default function TeamsPage() {
             transition={{ duration: 0.6, ease: "easeOut", delay: 0.08 }}
           >
             <h1 className="max-w-3xl font-serif text-5xl font-normal leading-[.9] tracking-[-.06em] sm:text-7xl">THE PEOPLE BEHIND THE EVIDENCE.</h1>
-            <p className="max-w-md text-sm leading-7 text-white/60">Alchemist brings protocol engineering, metadata-aware ML, deterministic security analysis, and clear evidence UX into one disciplined workflow.</p>
+            <p className="max-w-md text-sm leading-7 text-white/60">The team brings protocol engineering, metadata-aware ML, deterministic security analysis, and clear evidence UX into one disciplined workflow.</p>
           </motion.div>
 
           <div className="mt-12 grid gap-px border border-sky-200/20 bg-sky-200/20 md:grid-cols-2">
