@@ -16,11 +16,13 @@ import (
 	coreanalysis "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/analysis"
 	corefusion "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/fusion"
 	coreinput "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/input"
+	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/localsensor"
 	coreml "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/ml"
 	coreprotocol "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/protocolread"
 	corereport "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/report"
 	corerisk "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/risk"
 	coresecurity "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/security"
+	coresystem "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/system"
 	coreworkspace "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/workspace"
 	shared "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/domain/sensor"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/fusion/query"
@@ -29,7 +31,8 @@ import (
 
 const maxHTTPPCAPBytes = 4 << 30
 
-func registerWorkflowAPI(mux *http.ServeMux, input *coreinput.Service, analysis *coreanalysis.Service, reports *corereport.Service, workspace *coreworkspace.Service, protocol *coreprotocol.Service, fusion *corefusion.Service, security *coresecurity.Service, risk *corerisk.Service, ml *coreml.Service, flows *flow.Service) {
+func registerWorkflowAPI(mux *http.ServeMux, input *coreinput.Service, analysis *coreanalysis.Service, reports *corereport.Service, workspace *coreworkspace.Service, protocol *coreprotocol.Service, fusion *corefusion.Service, security *coresecurity.Service, risk *corerisk.Service, ml *coreml.Service, flows *flow.Service, system coresystem.Service, localSensor *localsensor.Service) {
+	mux.HandleFunc("GET /api/v1/system/overview", func(w http.ResponseWriter, r *http.Request) { getSystemOverview(w, r, system, localSensor) })
 	mux.HandleFunc("POST /api/v1/pcap", func(w http.ResponseWriter, r *http.Request) { uploadPCAP(w, r, input, workspace) })
 	mux.HandleFunc("POST /api/v1/analyses", func(w http.ResponseWriter, r *http.Request) { startAnalysis(w, r, analysis) })
 	mux.HandleFunc("GET /api/v1/analyses/{analysisID}", func(w http.ResponseWriter, r *http.Request) { getAnalysis(w, r, analysis) })
@@ -39,6 +42,43 @@ func registerWorkflowAPI(mux *http.ServeMux, input *coreinput.Service, analysis 
 	mux.HandleFunc("POST /api/v1/analyses/{analysisID}/report", func(w http.ResponseWriter, r *http.Request) { generateReport(w, r, reports) })
 	mux.HandleFunc("GET /api/v1/reports/{reportID}", func(w http.ResponseWriter, r *http.Request) { getReport(w, r, reports) })
 	mux.HandleFunc("GET /api/v1/reports/{reportID}/download", func(w http.ResponseWriter, r *http.Request) { downloadReport(w, r, reports) })
+}
+
+// getSystemOverview intentionally exposes only readiness/capability data. It
+// gives the dashboard a real view of every local dependency without exposing
+// privileged VICI/XFRM commands or raw Sensor control APIs to a browser.
+func getSystemOverview(w http.ResponseWriter, r *http.Request, system coresystem.Service, localSensor *localsensor.Service) {
+	if system == nil {
+		writeWorkflowError(w, shared.NewError(shared.Unavailable, "", "Core system service is unavailable"))
+		return
+	}
+	result := map[string]any{}
+	if value, err := system.Version(r.Context()); err == nil {
+		result["version"] = value
+	}
+	if value, err := system.Readiness(r.Context()); err == nil {
+		result["readiness"] = value
+	}
+	if value, err := system.Capabilities(r.Context()); err == nil {
+		result["capabilities"] = value
+	}
+	if value, err := system.RuntimeStats(r.Context()); err == nil {
+		result["runtime"] = value
+	}
+	if localSensor != nil {
+		local := map[string]any{}
+		if value, err := localSensor.Status(r.Context()); err == nil {
+			local["status"] = value
+		}
+		if value, err := localSensor.Capabilities(r.Context()); err == nil {
+			local["capabilities"] = value
+		}
+		if value, err := localSensor.Probe(r.Context()); err == nil {
+			local["mode_availability"] = value
+		}
+		result["local_sensor"] = local
+	}
+	writeJSON(w, http.StatusOK, result)
 }
 
 // getAnalysisInsights is deliberately a read-only, browser-oriented view of

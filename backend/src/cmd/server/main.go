@@ -13,6 +13,7 @@ import (
 
 	runtimeconfigv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/runtimeconfig"
 	coresystemv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/system"
+	sensorv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/sensor/v1"
 	mlworkerv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/ml/v1"
 	coreanalysis "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/analysis"
 	coreartifact "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/artifact"
@@ -32,9 +33,11 @@ import (
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/workspace"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/fusion"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/sensor/acquisition"
+	sensorsystem "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/sensor/system"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/sensor/vici"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/sensor/xfrm"
 	coretransport "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/transport/grpc/core"
+	sensortransport "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/transport/grpc/sensor"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -84,6 +87,8 @@ func main() {
 	coreEventService := coreevents.New()
 	analysisService.SetEvents(coreEventService)
 	policyService := corepolicy.New(fusionRuntime.Policy)
+	localSensorService := localsensor.New(provider)
+	sensorSystemService := sensorsystem.New(sensorsystem.Options{Dependencies: dependencies.SensorSystemProvider{Provider: provider}, Metrics: dependencies.SensorSystemProvider{Provider: provider}})
 	fusionService := corefusion.New(coreprotocol.WorkspaceRunResolver{Workspace: workspaceService}, fusionRuntime.Fusion, fusionRuntime.Provenance, fusionRuntime.Ingest)
 	securityService := coresecurity.New(fusionService)
 	riskService := corerisk.New(securityService)
@@ -112,7 +117,7 @@ func main() {
 		grpcServer,
 		coretransport.NewSystemHandler(systemService),
 		coretransport.NewWorkspaceHandler(workspaceService),
-		coretransport.NewLocalSensorHandler(localsensor.New(provider)),
+		coretransport.NewLocalSensorHandler(localSensorService),
 		coretransport.NewInputHandler(inputService, workspaceService),
 		coretransport.NewAnalysisHandler(analysisService),
 		coretransport.NewProtocolReadHandler(protocolService),
@@ -125,6 +130,26 @@ func main() {
 		coretransport.NewArtifactHandler(artifactService),
 		coretransport.NewRuntimeConfigHandler(runtimeConfigService),
 		coretransport.NewEventHandler(workspaceService, fusionRuntime.Events, coreEventService),
+	)
+	// Sensor services share the Core gRPC listener but were previously only
+	// constructed in-process. Register them so every implemented Sensor API is
+	// reachable by trusted gRPC clients; the browser still uses the HTTP BFF.
+	sensortransport.RegisterAcquisitionServices(
+		grpcServer,
+		sensortransport.NewSessionHandler(sensorServices.Sessions),
+		sensortransport.NewNetworkInterfaceHandler(sensorServices.Interfaces),
+		sensortransport.NewCaptureHandler(sensorServices.Captures),
+	)
+	sensorv1.RegisterSensorSystemServiceServer(grpcServer, sensortransport.NewSystemHandler(sensorSystemService))
+	sensortransport.RegisterDeepAndTelemetryServices(
+		grpcServer,
+		sensortransport.NewXfrmHandler(xfrmService),
+		sensortransport.NewTelemetryHandler(sensorServices.Sessions, sensorServices.Flows),
+	)
+	sensortransport.RegisterTelemetryServices(
+		grpcServer,
+		sensortransport.NewFlowHandler(sensorServices.Flows),
+		sensortransport.NewViciHandler(viciService),
 	)
 	grpcAddress := envOrDefault("CORE_GRPC_ADDRESS", "127.0.0.1:50052")
 	grpcListener, err := net.Listen("tcp", grpcAddress)
@@ -165,7 +190,7 @@ func main() {
 			},
 		})
 	})
-	registerWorkflowAPI(mux, inputService, analysisService, reportService, workspaceService, protocolService, fusionService, securityService, riskService, mlService, sensorServices.Flows)
+	registerWorkflowAPI(mux, inputService, analysisService, reportService, workspaceService, protocolService, fusionService, securityService, riskService, mlService, sensorServices.Flows, systemService, localSensorService)
 	httpAddress := envOrDefault("CORE_HTTP_ADDRESS", "127.0.0.1:8080")
 	httpServer := &http.Server{
 		Addr: httpAddress, Handler: mux,

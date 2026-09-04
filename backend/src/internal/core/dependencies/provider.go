@@ -12,6 +12,7 @@ import (
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/localsensor"
 	coresystem "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/system"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/sensor/acquisition"
+	sensorsystem "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/sensor/system"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/sensor/vici"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/sensor/xfrm"
 	"google.golang.org/grpc"
@@ -25,6 +26,70 @@ type Provider struct {
 	FusionAvailable bool
 	VICI            *vici.Service
 	XFRM            *xfrm.Service
+}
+
+// SensorSystemProvider adapts the in-process Core dependency provider to the
+// SensorSystem contract. Keeping this adapter separate prevents the two API
+// versions from being accidentally conflated while allowing both surfaces to
+// report the same real local dependencies.
+type SensorSystemProvider struct{ Provider *Provider }
+
+func (p SensorSystemProvider) Readiness(ctx context.Context) (sensorsystem.Readiness, error) {
+	if p.Provider == nil {
+		return sensorsystem.Readiness{}, context.Canceled
+	}
+	if err := ctx.Err(); err != nil {
+		return sensorsystem.Readiness{}, err
+	}
+	ready := sensorsystem.ComponentUnavailable
+	if p.Provider.sensorAvailable(ctx) {
+		ready = sensorsystem.ComponentReady
+	}
+	temporary := sensorsystem.ComponentUnavailable
+	if file, err := os.CreateTemp("", "ipsec-sensor-readiness-*"); err == nil {
+		name := file.Name()
+		_ = file.Close()
+		_ = os.Remove(name)
+		temporary = sensorsystem.ComponentReady
+	}
+	viciState, xfrmState := sensorsystem.ComponentUnavailable, sensorsystem.ComponentUnavailable
+	if p.Provider.VICI != nil {
+		if probe, err := p.Provider.VICI.Probe(ctx, vici.DefaultSocketURI); err == nil && probe.GetAvailable() {
+			viciState = sensorsystem.ComponentReady
+		}
+	}
+	if p.Provider.XFRM != nil {
+		if caps, err := p.Provider.XFRM.Capabilities(ctx); err == nil && caps.GetAvailable() {
+			xfrmState = sensorsystem.ComponentReady
+		}
+	}
+	return sensorsystem.Readiness{CaptureEngine: ready, TempStorage: temporary, ProtocolEngine: sensorsystem.ComponentReady, VICI: viciState, XFRM: xfrmState}, nil
+}
+
+func (p SensorSystemProvider) Capabilities(ctx context.Context) (sensorsystem.Capabilities, error) {
+	if p.Provider == nil {
+		return sensorsystem.Capabilities{}, context.Canceled
+	}
+	if err := ctx.Err(); err != nil {
+		return sensorsystem.Capabilities{}, err
+	}
+	live := p.Provider.sensorAvailable(ctx)
+	probe := localsensor.Probe{}
+	if value, err := p.Provider.SensorProbe(ctx); err == nil {
+		probe = value
+	}
+	return sensorsystem.Capabilities{PassiveLive: live, PassivePCAP: true, DeepAssessment: probe.VICI.Available || probe.XFRM.Available, IPv4: true, IPv6: true, IKEv1: true, IKEv2: true, ESP: true, AH: true, NATT: true, VICI: probe.VICI.Available, XFRM: probe.XFRM.Available, FeatureWindows: true, SequenceSketches: true}, nil
+}
+
+func (p SensorSystemProvider) PipelineStats(ctx context.Context) (sensorsystem.PipelineStats, error) {
+	if p.Provider == nil || p.Provider.Sensor.Flows == nil {
+		return sensorsystem.PipelineStats{}, nil
+	}
+	if err := ctx.Err(); err != nil {
+		return sensorsystem.PipelineStats{}, err
+	}
+	active, pending, _ := p.Provider.Sensor.Flows.RuntimeCounts()
+	return sensorsystem.PipelineStats{ActiveFlows: active, FeatureQueueDepth: pending}, nil
 }
 
 func (p *Provider) Dependencies(ctx context.Context) (coresystem.Dependencies, error) {
