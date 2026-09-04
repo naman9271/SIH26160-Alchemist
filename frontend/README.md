@@ -8,8 +8,8 @@ It never connects directly to Go gRPC or the Python ML gRPC worker.
 Start Go Core on port 8080, then:
 
 ```bash
-npm ci
-npm run dev
+pnpm install --frozen-lockfile
+pnpm dev
 ```
 
 Open `http://localhost:3000`. Set `CORE_HTTP_URL` only when Core is not on
