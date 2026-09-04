@@ -113,17 +113,17 @@ export function PrinciplesSection({ items = principles }: { items?: Principle[] 
   }, [items]);
 
   return (
-    <section ref={sectionRef} id="approach" className="relative isolate overflow-x-clip bg-black px-4 py-24 text-white md:px-8 md:py-32 lg:px-12">
+    <section ref={sectionRef} id="approach" className="relative isolate overflow-x-clip bg-black px-4 py-16 text-white md:px-8 md:py-24 lg:px-12">
       <SectionGrid />
       <div className="relative z-10 mx-auto max-w-[1440px]">
-        <header data-principles-header className="mb-24">
+        <header data-principles-header className="mb-16">
           <p className="font-mono text-[10px] uppercase tracking-[.3em] text-primary">APPROACH</p>
           <h2 className="mt-5 uppercase [font-family:var(--serif)] text-4xl font-normal leading-[.92] tracking-[-.06em] md:text-6xl lg:text-7xl">
             HOW IT WORKS
           </h2>
         </header>
 
-        <div className="space-y-24 md:space-y-32">
+        <div className="space-y-16 md:space-y-24">
           {items.map((principle) => {
             const isRight = principle.align === "right";
 
@@ -140,10 +140,10 @@ export function PrinciplesSection({ items = principles }: { items?: Principle[] 
                 <h3 className="mt-5 uppercase [font-family:var(--serif)] text-4xl font-normal leading-[.92] tracking-[-.06em] md:text-6xl lg:text-[96px]">
                   <HighlightText title={principle.title} highlight={principle.highlight} />
                 </h3>
-                <p className={`mt-7 max-w-md font-mono text-sm leading-7 text-white/50 ${isRight ? "ml-auto" : ""}`}>
+                <p className={`mt-6 max-w-md font-mono text-sm leading-7 text-white/50 ${isRight ? "ml-auto" : ""}`}>
                   {principle.description}
                 </p>
-                <div aria-hidden="true" className={`mt-8 h-px w-24 bg-primary/35 lg:w-48 ${isRight ? "ml-auto" : ""}`} />
+                <div aria-hidden="true" className={`mt-6 h-px w-24 bg-primary/35 lg:w-48 ${isRight ? "ml-auto" : ""}`} />
               </article>
             );
           })}

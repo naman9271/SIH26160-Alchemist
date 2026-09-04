@@ -38,10 +38,10 @@ export function FeaturesSection() {
   }, []);
 
   return (
-    <section ref={sectionRef} id="features" className="relative isolate overflow-hidden py-24 md:py-32">
+    <section ref={sectionRef} id="features" className="relative isolate overflow-hidden py-16 md:py-24">
       <SectionGrid />
       <div className="site-container relative z-10">
-        <div ref={headerRef} className="mb-16 flex items-end justify-between gap-8">
+        <div ref={headerRef} className="mb-12 flex items-end justify-between gap-8">
           <div>
             <p className="font-mono text-[10px] uppercase tracking-[.3em] text-primary">FEATURES</p>
             <h2 className="mt-4 font-mono text-3xl font-bold tracking-[.04em] md:text-5xl lg:text-6xl">WHAT YOU GET</h2>
