@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 import { LandingFooter } from "@/components/ui/site-chrome";
+import { analysisPhase } from "./analysis-state";
 
 type Health = { status?: string };
 type Upload = { source_id: string; filename: string; packets: number; esp_packets: number };
@@ -38,14 +39,14 @@ export default function WorkspacePage() {
   }, []);
 
   useEffect(() => {
-    if (!analysis || !["QUEUED", "RUNNING"].includes(analysis.state)) return;
+    if (!analysis || phase !== "running") return;
     const interval = window.setInterval(async () => {
       try {
         const next = await coreRequest<Analysis>(`/api/v1/analyses/${encodeURIComponent(analysis.analysis_id)}`);
         setAnalysis(next);
-        if (next.state === "COMPLETED") setPhase("complete");
-        if (["FAILED", "CANCELLED"].includes(next.state)) {
-          setPhase("failed");
+        const nextPhase = analysisPhase(next.state);
+        setPhase(nextPhase);
+        if (nextPhase === "failed") {
           setError(next.failure_reason ?? "The analysis did not complete.");
         }
       } catch (pollError) {
@@ -54,7 +55,7 @@ export default function WorkspacePage() {
       }
     }, 1500);
     return () => window.clearInterval(interval);
-  }, [analysis]);
+  }, [analysis, phase]);
 
   function selectFile(event: ChangeEvent<HTMLInputElement>) {
     setFile(event.target.files?.[0]);
@@ -89,7 +90,11 @@ export default function WorkspacePage() {
         body: JSON.stringify({ source_id: uploaded.source_id, enable_ml: enableMl }),
       });
       setAnalysis(started);
-      setPhase(started.state === "COMPLETED" ? "complete" : "running");
+      const startedPhase = analysisPhase(started.state);
+      setPhase(startedPhase);
+      if (startedPhase === "failed") {
+        setError(started.failure_reason ?? "The analysis did not complete.");
+      }
     } catch (requestError) {
       setPhase("failed");
       setError(requestError instanceof Error ? requestError.message : "The workflow could not start.");
