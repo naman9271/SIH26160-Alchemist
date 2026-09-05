@@ -41,7 +41,7 @@ export default function WorkspacePage() {
     if (!analysis || !["QUEUED", "RUNNING"].includes(analysis.state)) return;
     const interval = window.setInterval(async () => {
       try {
-        const next = await coreRequest<Analysis>(`/api/v1/analyses/${analysis.analysis_id}`);
+        const next = await coreRequest<Analysis>(`/api/v1/analyses/${encodeURIComponent(analysis.analysis_id)}`);
         setAnalysis(next);
         if (next.state === "COMPLETED") setPhase("complete");
         if (["FAILED", "CANCELLED"].includes(next.state)) {
