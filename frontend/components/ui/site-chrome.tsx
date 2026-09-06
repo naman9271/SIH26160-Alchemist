@@ -14,7 +14,6 @@ export function LandingNavigation({ overlay = false }: { overlay?: boolean }) {
           <Link className={navLinkClass} href="/dashboard/evidence">EVIDENCE</Link>
           <Link className={navLinkClass} href="/dashboard/findings">FINDINGS</Link>
           <Link className={navLinkClass} href="/dashboard/reports">REPORTS</Link>
-          <Link className={navLinkClass} href="/teams">TEAM</Link>
         </nav>
         <Link href="/workspace" className="group relative shrink-0 overflow-hidden border border-teal-100/65 bg-teal-100/[.045] px-4 py-2.5 text-[10px] font-bold tracking-[.14em] text-teal-50 shadow-[0_0_22px_rgba(94,234,212,.12)] transition-all duration-300 hover:border-teal-100 hover:bg-teal-100 hover:text-slate-950 hover:shadow-[0_0_34px_rgba(94,234,212,.28)]"><span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/35 to-transparent transition-transform duration-700 group-hover:translate-x-full" /><span className="relative">OPEN WORKSPACE</span></Link>
       </div>
@@ -31,7 +30,6 @@ export function LandingFooter() {
     ["FINDINGS", "/dashboard/findings"],
     ["REPORTS", "/dashboard/reports"],
     ["API STATUS", "/dashboard/health"],
-    ["TEAM", "/teams"],
   ] as const;
 
   return (
