@@ -53,10 +53,9 @@ export function LandingFooter() {
           ))}
           <Link
             href="/workspace"
-            className="group relative flex min-h-9 items-center overflow-hidden border border-teal-100/60 bg-teal-100/[.08] px-3 py-1.5 text-[9px] font-bold tracking-[.13em] text-teal-50 transition-all duration-300 hover:bg-teal-100 hover:text-slate-950 hover:shadow-[0_0_28px_rgba(94,234,212,.24)]"
+            className="flex min-h-9 items-center border border-teal-200/20 bg-black/35 px-3 py-1.5 text-[9px] font-bold tracking-[.13em] text-teal-100/70 transition-all duration-300 hover:border-teal-100/55 hover:bg-teal-100/[.08] hover:text-teal-50 hover:shadow-[0_0_22px_rgba(94,234,212,.14)]"
           >
-            <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/35 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-            <span className="relative">OPEN WORKSPACE</span>
+            OPEN WORKSPACE
           </Link>
         </nav>
         <div className="pointer-events-auto hidden h-56 border-y border-teal-200/10 lg:col-span-2 lg:block">

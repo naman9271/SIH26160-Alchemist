@@ -88,9 +88,7 @@ body { overflow-x: clip; }
 @media (min-width: 768px) { .site-container { padding-inline: 2rem; } }
 @media (min-width: 1280px) { .site-container { padding-inline: 3rem; } }
 
-.hero-ascii [data-us-project] { position: relative; overflow: hidden; }
 .hero-ascii-dither { background-image: repeating-linear-gradient(0deg, transparent 0 1px, white 1px 2px), repeating-linear-gradient(90deg, transparent 0 1px, white 1px 2px); background-size: 3px 3px; }
-.hero-ascii-stars { background-image: radial-gradient(1px 1px at 20% 30%, white, transparent), radial-gradient(1px 1px at 60% 70%, white, transparent), radial-gradient(1px 1px at 50% 50%, white, transparent), radial-gradient(1px 1px at 80% 10%, white, transparent), radial-gradient(1px 1px at 90% 60%, white, transparent), radial-gradient(1px 1px at 33% 80%, white, transparent), radial-gradient(1px 1px at 15% 60%, white, transparent), radial-gradient(1px 1px at 70% 40%, white, transparent); background-size: 200% 200%, 180% 180%, 250% 250%, 220% 220%, 190% 190%, 240% 240%, 210% 210%, 230% 230%; background-position: 0 0, 40% 40%, 60% 60%, 20% 20%, 80% 80%, 30% 30%, 70% 70%, 50% 50%; opacity: .3; }
 .evidence-stage-scan { background: linear-gradient(180deg, rgba(94,234,212,.18), transparent); animation: evidence-stage-scan 2.8s ease-in-out infinite; }
 .evidence-stage-node { box-shadow: 0 0 18px rgba(153,246,228,.62); animation: evidence-stage-node 1.8s ease-in-out infinite; }
 .readiness-scan { background: linear-gradient(180deg, rgba(94,234,212,.18), transparent); animation: readiness-scan 4.2s ease-in-out infinite; }

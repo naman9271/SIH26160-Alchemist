@@ -1,44 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
-import GatewayFlow from "@/components/ui/gateway-flow";
-import { MeshGradientSVG } from "@/components/ui/shader-svg";
-
-declare global {
-  interface Window {
-    UnicornStudio?: { init: () => void; isInitialized?: boolean };
-  }
-}
 
 const signalBars = [7, 15, 10, 22, 14, 28, 18, 9];
 
+function GhostGraphic() {
+  return (
+    <svg viewBox="0 0 231 289" className="w-full max-w-sm text-slate-950" aria-label="Alchemist signal">
+      <path d="M230.809 115.385V249.411C230.809 269.923 214.985 287.282 194.495 288.411C184.544 288.949 175.364 285.718 168.26 280C159.746 273.154 147.769 273.461 139.178 280.23C132.638 285.384 124.381 288.462 115.379 288.462C106.377 288.462 98.1451 285.384 91.6055 280.23C82.912 273.385 70.9353 273.385 62.2415 280.23C55.7532 285.334 47.598 288.411 38.7246 288.462C17.4132 288.615 0 270.667 0 249.359V115.385C0 51.6667 51.6756 0 115.404 0C179.134 0 230.809 51.6756 230.809 115.385Z" fill="#0f766e" />
+      <path d="M230.809 115.385V249.411C230.809 269.923 214.985 287.282 194.495 288.411C184.544 288.949 175.364 285.718 168.26 280C159.746 273.154 147.769 273.461 139.178 280.23C132.638 285.384 124.381 288.462 115.379 288.462C106.377 288.462 98.1451 285.384 91.6055 280.23C82.912 273.385 70.9353 273.385 62.2415 280.23C55.7532 285.334 47.598 288.411 38.7246 288.462C17.4132 288.615 0 270.667 0 249.359V115.385C0 51.6667 51.6756 0 115.404 0C179.134 0 230.809 51.6756 230.809 115.385Z" fill="none" stroke="rgba(153,246,228,.75)" strokeWidth="1.5" />
+      <ellipse cx="80" cy="120" rx="20" ry="30" fill="currentColor" />
+      <ellipse cx="150" cy="120" rx="20" ry="30" fill="currentColor" />
+    </svg>
+  );
+}
+
 export function HeroAscii() {
-  useEffect(() => {
-    const existing = document.querySelector<HTMLScriptElement>('script[data-unicorn-studio="true"]');
-    const initialize = () => window.UnicornStudio?.init();
-
-    if (existing) {
-      existing.addEventListener("load", initialize, { once: true });
-      initialize();
-      return () => existing.removeEventListener("load", initialize);
-    }
-
-    const script = document.createElement("script");
-    script.src = "https://cdn.jsdelivr.net/gh/hiunicornstudio/unicornstudio.js@v1.4.33/dist/unicornStudio.umd.js";
-    script.async = true;
-    script.dataset.unicornStudio = "true";
-    script.addEventListener("load", initialize, { once: true });
-    document.head.appendChild(script);
-    return () => script.removeEventListener("load", initialize);
-  }, []);
-
   return (
     <section className="hero-ascii relative min-h-svh overflow-hidden bg-black font-mono text-white">
-      <div className="hero-ascii-stars absolute inset-0" aria-hidden="true" />
-      <GatewayFlow density={0.9} opacity={0.7} className="pointer-events-none absolute -inset-[18%] z-[1] h-[136%] w-[136%] scale-[1.55]" />
-      <div aria-hidden="true" className="absolute inset-0 z-[2] bg-[radial-gradient(circle_at_50%_50%,transparent_18%,#00000033_72%,#000000b3_100%)]" />
-
       <div aria-hidden="true" className="absolute left-0 top-0 z-20 h-8 w-8 border-l-2 border-t-2 border-white/30 lg:h-12 lg:w-12" />
       <div aria-hidden="true" className="absolute right-0 top-0 z-20 h-8 w-8 border-r-2 border-t-2 border-white/30 lg:h-12 lg:w-12" />
       <div aria-hidden="true" className="absolute bottom-[5vh] left-0 z-20 h-8 w-8 border-b-2 border-l-2 border-white/30 lg:h-12 lg:w-12" />
@@ -70,11 +49,8 @@ export function HeroAscii() {
             </div>
             <div className="mt-6 hidden items-center gap-2 opacity-40 lg:flex"><span className="text-[9px]">∞</span><span className="h-px flex-1 bg-white" /><span className="text-[9px]">IPSEC SENTINEL</span></div>
           </div>
-          <div className="relative hidden min-h-[26rem] overflow-visible lg:block" aria-hidden="true">
-            <div className="absolute inset-0 opacity-75" data-us-project="whwOGlfJ5Rz2rHaEUgHl" />
-            <div className="pointer-events-none absolute inset-0 grid place-items-center bg-black/10">
-              <MeshGradientSVG />
-            </div>
+          <div className="hidden min-h-[26rem] place-items-center lg:grid" aria-hidden="true">
+            <GhostGraphic />
           </div>
         </div>
       </div>
