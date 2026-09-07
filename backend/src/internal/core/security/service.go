@@ -230,18 +230,44 @@ func facts(items []model.FusedConclusion) (rules.Facts, uint64, bool) {
 		return nil
 	}
 	facts := rules.Facts{IKEVersion: get("ike.version"), EncryptionAlgorithm: get("child.encryption_algorithm", "ike.encryption"), IntegrityAlgorithm: get("child.integrity_algorithm", "ike.integrity"), DHGroup: get("ike.dh_group"), PFS: parseBool("child.pfs"), ReplayProtection: parseBool("replay.enabled"), MetadataExposure: get("metadata.exposure") != ""}
+	// AEAD transforms authenticate as well as encrypt, so a separate integrity
+	// transform is neither negotiated nor required. Preserve that fact for the
+	// rule engine and evidence-coverage calculation.
+	if facts.IntegrityAlgorithm == "" && isAEAD(facts.EncryptionAlgorithm) {
+		facts.IntegrityAlgorithm = "AEAD"
+	}
 	if value := get("child.lifetime_seconds"); value != "" {
 		var life uint64
 		_, _ = fmt.Sscan(value, &life)
 		facts.SALifetimeSeconds = life
 	}
 	unknown := uint64(0)
-	for _, property := range []string{"ike.version", "child.encryption_algorithm", "child.integrity_algorithm", "ike.dh_group", "child.pfs", "replay.enabled"} {
-		if _, ok := winners[property]; !ok {
+	for _, available := range []bool{
+		facts.IKEVersion != "",
+		facts.EncryptionAlgorithm != "",
+		facts.IntegrityAlgorithm != "",
+		facts.DHGroup != "",
+		facts.PFS != nil,
+		facts.ReplayProtection != nil,
+	} {
+		if !available {
 			unknown++
 		}
 	}
 	return facts, unknown, facts.MetadataExposure
+}
+
+func isAEAD(algorithm string) bool {
+	value := strings.ToUpper(strings.TrimSpace(algorithm))
+	if strings.Contains(value, "GCM") || strings.Contains(value, "CCM") || strings.Contains(value, "CHACHA20_POLY1305") {
+		return true
+	}
+	switch value {
+	case "ENCR_14", "ENCR_15", "ENCR_16", "ENCR_18", "ENCR_19", "ENCR_20", "ENCR_28":
+		return true
+	default:
+		return false
+	}
 }
 func scalar(item model.FusedConclusion) string {
 	if item.Value == nil {

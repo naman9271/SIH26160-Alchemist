@@ -41,3 +41,31 @@ func TestAssessmentAndRiskReuseDeterministicRules(t *testing.T) {
 		t.Fatalf("breakdown=%+v err=%v", breakdown, err)
 	}
 }
+
+func TestIKEAEADFallbackCountsEncryptionAndIntegrityEvidence(t *testing.T) {
+	service := coresecurity.New(conclusionFixture{
+		{ID: "c1", PropertyKey: "ike.version", Value: structpb.NewStringValue("IKEv2.0"), Status: commonv1.EvidenceStatus_OBSERVED, Confidence: .95},
+		{ID: "c2", PropertyKey: "ike.encryption", Value: structpb.NewStringValue("ENCR_20"), Status: commonv1.EvidenceStatus_OBSERVED, Confidence: .95},
+		{ID: "c3", PropertyKey: "ike.dh_group", Value: structpb.NewStringValue("DH_19"), Status: commonv1.EvidenceStatus_OBSERVED, Confidence: .95},
+	})
+
+	record, err := service.Run(context.Background(), "analysis-aead", "policy")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if record.UnknownEvidence != 2 {
+		t.Fatalf("unknown evidence = %d, want 2 (only PFS and replay)", record.UnknownEvidence)
+	}
+	if record.Result.Score != 100 || len(record.Result.Findings) != 0 {
+		t.Fatalf("assessment = %+v, want clean supported checks", record.Result)
+	}
+
+	risk := corerisk.New(service)
+	score, err := risk.Score(context.Background(), record.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if score.UnknownEvidenceCount != 2 || score.Confidence != .9 {
+		t.Fatalf("risk score = %+v, want two unknown facts and 0.9 confidence", score)
+	}
+}
