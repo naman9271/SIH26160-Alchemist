@@ -1,77 +1,38 @@
-import Link from "next/link";
-import { LandingFooter } from "@/components/ui/site-chrome";
-import { LiveAnalysisPanel } from "@/components/dashboard/live-analysis-panel";
+"use client";
 
-type View = {
-  title: string;
-  eyebrow: string;
-  description: string;
-  availability: "AVAILABLE" | "ADAPTER REQUIRED";
-  cards: Array<[string, string, string]>;
-};
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { LandingFooter } from "@/components/ui/site-chrome";
+import { LiveAnalysisPanel } from "./live-analysis-panel";
+import { HistoryPanel } from "./history-panel";
+import { ReportChat } from "./report-chat";
 
 const navigation = [
-  ["overview", "OVERVIEW"], ["upload", "UPLOAD / LIVE"], ["progress", "ANALYSIS PROGRESS"],
-  ["sessions", "VPN SESSIONS"], ["flows", "FLOWS"], ["classification", "TRAFFIC CLASSIFICATION"],
-  ["evidence", "EVIDENCE & PROVENANCE"], ["findings", "SECURITY FINDINGS"], ["risk", "RISK MATRIX"],
-  ["gateway", "GATEWAY VERIFICATION"], ["reports", "REPORTS"], ["health", "SYSTEM HEALTH"],
-] as const;
-
-const navCodes: Record<(typeof navigation)[number][0], string> = {
-  overview: "OV",
-  upload: "UP",
-  progress: "PR",
-  sessions: "SE",
-  flows: "FL",
-  classification: "CL",
-  evidence: "EV",
-  findings: "FI",
-  risk: "RI",
-  gateway: "GW",
-  reports: "RP",
-  health: "HL",
-};
-
-const views: Record<string, View> = {
-  overview: { title: "Evidence overview", eyebrow: "WORKSPACE / OVERVIEW", description: "A clear summary of available IPsec evidence. Select an analysis to load its live protocol, Fusion, security, risk, and ML records.", availability: "AVAILABLE", cards: [["OVERALL RISK", "LIVE DATA", "Loaded from the deterministic assessment."], ["EVIDENCE COVERAGE", "LIVE DATA", "Loaded from Fusion conclusions."], ["ML WORKER", "LIVE DATA", "Go Core reports optional ML status."], ["GATEWAY", "AUTHORISED ONLY", "Gateway facts require Deep Assessment."]] },
-  upload: { title: "Input and capture", eyebrow: "WORKSPACE / INPUT", description: "The browser-supported workflow accepts classic PCAP or CAP files and starts offline passive analysis.", availability: "AVAILABLE", cards: [["PASSIVE PCAP", "AVAILABLE", "Upload and analyse a classic PCAP."], ["PCAPNG", "CONVERT FIRST", "The current API accepts classic PCAP/CAP."], ["PASSIVE LIVE", "ADAPTER REQUIRED", "No browser capture orchestration endpoint exists."], ["DEEP ASSESSMENT", "ADAPTER REQUIRED", "Requires explicit authorization and local sensor support."]] },
-  progress: { title: "Analysis progress", eyebrow: "LIFECYCLE / PIPELINE", description: "Operational progress is polled from the Go Server for a running offline analysis.", availability: "AVAILABLE", cards: [["OBSERVE", "PENDING", "Packet observations begin after source upload."], ["DERIVE", "PENDING", "Deterministic protocol and flow facts."], ["INFER", "OPTIONAL", "Metadata-only ML, never protocol truth."], ["ASSESS", "PENDING", "Deterministic findings and risk score."]] },
-  sessions: { title: "VPN session explorer", eyebrow: "PROTOCOL / IKE · ESP · AH", description: "Session details are available only as aggregate insights after a completed analysis.", availability: "ADAPTER REQUIRED", cards: [["IKE SESSIONS", "NO ANALYSIS", "Run a PCAP analysis to inspect aggregate protocol data."], ["ESP SPI", "OBSERVED", "Packet SPI values are observation-only."], ["SECURITY ASSOCIATIONS", "PARTIAL API", "Individual session routes and filters are not exposed."], ["NAT-T", "UNKNOWN", "Shown only when supported by captured traffic."]] },
-  flows: { title: "Metadata flow explorer", eyebrow: "FLOW WINDOWS / NO PAYLOAD", description: "ESP payloads are never decrypted. Browser flow-window detail endpoints are not registered yet.", availability: "ADAPTER REQUIRED", cards: [["FLOW LIST", "UNAVAILABLE", "Needs a browser flow-list adapter."], ["WINDOW SIZE", "10 SECONDS", "Documented metadata aggregation interval."], ["DIRECTIONALITY", "DERIVED", "Available only when analysis supplies aggregate facts."], ["PAYLOAD", "NEVER EXPOSED", "Encrypted ESP payload is outside this product."]] },
-  classification: { title: "Traffic classification", eyebrow: "ML / METADATA ONLY", description: "Model output is probabilistic context and is always marked INFERRED—not protocol evidence or a security finding.", availability: "ADAPTER REQUIRED", cards: [["FINAL CLASS", "UNKNOWN", "No supported conclusion before a model result."], ["CONFIDENCE", "UNAVAILABLE", "Shown only from Go-owned ML results."], ["TOP CANDIDATES", "UNAVAILABLE", "Candidates remain context when final output is UNKNOWN."], ["EXPLANATIONS", "OPTIONAL", "Feature attributions may be unavailable."]] },
-  evidence: { title: "Evidence and provenance", eyebrow: "SOURCE / STATUS / CONFIDENCE", description: "Every security-relevant value carries its evidence status. Detail filtering and evidence-chain APIs require an adapter.", availability: "ADAPTER REQUIRED", cards: [["OBSERVED", "PACKET FACTS", "Directly present in captured traffic."], ["DERIVED", "DETERMINISTIC", "Computed from observations."], ["INFERRED", "ML OUTPUT", "Probabilistic metadata classification."], ["VERIFIED GATEWAY", "AUTHORIZED ONLY", "Never shown for passive PCAP."]] },
-  findings: { title: "Security findings", eyebrow: "DETERMINISTIC ASSESSMENT", description: "Findings originate from deterministic Go security rules. They are not generated from ML classifications.", availability: "ADAPTER REQUIRED", cards: [["ASSESSMENT", "NOT RUN", "Complete an analysis to receive findings."], ["CRITICAL", "—", "No sample severity is presented as a real result."], ["REMEDIATION", "UNAVAILABLE", "Available when linked to a deterministic finding."], ["COVERAGE", "PARTIAL", "Unavailable sources are not passing results."]] },
-  risk: { title: "Risk score and threat matrix", eyebrow: "DETERMINISTIC / EXPLAINABLE", description: "Risk is a deterministic score, separate from ML confidence. No score is displayed before assessment finishes.", availability: "ADAPTER REQUIRED", cards: [["RISK SCORE", "NOT CALCULATED", "The deterministic engine has not completed."], ["THREAT MATRIX", "UNAVAILABLE", "Available from aggregate insights when present."], ["SCORE DRIVERS", "UNAVAILABLE", "Needs a documented browser mapping."], ["COVERAGE IMPACT", "VISIBLE", "Missing data reduces coverage, not risk."]] },
-  gateway: { title: "Gateway verification", eyebrow: "AUTHORIZED DEEP ASSESSMENT", description: "Gateway facts require explicit authorized Deep Assessment mode and gateway provenance.", availability: "ADAPTER REQUIRED", cards: [["MODE", "PASSIVE PCAP", "Current browser workflow does not authorize Deep Assessment."], ["VICI", "UNAVAILABLE", "Local gateway adapter is not browser-exposed."], ["XFRM", "UNAVAILABLE", "Local gateway adapter is not browser-exposed."], ["VERIFIED FACTS", "NONE DISPLAYED", "Passive observations are never labelled gateway verified."]] },
-  reports: { title: "Reports and exports", eyebrow: "EXECUTIVE PDF", description: "Generate an executive PDF after an analysis completes. Technical and JSON export options need backend support.", availability: "AVAILABLE", cards: [["EXECUTIVE PDF", "AVAILABLE AFTER ANALYSIS", "The Go Server generates and serves the PDF."], ["TECHNICAL EXPORT", "ADAPTER REQUIRED", "Selectable report formats are not implemented."], ["JSON EXPORT", "ADAPTER REQUIRED", "No browser export endpoint is registered."], ["EVIDENCE LABELS", "PRESERVED", "Reports must retain evidence provenance."]] },
-  health: { title: "System health", eyebrow: "DEPENDENCY STATUS", description: "The Go Server health endpoint is browser-accessible. ML and sensor availability must be shown without pretending they are healthy.", availability: "AVAILABLE", cards: [["GO SERVER", "CHECKING", "Refresh status from the /health endpoint."], ["ML WORKER", "CHECK ON ANALYSIS", "The browser never calls Python directly."], ["FUSION", "CHECK ON ANALYSIS", "Aggregate insight availability is best effort."], ["LOCAL SENSOR", "UNAVAILABLE", "Browser readiness adapter is not registered."]] },
-};
-
-function StatusBadge({ status }: { status: View["availability"] }) { return <span className={`border px-2 py-1 text-[9px] font-bold tracking-[.12em] ${status === "AVAILABLE" ? "border-teal-300/60 text-teal-200" : "border-amber-300/60 text-amber-200"}`}>{status}</span>; }
+  ["overview", "Overview"], ["upload", "New capture"], ["progress", "Progress"],
+  ["sessions", "VPN sessions"], ["flows", "Flows"], ["classification", "Traffic classification"],
+  ["evidence", "Evidence"], ["findings", "Security findings"], ["risk", "Risk & fixes"],
+  ["reports", "Reports"], ["health", "System health"], ["history", "History"],
+  ["compare", "Compare analyses"], ["chat", "Report assistant"],
+];
 
 export function DashboardShell({ view = "overview" }: { view?: string }) {
-  const current = views[view] ?? views.overview;
-  return <div className="min-h-svh bg-black font-mono text-white"><nav className="flex gap-2 overflow-x-auto border-b border-white/15 bg-black px-5 py-3 lg:hidden" aria-label="Dashboard navigation">{navigation.map(([slug, label]) => <Link key={slug} href={slug === "overview" ? "/dashboard" : `/dashboard/${slug}`} className={`shrink-0 border px-3 py-2 text-[9px] tracking-[.1em] ${slug === view ? "border-teal-200 bg-teal-200 text-slate-950" : "border-white/20 text-white/60"}`}>{label}</Link>)}</nav><div className="dashboard-shell-grid mx-auto grid max-w-[1600px]">
-    <aside className="dashboard-sidebar group/sidebar sticky top-0 hidden h-svh overflow-hidden border-r border-teal-200/15 bg-[#05090f]/95 px-3 py-4 shadow-[18px_0_60px_rgba(0,0,0,.25)] backdrop-blur-sm lg:block">
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(94,234,212,.08)_1px,transparent_1px),linear-gradient(90deg,rgba(94,234,212,.06)_1px,transparent_1px)] [background-size:26px_26px] opacity-30" />
-      <div className="relative z-10 flex h-full flex-col">
-        <div className="dashboard-sidebar-brand grid items-center gap-3 border border-white/10 bg-white/[.025] px-2.5 py-2">
-          <span className="grid h-8 w-8 shrink-0 place-items-center border border-teal-200/45 bg-teal-200/10 text-[10px] font-bold text-teal-100 shadow-[0_0_18px_rgba(94,234,212,.12)]">IP</span>
-          <p className="dashboard-sidebar-label whitespace-nowrap text-[10px] font-bold tracking-[.16em] text-white/50">IPSEC SENTINEL TWIN</p>
-        </div>
-        <nav className="dashboard-sidebar-nav mt-4 grid gap-1" aria-label="Dashboard navigation">
-          {navigation.map(([slug, label]) => <Link key={slug} href={slug === "overview" ? "/dashboard" : `/dashboard/${slug}`} className={`dashboard-sidebar-link group/link grid items-center gap-3 border px-2 py-2 text-[10px] tracking-[.11em] transition-all duration-300 ${slug === view ? "border-teal-300/60 bg-teal-200/[.08] text-teal-100 shadow-[0_0_24px_rgba(94,234,212,.08)]" : "border-transparent text-white/50 hover:border-white/15 hover:bg-white/[.04] hover:text-white"}`}><span className={`grid h-7 w-7 place-items-center border text-[9px] font-bold transition ${slug === view ? "border-teal-200/55 bg-teal-200/10 text-teal-100" : "border-white/10 text-white/35 group-hover/link:border-white/25 group-hover/link:text-white/75"}`}>{navCodes[slug]}</span><span className="dashboard-sidebar-label whitespace-nowrap">{label}</span></Link>)}
-        </nav>
-        <div className="relative mt-auto border-t border-white/10 pt-4 text-[9px] leading-6 text-white/45">
-          <div className="grid h-8 w-8 place-items-center border border-white/10 text-[10px] text-teal-100/70">Σ</div>
-          <p className="dashboard-sidebar-label mt-3 whitespace-nowrap">OBSERVED · DERIVED<br />INFERRED · VERIFIED_GATEWAY<br />UNKNOWN · UNAVAILABLE</p>
-        </div>
-      </div>
-    </aside>
-    <main className="min-w-0 px-5 py-10 transition-[padding] duration-300 sm:px-8 lg:px-10"><div className="border-l border-dashed border-white/35 pl-5"><div className="flex flex-wrap items-start justify-between gap-4 border-b border-white/10 pb-7"><div><p className="text-[10px] font-bold tracking-[.16em] text-teal-200/80">{current.eyebrow}</p><h1 className="mt-3 text-3xl font-bold tracking-[.06em] sm:text-4xl">{current.title.toUpperCase()}</h1><p className="mt-4 max-w-3xl text-sm leading-7 text-white/60">{current.description}</p></div><StatusBadge status={current.availability} /></div></div>
-      <div className="mt-7 flex flex-wrap gap-2 border-y border-white/10 py-4 text-[10px] text-white/45"><span className="border border-white/15 px-3 py-2">WORKSPACE: NONE SELECTED</span><span className="border border-white/15 px-3 py-2">MODE: PASSIVE PCAP</span><span className="border border-white/15 px-3 py-2">GO SERVER: CHECK ON WORKSPACE</span></div>
-      <LiveAnalysisPanel view={view} />
-      <div className="mt-7 grid border-l border-t border-white/15 sm:grid-cols-2 xl:grid-cols-4">{current.cards.map(([label, value, body]) => <article key={label} className="min-h-44 border-b border-r border-white/15 bg-white/[.018] p-5 transition duration-300 hover:bg-white/[.055]"><p className="text-[10px] tracking-[.13em] text-white/45">{label}</p><h2 className="mt-8 text-lg font-bold tracking-[.06em] text-teal-100">{value}</h2><p className="mt-3 text-xs leading-6 text-white/55">{body}</p></article>)}</div>
-      <section className="mt-7 border border-white/15 bg-white/[.025] p-6"><p className="text-[10px] font-bold tracking-[.14em] text-white/45">EVIDENCE SAFETY NOTE</p><p className="mt-3 max-w-4xl text-sm leading-7 text-white/65">The dashboard distinguishes direct packet observations, deterministic derivations, ML inference, authorized gateway verification, unknown conclusions, and unavailable sources. ESP payloads are never decrypted or displayed.</p>{view === "upload" && <Link href="/workspace" className="mt-5 inline-block border border-teal-200 bg-teal-200 px-4 py-2 text-[10px] font-bold tracking-[.12em] text-slate-950 transition hover:bg-transparent hover:text-teal-100">OPEN PCAP WORKSPACE</Link>}</section>
-    </main></div><LandingFooter /></div>;
+  const search = useSearchParams();
+  const id = search.get("analysis");
+  const title = navigation.find(([slug]) => slug === view)?.[1] ?? "Overview";
+  function href(slug: string) {
+    if (slug === "upload") return "/workspace";
+    return (slug === "overview" ? "/dashboard" : "/dashboard/" + slug) + (id ? "?analysis=" + encodeURIComponent(id) : "");
+  }
+  return <div className="min-h-svh bg-black font-mono text-white">
+    <div className="mx-auto grid max-w-[1600px] lg:grid-cols-[240px_minmax(0,1fr)]">
+      <aside className="border-r border-teal-200/15 bg-[#05090f] p-4 lg:sticky lg:top-16 lg:h-[calc(100vh-4rem)] lg:overflow-y-auto">
+        <p className="mb-5 text-xs tracking-widest text-teal-200">ANALYSIS WORKSPACE</p>
+        <nav className="flex gap-2 overflow-x-auto lg:grid" aria-label="Dashboard navigation">{navigation.map(([slug, name]) => <Link key={slug} href={href(slug)} className={"shrink-0 border px-3 py-2.5 text-xs " + (slug === view ? "border-teal-200/40 bg-teal-200/10 text-teal-100" : "border-transparent text-white/55 hover:bg-white/5")}>{name}</Link>)}</nav>
+      </aside>
+      <main className="min-w-0 p-5 sm:p-8"><h1 className="text-3xl font-bold">{title}</h1>
+        {id && <p className="mt-3 break-all text-xs text-white/40">Analysis {id}</p>}
+        {view === "history" || view === "compare" ? <HistoryPanel compare={view === "compare"}/> : view === "chat" ? <ReportChat/> : <LiveAnalysisPanel key={id ?? "none"} view={view}/>}
+      </main>
+    </div><LandingFooter/>
+  </div>;
 }

@@ -4,6 +4,11 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { readHistory, saveSnapshot } from "./history-store";
+import { ResultCards } from "./result-cards";
+import { ClassificationCards } from "./classification-cards";
+import { RiskCards } from "./risk-cards";
+
 type RecordValue = Record<string, unknown>;
 type Insight = RecordValue & { analysis?: { state?: string; stage?: string; source_id?: string } };
 type Report = { report_id: string; state: string; download_url?: string; failure_reason?: string };
@@ -17,7 +22,7 @@ const sectionsForView: Record<string, Array<[string, string[]]>> = {
   classification: [["ML worker", ["ml", "worker"]], ["Traffic predictions", ["ml", "predictions"]], ["Prediction explanations", ["ml", "explanations"]]],
   evidence: [["Protocol evidence", ["protocol", "evidence"]], ["Fused conclusions", ["fusion", "conclusions"]], ["Fusion status", ["fusion", "status"]]],
   findings: [["Assessment and findings", ["security", "assessment"]], ["Recommendations", ["security", "assessment", "recommendations"]]],
-  risk: [["Risk score", ["security", "risk_score"]], ["Risk breakdown", ["security", "risk_breakdown"]], ["Critical overrides", ["security", "critical_overrides"]]],
+  risk: [["Risks and remediation", ["security", "assessment"]], ["Risk score", ["security", "risk_score"]], ["Risk breakdown", ["security", "risk_breakdown"]], ["Critical overrides", ["security", "critical_overrides"]]],
   reports: [["Analysis summary", ["summary"]], ["Security posture", ["security", "assessment"]]],
   gateway: [["Local deep-assessment availability", ["system", "local_sensor", "mode_availability"]], ["Source availability", ["fusion", "summary"]], ["Pipeline progress", ["progress"]]],
   health: [["Core readiness", ["system", "readiness"]], ["Core capabilities", ["system", "capabilities"]], ["Local sensor", ["system", "local_sensor"]], ["ML worker", ["ml", "worker"]]],
@@ -45,7 +50,7 @@ function DataBlock({ title, value }: { title: string; value: unknown }) {
   if (value === undefined || value === null || (Array.isArray(value) && value.length === 0) || (typeof value === "object" && !Array.isArray(value) && Object.keys(value).length === 0)) return null;
   return <details className="border border-white/15 bg-black/20 p-4" open={title === "Analysis summary" || title === "Pipeline progress"}>
     <summary className="cursor-pointer text-[10px] font-bold tracking-[.13em] text-teal-100">{title.toUpperCase()} <span className="ml-2 text-white/45">{Array.isArray(value) ? `${value.length} RECORDS` : "AVAILABLE"}</span></summary>
-    <pre className="mt-4 max-h-96 overflow-auto whitespace-pre-wrap break-words border-t border-white/10 pt-4 text-[11px] leading-5 text-white/65">{JSON.stringify(value, null, 2)}</pre>
+    <div className="mt-4 border-t border-white/10 pt-4"><ResultCards value={value}/></div>
   </details>;
 }
 
@@ -57,6 +62,7 @@ export function LiveAnalysisPanel({ view = "overview" }: { view?: string }) {
   const [system, setSystem] = useState<RecordValue>();
   const [error, setError] = useState<string>();
   const [report, setReport] = useState<Report>();
+  const [archived, setArchived] = useState(false);
 
   const refresh = useCallback(async () => {
     setError(undefined);
@@ -68,9 +74,17 @@ export function LiveAnalysisPanel({ view = "overview" }: { view?: string }) {
       ]);
       setHealth("READY");
       setSystem(systemData);
-      if (analysisData) setInsights(analysisData);
+      if (analysisData) {
+        setArchived(false);
+        setInsights(analysisData);
+        if (analysisData.analysis?.state === "ANALYSIS_STATE_COMPLETED" && analysisId) {
+          try { saveSnapshot(analysisId, analysisData); } catch { setError("Browser history is full or unavailable. Results are still available."); }
+        }
+      }
     } catch (requestError) {
       setHealth("UNAVAILABLE");
+      const saved = readHistory().find(item => item.id === analysisId);
+      if (saved) { setInsights(saved.data as Insight); setArchived(true); }
       setError(requestError instanceof Error ? requestError.message : "Unable to reach Go Server.");
     }
   }, [analysisId]);
@@ -81,7 +95,7 @@ export function LiveAnalysisPanel({ view = "overview" }: { view?: string }) {
   }, [refresh]);
   useEffect(() => {
     const state = insights?.analysis?.state;
-    if (!analysisId || !state || !["QUEUED", "RUNNING"].includes(state)) return;
+    if (!analysisId || !state || !["ANALYSIS_STATE_QUEUED", "ANALYSIS_STATE_RUNNING"].includes(state)) return;
     const timer = window.setInterval(() => { void refresh(); }, 1500);
     return () => window.clearInterval(timer);
   }, [analysisId, insights?.analysis?.state, refresh]);
@@ -106,8 +120,11 @@ export function LiveAnalysisPanel({ view = "overview" }: { view?: string }) {
   const availableSections = ["protocol", "flows", "fusion", "security", "ml"].reduce((total, key) => total + count(insights?.[key]), 0);
 
   return <section className="mt-7 border border-white/15 bg-white/[.025] p-5 sm:p-6">
+    {archived && <p className="mb-5 border border-amber-200/25 p-4 text-sm text-amber-100">Showing the saved browser snapshot. The server copy is unavailable; existing downloaded PDFs remain valid.</p>}
+    {["overview", "risk", "findings"].includes(view) && <RiskCards value={atPath(insights, ["security", "assessment"])}/>}
+    {view === "classification" && <ClassificationCards value={atPath(insights, ["ml", "predictions"])}/>}
     <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] font-bold tracking-[.14em] text-sky-200">LIVE GO SERVER DATA</p><p className="mt-2 text-xs text-white/55">Each value below is fetched from the completed analysis through the same-origin Core proxy.</p></div><button onClick={() => void refresh()} className="border border-white/30 px-3 py-2 text-[9px] font-bold tracking-[.12em] transition hover:bg-white hover:text-black">REFRESH</button></div>
-    {!analysisId && !["health", "gateway", "upload"].includes(view) ? <div className="mt-5 border-t border-white/10 pt-5 text-sm leading-7 text-white/60">No analysis is selected. <Link className="text-teal-200 underline underline-offset-4" href="/workspace">Upload a PCAP</Link>, then open the completed analysis dashboard.</div> : <><div className="mt-5 grid gap-2 border-t border-white/10 pt-5 sm:grid-cols-4"><div><p className="text-[9px] text-white/40">GO SERVER</p><p className={`mt-2 text-xs font-bold ${health === "READY" ? "text-teal-200" : "text-red-200"}`}>{health}</p></div><div><p className="text-[9px] text-white/40">ANALYSIS STATE</p><p className="mt-2 text-xs font-bold text-white">{analysis?.state ?? "NOT SELECTED"}</p></div><div><p className="text-[9px] text-white/40">OPERATIONAL STAGE</p><p className="mt-2 text-xs font-bold text-white">{analysis?.stage ?? "—"}</p></div><div><p className="text-[9px] text-white/40">AVAILABLE RECORD GROUPS</p><p className="mt-2 text-xs font-bold text-white">{availableSections}</p></div></div><div className="mt-5 flex flex-wrap items-center gap-3"><button onClick={() => void generateReport()} disabled={analysis?.state !== "COMPLETED"} className="border border-teal-200 bg-teal-200 px-3 py-2 text-[9px] font-bold tracking-[.12em] text-slate-950 transition hover:bg-transparent hover:text-teal-100 disabled:cursor-not-allowed disabled:opacity-40">GENERATE EXECUTIVE PDF</button>{report && <span className="text-[10px] text-white/55">REPORT: {report.state}{report.failure_reason ? ` · ${report.failure_reason}` : ""}</span>}{report?.download_url && <a href={`/api/core${report.download_url}`} className="border border-white/40 px-3 py-2 text-[9px] font-bold tracking-[.12em] hover:bg-white hover:text-black">DOWNLOAD PDF</a>}</div><div className="mt-5 grid gap-3">{dataBlocks.map(([title, value]) => <DataBlock key={title} title={title} value={value} />)}{dataBlocks.every(([, value]) => value === undefined || value === null || (Array.isArray(value) && value.length === 0) || (typeof value === "object" && !Array.isArray(value) && Object.keys(value).length === 0)) && <p className="border border-dashed border-white/20 p-4 text-xs leading-6 text-white/55">This section has no records yet. The analysis may still be running, the capture may not contain this protocol data, or the optional service may be unavailable.</p>}</div></>}
+    {!analysisId && !["health", "gateway", "upload"].includes(view) ? <div className="mt-5 border-t border-white/10 pt-5 text-sm leading-7 text-white/60">No analysis is selected. <Link className="text-teal-200 underline underline-offset-4" href="/workspace">Upload a PCAP</Link>, then open the completed analysis dashboard.</div> : <><div className="mt-5 grid gap-2 border-t border-white/10 pt-5 sm:grid-cols-4"><div><p className="text-[9px] text-white/40">GO SERVER</p><p className={`mt-2 text-xs font-bold ${health === "READY" ? "text-teal-200" : "text-red-200"}`}>{health}</p></div><div><p className="text-[9px] text-white/40">ANALYSIS STATE</p><p className="mt-2 text-xs font-bold text-white">{analysis?.state ?? "NOT SELECTED"}</p></div><div><p className="text-[9px] text-white/40">OPERATIONAL STAGE</p><p className="mt-2 text-xs font-bold text-white">{analysis?.stage ?? "—"}</p></div><div><p className="text-[9px] text-white/40">AVAILABLE RECORD GROUPS</p><p className="mt-2 text-xs font-bold text-white">{availableSections}</p></div></div><div className="mt-5 flex flex-wrap items-center gap-3"><button onClick={() => void generateReport()} disabled={archived || analysis?.state !== "ANALYSIS_STATE_COMPLETED"} className="border border-teal-200 bg-teal-200 px-3 py-2 text-[9px] font-bold tracking-[.12em] text-slate-950 transition hover:bg-transparent hover:text-teal-100 disabled:cursor-not-allowed disabled:opacity-40">GENERATE EXECUTIVE PDF</button>{report && <span className="text-[10px] text-white/55">REPORT: {report.state}{report.failure_reason ? ` · ${report.failure_reason}` : ""}</span>}{report?.state === "READY" && report.download_url && <a href={`/api/core${report.download_url}`} className="border border-white/40 px-3 py-2 text-[9px] font-bold tracking-[.12em] hover:bg-white hover:text-black">DOWNLOAD PDF</a>}</div><div className="mt-5 grid gap-3">{dataBlocks.map(([title, value]) => <DataBlock key={title} title={title} value={value} />)}{dataBlocks.every(([, value]) => value === undefined || value === null || (Array.isArray(value) && value.length === 0) || (typeof value === "object" && !Array.isArray(value) && Object.keys(value).length === 0)) && <p className="border border-dashed border-white/20 p-4 text-xs leading-6 text-white/55">This section has no records yet. The analysis may still be running, the capture may not contain this protocol data, or the optional service may be unavailable.</p>}</div></>}
     {error && <p className="mt-5 border border-red-300/50 bg-red-300/10 p-3 text-xs text-red-100">{error}</p>}
   </section>;
 }
