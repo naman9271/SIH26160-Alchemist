@@ -113,7 +113,7 @@ export function PrinciplesSection({ items = principles }: { items?: Principle[] 
   }, [items]);
 
   return (
-    <section ref={sectionRef} id="approach" className="relative isolate overflow-x-clip bg-black px-4 py-16 text-white md:px-8 md:py-24 lg:px-12">
+    <section ref={sectionRef} id="approach" className="relative isolate overflow-x-clip bg-[var(--landing-canvas)] px-4 py-16 text-white md:px-8 md:py-24 lg:px-12">
       <SectionGrid />
       <div className="relative z-10 mx-auto max-w-[1440px]">
         <header data-principles-header className="mb-16">

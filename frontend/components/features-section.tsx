@@ -62,7 +62,7 @@ function FeatureCard({ feature, index }: { feature: Feature; index: number }) {
 
   const active = hovered;
   return (
-    <article ref={cardRef} className={`group relative flex cursor-pointer flex-col justify-between overflow-hidden border border-border/40 p-4 transition-all duration-500 md:p-5 ${feature.span} ${active ? "border-primary/60" : ""}`} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
+    <article ref={cardRef} className={`group relative flex cursor-pointer flex-col justify-between overflow-hidden border border-border/40 bg-black p-4 transition-all duration-500 md:p-5 ${feature.span} ${active ? "border-primary/60" : ""}`} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
       <div aria-hidden="true" className={`absolute inset-0 bg-primary/5 transition-opacity duration-500 ${active ? "opacity-100" : "opacity-0"}`} />
       <div className="relative z-10">
         <p className="font-mono text-[10px] uppercase tracking-widest text-foreground/40">{feature.label}</p>

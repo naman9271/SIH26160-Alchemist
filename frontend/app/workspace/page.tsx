@@ -170,7 +170,7 @@ export default function WorkspacePage() {
   const action = phase === "uploading" ? "UPLOADING PCAP…" : phase === "starting" ? mode === "pcap" ? "STARTING ANALYSIS…" : "STARTING CAPTURE…" : phase === "running" ? (mode === "pcap" || analysis) ? "ANALYSIS IN PROGRESS" : "CAPTURE RUNNING" : mode === "pcap" ? "UPLOAD AND START" : mode === "live" ? "START LIVE CAPTURE" : "START DEEP ASSESSMENT";
 
   return (
-    <div className="min-h-svh bg-black font-mono text-white">
+    <div className="min-h-svh bg-[var(--landing-canvas)] font-mono text-white">
       <div className="workspace-sidebar-shell mx-auto grid max-w-[1600px]">
         <aside className="workspace-sidebar group/sidebar relative z-20 overflow-hidden border-b border-white/15 bg-[#060910] px-5 py-6 transition-shadow duration-300 lg:sticky lg:top-0 lg:h-svh lg:w-full lg:border-b-0 lg:border-r lg:px-3 lg:py-2 lg:hover:shadow-[18px_0_46px_rgba(0,0,0,.42)]">
           <div aria-hidden="true" className="absolute inset-0 opacity-25 [background-image:linear-gradient(rgba(94,234,212,.14)_1px,transparent_1px),linear-gradient(90deg,rgba(94,234,212,.14)_1px,transparent_1px)] [background-size:34px_34px]" />

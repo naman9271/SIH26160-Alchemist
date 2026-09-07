@@ -1,16 +1,18 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { FooterBackgroundGradient, TextHoverEffect } from "@/components/ui/hover-footer";
 
 export function LandingNavigation({ overlay = false }: { overlay?: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
+  const isLandingPage = usePathname() === "/";
   const navLinkClass = "border border-transparent px-2.5 py-1.5 text-[10px] font-bold tracking-[.13em] text-teal-100/70 transition-all duration-300 hover:border-teal-200/35 hover:bg-teal-200/[.055] hover:text-teal-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-200/70";
   const mobileNavLinkClass = "block border border-transparent px-3 py-2.5 text-[10px] font-bold tracking-[.13em] text-teal-100/70 transition-colors hover:border-teal-200/30 hover:bg-teal-200/[.055] hover:text-teal-50";
 
   return (
-    <header className={`${overlay ? "absolute" : "sticky"} inset-x-0 top-0 z-30 px-3 pt-2 font-mono text-white sm:px-5`}>
+    <header className={`${overlay || isLandingPage ? "absolute" : "relative"} inset-x-0 top-0 z-30 px-3 pt-2 font-mono text-white sm:px-5`}>
       <div className="mx-auto flex h-12 max-w-6xl items-center justify-between gap-4 border border-teal-200/25 bg-black/90 px-4 shadow-[0_10px_28px_rgba(0,0,0,.4)] backdrop-blur-sm sm:px-6 lg:px-8">
         <Link href="/" aria-label="Alchemist home" className="shrink-0 border border-transparent px-1.5 py-1 text-white/80 transition-all duration-300 hover:border-teal-200/40 hover:bg-teal-200/[.06] hover:text-teal-100"><span className="text-base font-bold italic tracking-widest [transform:skewX(-12deg)] sm:text-lg">ALCHEMIST</span></Link>
         <nav className="hidden items-center gap-2 xl:flex" aria-label="Primary navigation">
@@ -44,7 +46,7 @@ export function LandingFooter() {
   ] as const;
 
   return (
-    <footer className="relative isolate overflow-hidden border-t border-teal-200/20 bg-black px-5 py-8 font-mono text-[10px] tracking-[.12em] text-white/55 lg:px-8 lg:py-12">
+    <footer className="relative isolate overflow-hidden border-t border-teal-200/20 bg-[var(--landing-canvas)] px-5 py-8 font-mono text-[10px] tracking-[.12em] text-white/55 lg:px-8 lg:py-12">
       <FooterBackgroundGradient />
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(rgba(94,234,212,.12)_1px,transparent_1px),linear-gradient(90deg,rgba(94,234,212,.12)_1px,transparent_1px)] [background-size:42px_42px] opacity-55" />
       <div className="relative z-10 mx-auto grid max-w-7xl gap-5 lg:grid-cols-[minmax(0,0.85fr)_minmax(34rem,1.15fr)] lg:items-start">

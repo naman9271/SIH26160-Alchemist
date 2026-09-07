@@ -9,7 +9,7 @@ import { NoiseOverlay } from "@/components/ui/noise-overlay";
 
 export default function Home() {
   return (
-    <main className="bg-black text-white">
+    <main className="bg-[var(--landing-canvas)] text-white">
       <HeroAscii />
 
       <div className="relative isolate overflow-hidden">

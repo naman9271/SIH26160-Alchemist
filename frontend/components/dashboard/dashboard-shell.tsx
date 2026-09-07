@@ -31,7 +31,7 @@ export function DashboardShell({ view = "overview" }: { view?: string }) {
     if (slug === "upload") return "/workspace";
     return (slug === "overview" ? "/dashboard" : "/dashboard/" + slug) + (id ? "?analysis=" + encodeURIComponent(id) : "");
   }
-  return <div className="min-h-svh bg-black font-mono text-white">
+  return <div className="min-h-svh bg-[var(--landing-canvas)] font-mono text-white">
     <div className="dashboard-shell-grid mx-auto grid max-w-[1600px]">
       <aside className="dashboard-sidebar relative z-20 border-r border-teal-200/15 bg-[#05090f] p-3 lg:sticky lg:top-0 lg:h-svh lg:overflow-x-hidden lg:overflow-y-auto">
         <div className="dashboard-sidebar-brand grid min-h-12 items-center gap-3 px-2">
