@@ -9,6 +9,8 @@ type Health = { status?: string };
 type Upload = { source_id: string; filename: string; packets: number; esp_packets: number };
 type Analysis = { analysis_id: string; state: string; stage: string; failure_reason?: string };
 type WorkspaceMode = "pcap" | "live" | "deep";
+type CaptureInterface = { name: string; addresses: string[]; up: boolean; loopback: boolean; capture_supported: boolean };
+type LiveCapture = { capture_id: string; state: string; interface_name: string; packets_total: number; esp_packets: number; packets_per_second?: number; active_flows: number; packet_drops: number; gateway?: { authorized: boolean; vici_error?: string; xfrm_error?: string } };
 
 const workspaceSteps = [
   ["01", "MODE", "Choose PCAP, live, or deep assessment."],
@@ -32,10 +34,19 @@ export default function WorkspacePage() {
   const [phase, setPhase] = useState<"idle" | "uploading" | "starting" | "running" | "complete" | "failed">("idle");
   const [upload, setUpload] = useState<Upload>();
   const [analysis, setAnalysis] = useState<Analysis>();
+  const [interfaces, setInterfaces] = useState<CaptureInterface[]>([]);
+  const [interfaceName, setInterfaceName] = useState("");
+  const [deepAuthorized, setDeepAuthorized] = useState(false);
+  const [liveCapture, setLiveCapture] = useState<LiveCapture>();
   const [error, setError] = useState<string>();
 
   useEffect(() => {
     coreRequest<Health>("/health").then(() => setHealth("ready")).catch(() => setHealth("unavailable"));
+    coreRequest<{ interfaces: CaptureInterface[] }>("/api/v1/live-capture/interfaces").then((result) => {
+      const available = result.interfaces.filter((item) => item.capture_supported);
+      setInterfaces(available);
+      setInterfaceName(available[0]?.name ?? "");
+    }).catch(() => setInterfaces([]));
   }, []);
 
   useEffect(() => {
@@ -57,10 +68,25 @@ export default function WorkspacePage() {
     return () => window.clearInterval(interval);
   }, [analysis, phase]);
 
+  useEffect(() => {
+    if (!liveCapture || phase !== "running") return;
+    const interval = window.setInterval(async () => {
+      try {
+        const next = await coreRequest<LiveCapture>(`/api/v1/live-captures/${encodeURIComponent(liveCapture.capture_id)}`);
+        setLiveCapture(next);
+        if (next.state === "FAILED" || next.state === "STOPPED") setPhase("complete");
+      } catch (captureError) {
+        setError(captureError instanceof Error ? captureError.message : "Live capture polling failed.");
+      }
+    }, 1500);
+    return () => window.clearInterval(interval);
+  }, [liveCapture, phase]);
+
   function selectFile(event: ChangeEvent<HTMLInputElement>) {
     setFile(event.target.files?.[0]);
     setUpload(undefined);
     setAnalysis(undefined);
+    setLiveCapture(undefined);
     setError(undefined);
     setPhase("idle");
   }
@@ -68,7 +94,18 @@ export default function WorkspacePage() {
   async function startWorkflow(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (mode !== "pcap") {
-      setError(mode === "live" ? "Live capture is not exposed by the current browser API. Use a trusted client or add a Go Server HTTP adapter." : "Deep Assessment requires explicit authorization and a browser adapter for VICI/XFRM readiness.");
+      if (!interfaceName) { setError("Select a capture-capable network interface."); return; }
+      if (mode === "deep" && !deepAuthorized) { setError("Confirm authorization before starting Deep Assessment."); return; }
+      setError(undefined);
+      setPhase("starting");
+      try {
+        const started = await coreRequest<LiveCapture>("/api/v1/live-captures", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ interface_name: interfaceName, mode, authorized: deepAuthorized, enable_vici: mode === "deep", enable_xfrm: mode === "deep", save_pcap: true }) });
+        setLiveCapture(started);
+        setPhase("running");
+      } catch (requestError) {
+        setPhase("failed");
+        setError(requestError instanceof Error ? requestError.message : "The live capture could not start.");
+      }
       return;
     }
     if (!file) return;
@@ -101,8 +138,19 @@ export default function WorkspacePage() {
     }
   }
 
+  async function stopCapture() {
+    if (!liveCapture) return;
+    try {
+      const stopped = await coreRequest<LiveCapture>(`/api/v1/live-captures/${encodeURIComponent(liveCapture.capture_id)}/stop`, { method: "POST" });
+      setLiveCapture((current) => current ? { ...current, ...stopped } : current);
+      setPhase("complete");
+    } catch (stopError) {
+      setError(stopError instanceof Error ? stopError.message : "The capture could not be stopped.");
+    }
+  }
+
   const busy = ["uploading", "starting", "running"].includes(phase);
-  const action = phase === "uploading" ? "UPLOADING PCAP…" : phase === "starting" ? "STARTING ANALYSIS…" : phase === "running" ? "ANALYSIS IN PROGRESS" : mode === "pcap" ? "UPLOAD AND START" : mode === "live" ? "LIVE CAPTURE ADAPTER REQUIRED" : "DEEP ASSESSMENT ADAPTER REQUIRED";
+  const action = phase === "uploading" ? "UPLOADING PCAP…" : phase === "starting" ? mode === "pcap" ? "STARTING ANALYSIS…" : "STARTING CAPTURE…" : phase === "running" ? mode === "pcap" ? "ANALYSIS IN PROGRESS" : "CAPTURE RUNNING" : mode === "pcap" ? "UPLOAD AND START" : mode === "live" ? "START LIVE CAPTURE" : "START DEEP ASSESSMENT";
 
   return (
     <div className="min-h-svh bg-black font-mono text-white">
@@ -111,15 +159,7 @@ export default function WorkspacePage() {
           <div aria-hidden="true" className="absolute inset-0 opacity-25 [background-image:linear-gradient(rgba(94,234,212,.14)_1px,transparent_1px),linear-gradient(90deg,rgba(94,234,212,.14)_1px,transparent_1px)] [background-size:34px_34px]" />
           <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(circle_at_20%_0,rgba(94,234,212,.18),transparent_0_18rem),linear-gradient(180deg,rgba(0,0,0,.18),rgba(0,0,0,.86))]" />
           <div className="relative z-10 flex min-h-full flex-col">
-            <div className="flex items-center gap-3">
-              <div className="grid h-11 w-11 shrink-0 place-items-center border border-teal-200/45 bg-teal-200/[.08] text-xs font-bold tracking-[.16em] text-teal-100 shadow-[0_0_24px_rgba(94,234,212,.12)]">IP</div>
-              <div className="min-w-0 opacity-100 transition-opacity duration-300 lg:w-0 lg:overflow-hidden lg:opacity-0 lg:group-hover/sidebar:w-auto lg:group-hover/sidebar:opacity-100">
-                <p className="whitespace-nowrap text-[9px] font-bold tracking-[.18em] text-teal-100/70">IPSEC SENTINEL TWIN</p>
-                <p className="mt-1 whitespace-nowrap text-[9px] tracking-[.14em] text-white/35">WORKSPACE CONTROL</p>
-              </div>
-            </div>
-
-            <div className="mt-4 border-y border-white/10 py-4 opacity-100 transition-opacity duration-300 lg:opacity-0 lg:group-hover/sidebar:opacity-100">
+            <div className="border-y border-white/10 py-4 opacity-100 transition-opacity duration-300 lg:opacity-0 lg:group-hover/sidebar:opacity-100">
               <p className="whitespace-nowrap text-[10px] tracking-[.16em] text-white/40">WORKSPACE STATE</p>
               <div className="mt-4 grid gap-3 text-[10px]">
                 <div className="flex items-center justify-between gap-4">
@@ -167,8 +207,9 @@ export default function WorkspacePage() {
             <form className="border-b border-r border-white/20 p-6 sm:p-9" onSubmit={startWorkflow}>
             <p className="text-[10px] tracking-[.16em] text-white/45">ANALYSIS MODE</p>
             <div className="mt-5 grid gap-2 sm:grid-cols-3">
-              {([['pcap', 'PASSIVE PCAP', 'Upload an offline capture.'], ['live', 'PASSIVE LIVE', 'Observe an authorized interface.'], ['deep', 'DEEP ASSESSMENT', 'Verify authorized gateway facts.']] as const).map(([value, label, detail]) => <label key={value} className={`cursor-pointer border p-3 transition ${mode === value ? "border-teal-200 bg-teal-200/10" : "border-white/20 hover:border-white/55"}`}><input className="sr-only" type="radio" name="mode" value={value} checked={mode === value} onChange={() => { setMode(value); setError(undefined); }} /><span className="block text-[10px] font-bold tracking-[.1em]">{label}</span><span className="mt-2 block text-[10px] leading-4 text-white/50">{detail}</span></label>)}
+              {([['pcap', 'PASSIVE PCAP', 'Upload an offline capture.'], ['live', 'PASSIVE LIVE', 'Observe an authorized interface.'], ['deep', 'DEEP ASSESSMENT', 'Verify authorized gateway facts.']] as const).map(([value, label, detail]) => <label key={value} className={`cursor-pointer border p-3 transition ${mode === value ? "border-teal-200 bg-teal-200/10" : "border-white/20 hover:border-white/55"}`}><input className="sr-only" type="radio" name="mode" value={value} checked={mode === value} onChange={() => { setMode(value); setLiveCapture(undefined); setPhase("idle"); setError(undefined); }} /><span className="block text-[10px] font-bold tracking-[.1em]">{label}</span><span className="mt-2 block text-[10px] leading-4 text-white/50">{detail}</span></label>)}
             </div>
+            {mode === "pcap" ? <>
             <p className="mt-7 text-[10px] tracking-[.16em] text-white/45">SOURCE / CLASSIC PCAP OR CAP</p>
             <label className={`group relative mt-6 block cursor-pointer overflow-hidden border p-7 transition duration-300 sm:p-9 ${file ? "border-teal-200/70 bg-teal-200/[.055]" : "border-dashed border-white/35 bg-white/[.018] hover:border-teal-200/70 hover:bg-teal-200/[.04]"}`} htmlFor="pcap-upload">
               <input id="pcap-upload" className="sr-only" type="file" accept=".pcap,.cap,application/vnd.tcpdump.pcap" onChange={selectFile} />
@@ -197,7 +238,16 @@ export default function WorkspacePage() {
               <input className="mt-0.5 h-4 w-4 accent-white" type="checkbox" checked={enableMl} onChange={(event) => setEnableMl(event.target.checked)} />
               <span><b className="block text-white">ENABLE METADATA-ONLY ML</b><span className="mt-2 block leading-6">Classification is INFERRED, never protocol truth. Unavailable and low-confidence results remain visible as UNAVAILABLE or UNKNOWN.</span></span>
             </label>
-            <button className="mt-7 w-full border border-white bg-white px-6 py-3 text-xs font-bold tracking-[.14em] text-black transition hover:bg-black hover:text-white disabled:cursor-not-allowed disabled:opacity-35" type="submit" disabled={!file || busy || health !== "ready" || mode !== "pcap"}>{action}</button>
+            </> : <div className="mt-7 border-y border-white/15 py-5">
+              <label className="block text-[10px] tracking-[.16em] text-white/45">CAPTURE INTERFACE
+                <select value={interfaceName} onChange={(event) => setInterfaceName(event.target.value)} className="mt-3 block w-full border border-teal-200/30 bg-black px-3 py-3 text-xs text-white outline-none focus:border-teal-200" disabled={busy}>
+                  {interfaces.length === 0 ? <option value="">NO CAPTURE-CAPABLE INTERFACE FOUND</option> : interfaces.map((item) => <option key={item.name} value={item.name}>{item.name}{item.addresses.length ? ` · ${item.addresses[0]}` : ""}</option>)}
+                </select>
+              </label>
+              {mode === "deep" && <label className="mt-5 flex cursor-pointer gap-3 text-xs leading-6 text-white/65"><input className="mt-1 h-4 w-4 accent-teal-200" type="checkbox" checked={deepAuthorized} onChange={(event) => setDeepAuthorized(event.target.checked)} /><span><b className="block text-teal-100">I AM AUTHORIZED TO ASSESS THIS GATEWAY</b>Read-only VICI/XFRM gateway telemetry will be requested. This never decrypts traffic or changes gateway configuration.</span></label>}
+              <p className="mt-4 text-[10px] leading-5 text-white/45">The capture uses the fixed IPsec metadata filter: IKE, NAT-T, ESP, and AH. Host capture permission is still required.</p>
+            </div>}
+            <button className="mt-7 w-full border border-white bg-white px-6 py-3 text-xs font-bold tracking-[.14em] text-black transition hover:bg-black hover:text-white disabled:cursor-not-allowed disabled:opacity-35" type="submit" disabled={busy || health !== "ready" || (mode === "pcap" ? !file : !interfaceName) || (mode === "deep" && !deepAuthorized)}>{action}</button>
             {error && <p className="mt-5 border border-red-300/60 bg-red-300/10 p-4 text-xs leading-6 text-red-100">{error}</p>}
             </form>
 
@@ -207,21 +257,22 @@ export default function WorkspacePage() {
               <div className="border-b border-white/15 pb-5"><dt className="text-white">GO SERVER</dt><dd className="mt-2 text-white/55">{health === "ready" ? "READY · browser API reachable" : health === "checking" ? "CHECKING…" : "UNAVAILABLE · start Core or set CORE_HTTP_URL"}</dd></div>
               <div className="border-b border-white/15 pb-5"><dt className="text-sky-300">OBSERVED + DERIVED</dt><dd className="mt-2 text-white/55">Packet facts and deterministic flow metadata are included in passive analysis.</dd></div>
               <div className="border-b border-white/15 pb-5"><dt className="text-amber-300">INFERRED</dt><dd className="mt-2 text-white/55">{enableMl ? "Requested when the ML worker is available." : "Not requested for this analysis."}</dd></div>
-              <div><dt className="text-white/50">VERIFIED GATEWAY</dt><dd className="mt-2 text-white/55">UNAVAILABLE in Passive PCAP mode. Authorized Deep Assessment is required.</dd></div>
+              <div><dt className="text-white/50">VERIFIED GATEWAY</dt><dd className="mt-2 text-white/55">{liveCapture?.gateway?.authorized ? "AUTHORIZED · read-only gateway telemetry requested" : "UNAVAILABLE in Passive PCAP mode. Authorized Deep Assessment is required."}</dd></div>
             </dl>
             <div className="mt-7 border border-dashed border-sky-300/35 bg-sky-300/[.04] p-4">
               <p className="text-[10px] font-bold tracking-[.14em] text-sky-200">LIVE CAPTURE CONSOLE</p>
-              <div className="mt-4 flex items-center justify-between border-y border-white/10 py-3 text-[10px]"><span className="text-white/55">INTERFACE</span><span className="text-white/35">NO BROWSER ADAPTER</span></div>
-              <div className="mt-3 flex items-center justify-between text-[10px]"><span className="text-white/55">PACKET RATE</span><span className="text-white/35">— PKTS/S</span></div>
-              <button className="mt-5 w-full border border-white/20 px-3 py-2 text-[10px] tracking-[.12em] text-white/35" type="button" disabled>START LIVE CAPTURE</button>
-              <p className="mt-3 text-[10px] leading-5 text-white/45">Live capture needs the Go Server browser adapter; the current HTTP contract intentionally does not start or stop capture.</p>
+              <div className="mt-4 flex items-center justify-between border-y border-white/10 py-3 text-[10px]"><span className="text-white/55">INTERFACE</span><span className={liveCapture ? "text-teal-100" : "text-white/35"}>{liveCapture?.interface_name ?? "NOT STARTED"}</span></div>
+              <div className="mt-3 flex items-center justify-between text-[10px]"><span className="text-white/55">PACKETS / RATE</span><span className={liveCapture ? "text-teal-100" : "text-white/35"}>{liveCapture ? `${liveCapture.packets_total.toLocaleString()} · ${(liveCapture.packets_per_second ?? 0).toFixed(1)} PKTS/S` : "— PKTS/S"}</span></div>
+              <div className="mt-3 flex items-center justify-between text-[10px]"><span className="text-white/55">ESP / FLOWS</span><span className={liveCapture ? "text-teal-100" : "text-white/35"}>{liveCapture ? `${liveCapture.esp_packets.toLocaleString()} · ${liveCapture.active_flows}` : "—"}</span></div>
+              {liveCapture?.state === "CAPTURING" ? <button className="mt-5 w-full border border-red-200/60 px-3 py-2 text-[10px] tracking-[.12em] text-red-100 transition hover:bg-red-300/10" type="button" onClick={() => void stopCapture()}>STOP LIVE CAPTURE</button> : <p className="mt-5 border border-teal-200/20 px-3 py-2 text-[10px] leading-5 text-white/50">Select PASSIVE LIVE or DEEP ASSESSMENT, choose an interface, then start the capture.</p>}
+              {liveCapture?.gateway && <p className="mt-3 text-[10px] leading-5 text-white/45">{liveCapture.gateway.vici_error ? `VICI: ${liveCapture.gateway.vici_error}` : "VICI telemetry available when configured."}{liveCapture.gateway.xfrm_error ? ` XFRM: ${liveCapture.gateway.xfrm_error}` : ""}</p>}
             </div>
             </aside>
           </div>
 
           <section id="analysis-state" className="mt-10 scroll-mt-24 border border-white/20 p-6 sm:p-9">
-          <div className="flex flex-col gap-3 border-b border-white/15 pb-5 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-[10px] tracking-[.16em] text-white/45">ANALYSIS STATE</p><h2 className="mt-3 text-lg font-bold tracking-[.08em]">{analysis ? analysis.state.replaceAll("_", " ") : "AWAITING SOURCE"}</h2></div><span className="text-xs text-white/50">{analysis ? `OPERATIONAL STAGE: ${analysis.stage.replaceAll("_", " ")}` : "NO ACTIVE ANALYSIS"}</span></div>
-          {upload ? <p className="mt-5 text-xs leading-6 text-white/60">SOURCE ACCEPTED: {upload.filename} · {upload.packets.toLocaleString()} packets received · {upload.esp_packets.toLocaleString()} ESP packets observed. These counters are not security conclusions.</p> : <p className="mt-5 text-xs leading-6 text-white/50">Upload a PCAP to create a workspace and begin the browser-supported workflow.</p>}
+          <div className="flex flex-col gap-3 border-b border-white/15 pb-5 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-[10px] tracking-[.16em] text-white/45">{liveCapture ? "LIVE CAPTURE STATE" : "ANALYSIS STATE"}</p><h2 className="mt-3 text-lg font-bold tracking-[.08em]">{liveCapture ? liveCapture.state : analysis ? analysis.state.replaceAll("_", " ") : "AWAITING SOURCE"}</h2></div><span className="text-xs text-white/50">{liveCapture ? `${liveCapture.interface_name} · ${liveCapture.packet_drops} DROPS` : analysis ? `OPERATIONAL STAGE: ${analysis.stage.replaceAll("_", " ")}` : "NO ACTIVE ANALYSIS"}</span></div>
+          {liveCapture ? <p className="mt-5 text-xs leading-6 text-white/60">LIVE PASSIVE COLLECTION IS ACTIVE. Only IPsec packet metadata is observed; ESP payloads are never decrypted. Stop the capture when collection is complete.</p> : upload ? <p className="mt-5 text-xs leading-6 text-white/60">SOURCE ACCEPTED: {upload.filename} · {upload.packets.toLocaleString()} packets received · {upload.esp_packets.toLocaleString()} ESP packets observed. These counters are not security conclusions.</p> : <p className="mt-5 text-xs leading-6 text-white/50">Upload a PCAP or select a live capture mode to begin.</p>}
           {phase === "complete" && analysis && <Link href={`/dashboard?analysis=${encodeURIComponent(analysis.analysis_id)}`} className="mt-6 inline-block border border-white px-4 py-2 text-[10px] font-bold tracking-[.12em] transition hover:bg-white hover:text-black">OPEN LIVE RESULTS DASHBOARD</Link>}
           </section>
         </main>

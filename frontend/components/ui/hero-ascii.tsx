@@ -1,23 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { MeshGradientSVG } from "@/components/ui/shader-svg";
 
 const signalBars = [7, 15, 10, 22, 14, 28, 18, 9];
 
-function GhostGraphic() {
-  return (
-    <svg viewBox="0 0 231 289" className="w-full max-w-sm text-slate-950" aria-label="Alchemist signal">
-      <path d="M230.809 115.385V249.411C230.809 269.923 214.985 287.282 194.495 288.411C184.544 288.949 175.364 285.718 168.26 280C159.746 273.154 147.769 273.461 139.178 280.23C132.638 285.384 124.381 288.462 115.379 288.462C106.377 288.462 98.1451 285.384 91.6055 280.23C82.912 273.385 70.9353 273.385 62.2415 280.23C55.7532 285.334 47.598 288.411 38.7246 288.462C17.4132 288.615 0 270.667 0 249.359V115.385C0 51.6667 51.6756 0 115.404 0C179.134 0 230.809 51.6756 230.809 115.385Z" fill="#0f766e" />
-      <path d="M230.809 115.385V249.411C230.809 269.923 214.985 287.282 194.495 288.411C184.544 288.949 175.364 285.718 168.26 280C159.746 273.154 147.769 273.461 139.178 280.23C132.638 285.384 124.381 288.462 115.379 288.462C106.377 288.462 98.1451 285.384 91.6055 280.23C82.912 273.385 70.9353 273.385 62.2415 280.23C55.7532 285.334 47.598 288.411 38.7246 288.462C17.4132 288.615 0 270.667 0 249.359V115.385C0 51.6667 51.6756 0 115.404 0C179.134 0 230.809 51.6756 230.809 115.385Z" fill="none" stroke="rgba(153,246,228,.75)" strokeWidth="1.5" />
-      <ellipse cx="80" cy="120" rx="20" ry="30" fill="currentColor" />
-      <ellipse cx="150" cy="120" rx="20" ry="30" fill="currentColor" />
-    </svg>
-  );
-}
-
 export function HeroAscii() {
   return (
-    <section className="hero-ascii relative min-h-svh overflow-hidden bg-black font-mono text-white">
+    <section className="hero-ascii relative min-h-svh overflow-hidden bg-[#111827] font-mono text-white">
+      <div className="hero-ascii-noise absolute inset-0" aria-hidden="true" />
       <div aria-hidden="true" className="absolute left-0 top-0 z-20 h-8 w-8 border-l-2 border-t-2 border-white/30 lg:h-12 lg:w-12" />
       <div aria-hidden="true" className="absolute right-0 top-0 z-20 h-8 w-8 border-r-2 border-t-2 border-white/30 lg:h-12 lg:w-12" />
       <div aria-hidden="true" className="absolute bottom-[5vh] left-0 z-20 h-8 w-8 border-b-2 border-l-2 border-white/30 lg:h-12 lg:w-12" />
@@ -50,7 +41,7 @@ export function HeroAscii() {
             <div className="mt-6 hidden items-center gap-2 opacity-40 lg:flex"><span className="text-[9px]">∞</span><span className="h-px flex-1 bg-white" /><span className="text-[9px]">IPSEC SENTINEL</span></div>
           </div>
           <div className="hidden min-h-[26rem] place-items-center lg:grid" aria-hidden="true">
-            <GhostGraphic />
+            <MeshGradientSVG />
           </div>
         </div>
       </div>

@@ -12,6 +12,8 @@ import (
 	inputv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/input"
 	reportv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/report"
 	workspacev1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/workspace"
+	sensorv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/sensor/v1"
+	capturev1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/sensor/v1/capture"
 	flowv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/sensor/v1/flow"
 	coreanalysis "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/analysis"
 	corefusion "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/fusion"
@@ -26,13 +28,26 @@ import (
 	coreworkspace "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/workspace"
 	shared "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/domain/sensor"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/fusion/query"
+	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/sensor/capture"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/sensor/flow"
+	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/sensor/network"
+	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/sensor/session"
+	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/sensor/vici"
+	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/sensor/xfrm"
 )
 
 const maxHTTPPCAPBytes = 4 << 30
 
-func registerWorkflowAPI(mux *http.ServeMux, input *coreinput.Service, analysis *coreanalysis.Service, reports *corereport.Service, workspace *coreworkspace.Service, protocol *coreprotocol.Service, fusion *corefusion.Service, security *coresecurity.Service, risk *corerisk.Service, ml *coreml.Service, flows *flow.Service, system coresystem.Service, localSensor *localsensor.Service) {
+func registerWorkflowAPI(mux *http.ServeMux, input *coreinput.Service, analysis *coreanalysis.Service, reports *corereport.Service, workspace *coreworkspace.Service, protocol *coreprotocol.Service, fusion *corefusion.Service, security *coresecurity.Service, risk *corerisk.Service, ml *coreml.Service, flows *flow.Service, system coresystem.Service, localSensor *localsensor.Service, sessions *session.Service, interfaces *network.Service, captures *capture.Service, viciService *vici.Service, xfrmService *xfrm.Service) {
 	mux.HandleFunc("GET /api/v1/system/overview", func(w http.ResponseWriter, r *http.Request) { getSystemOverview(w, r, system, localSensor) })
+	mux.HandleFunc("GET /api/v1/live-capture/interfaces", func(w http.ResponseWriter, r *http.Request) { listCaptureInterfaces(w, r, interfaces) })
+	mux.HandleFunc("POST /api/v1/live-captures", func(w http.ResponseWriter, r *http.Request) {
+		startLiveCapture(w, r, sessions, captures, viciService, xfrmService)
+	})
+	mux.HandleFunc("GET /api/v1/live-captures/{captureID}", func(w http.ResponseWriter, r *http.Request) {
+		getLiveCapture(w, r, sessions, captures, viciService, xfrmService)
+	})
+	mux.HandleFunc("POST /api/v1/live-captures/{captureID}/stop", func(w http.ResponseWriter, r *http.Request) { stopLiveCapture(w, r, captures) })
 	mux.HandleFunc("POST /api/v1/pcap", func(w http.ResponseWriter, r *http.Request) { uploadPCAP(w, r, input, workspace) })
 	mux.HandleFunc("POST /api/v1/analyses", func(w http.ResponseWriter, r *http.Request) { startAnalysis(w, r, analysis) })
 	mux.HandleFunc("GET /api/v1/analyses/{analysisID}", func(w http.ResponseWriter, r *http.Request) { getAnalysis(w, r, analysis) })
@@ -42,6 +57,138 @@ func registerWorkflowAPI(mux *http.ServeMux, input *coreinput.Service, analysis 
 	mux.HandleFunc("POST /api/v1/analyses/{analysisID}/report", func(w http.ResponseWriter, r *http.Request) { generateReport(w, r, reports) })
 	mux.HandleFunc("GET /api/v1/reports/{reportID}", func(w http.ResponseWriter, r *http.Request) { getReport(w, r, reports) })
 	mux.HandleFunc("GET /api/v1/reports/{reportID}/download", func(w http.ResponseWriter, r *http.Request) { downloadReport(w, r, reports) })
+}
+
+// The browser bridge deliberately exposes only a small, passive capture
+// workflow. It cannot pass arbitrary tcpdump arguments or invoke gateway
+// commands. Deep mode is opt-in and can only read sanitized VICI/XFRM state.
+func listCaptureInterfaces(w http.ResponseWriter, r *http.Request, interfaces *network.Service) {
+	if interfaces == nil {
+		writeWorkflowError(w, shared.NewError(shared.Unavailable, "", "network interface service is unavailable"))
+		return
+	}
+	items, err := interfaces.List(r.Context())
+	if err != nil {
+		writeWorkflowError(w, err)
+		return
+	}
+	result := make([]map[string]any, 0, len(items))
+	for _, item := range items {
+		result = append(result, map[string]any{"name": item.Name, "addresses": item.Addresses, "up": item.Up, "loopback": item.Loopback, "capture_supported": item.CaptureSupported})
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"interfaces": result})
+}
+
+func startLiveCapture(w http.ResponseWriter, r *http.Request, sessions *session.Service, captures *capture.Service, viciService *vici.Service, xfrmService *xfrm.Service) {
+	if sessions == nil || captures == nil {
+		writeWorkflowError(w, shared.NewError(shared.Unavailable, "", "live capture service is unavailable"))
+		return
+	}
+	var request struct {
+		InterfaceName string `json:"interface_name"`
+		Mode          string `json:"mode"`
+		Authorized    bool   `json:"authorized"`
+		EnableVICI    bool   `json:"enable_vici"`
+		EnableXFRM    bool   `json:"enable_xfrm"`
+		SavePCAP      bool   `json:"save_pcap"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		writeWorkflowError(w, shared.NewError(shared.InvalidArgument, "", "invalid JSON request"))
+		return
+	}
+	mode := sensorv1.SensorMode_PASSIVE_LIVE
+	var deepOptions *session.DeepOptions
+	if request.Mode == "deep" {
+		if !request.Authorized {
+			writeWorkflowError(w, shared.NewError(shared.FailedPrecondition, "", "Deep Assessment requires explicit authorization"))
+			return
+		}
+		if !request.EnableVICI && !request.EnableXFRM {
+			writeWorkflowError(w, shared.NewError(shared.InvalidArgument, "", "select VICI and/or XFRM for Deep Assessment"))
+			return
+		}
+		mode, deepOptions = sensorv1.SensorMode_DEEP_ASSESSMENT, &session.DeepOptions{EnableVICI: request.EnableVICI, EnableXFRM: request.EnableXFRM}
+	}
+	item, err := sessions.Create(r.Context(), mode, "browser-"+request.Mode+"-capture", deepOptions)
+	if err != nil {
+		writeWorkflowError(w, err)
+		return
+	}
+	record, err := captures.Start(r.Context(), item.ID, request.InterfaceName, capturev1.CaptureFilterMode_IPSEC_ONLY, "", false, request.SavePCAP, 0, 0)
+	if err != nil {
+		writeWorkflowError(w, err)
+		return
+	}
+	writeLiveCapture(w, r, record, sessions, captures, viciService, xfrmService)
+}
+
+func getLiveCapture(w http.ResponseWriter, r *http.Request, sessions *session.Service, captures *capture.Service, viciService *vici.Service, xfrmService *xfrm.Service) {
+	if captures == nil {
+		writeWorkflowError(w, shared.NewError(shared.Unavailable, "", "live capture service is unavailable"))
+		return
+	}
+	record, err := captures.Status(r.Context(), r.PathValue("captureID"))
+	if err != nil {
+		writeWorkflowError(w, err)
+		return
+	}
+	writeLiveCapture(w, r, record, sessions, captures, viciService, xfrmService)
+}
+
+func stopLiveCapture(w http.ResponseWriter, r *http.Request, captures *capture.Service) {
+	if captures == nil {
+		writeWorkflowError(w, shared.NewError(shared.Unavailable, "", "live capture service is unavailable"))
+		return
+	}
+	record, err := captures.Stop(r.Context(), r.PathValue("captureID"))
+	if err != nil {
+		writeWorkflowError(w, err)
+		return
+	}
+	counters, _, _, _, statsErr := captures.Stats(r.Context(), record.CaptureID())
+	if statsErr != nil {
+		writeWorkflowError(w, statsErr)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"capture_id": record.CaptureID(), "state": record.State(), "packets_total": counters.PacketsTotal, "esp_packets": counters.ESPPackets})
+}
+
+func writeLiveCapture(w http.ResponseWriter, r *http.Request, record interface {
+	CaptureID() string
+	SessionID() string
+	InterfaceName() string
+	State() string
+}, sessions *session.Service, captures *capture.Service, viciService *vici.Service, xfrmService *xfrm.Service) {
+	counters, flows, vpnSessions, elapsed, err := captures.Stats(r.Context(), record.CaptureID())
+	if err != nil {
+		writeWorkflowError(w, err)
+		return
+	}
+	result := map[string]any{"capture_id": record.CaptureID(), "session_id": record.SessionID(), "interface_name": record.InterfaceName(), "state": record.State(), "duration_seconds": uint64(elapsed.Seconds()), "packets_total": counters.PacketsTotal, "bytes_total": counters.BytesTotal, "ike_packets": counters.IKEPackets, "esp_packets": counters.ESPPackets, "ah_packets": counters.AHPackets, "nat_t_packets": counters.NATTPackets, "packet_drops": counters.PacketDrops, "active_flows": flows, "active_vpn_sessions": vpnSessions}
+	if elapsed > 0 {
+		result["packets_per_second"] = float64(counters.PacketsTotal) / elapsed.Seconds()
+	}
+	if sessions != nil {
+		if item, sessionErr := sessions.Get(r.Context(), record.SessionID()); sessionErr == nil && item.Mode == sensorv1.SensorMode_DEEP_ASSESSMENT {
+			gateway := map[string]any{"authorized": true}
+			if item.DeepOptions.EnableVICI && viciService != nil {
+				if snapshot, snapshotErr := viciService.Snapshot(r.Context(), vici.DefaultSocketURI); snapshotErr == nil {
+					gateway["vici"] = snapshot
+				} else {
+					gateway["vici_error"] = snapshotErr.Error()
+				}
+			}
+			if item.DeepOptions.EnableXFRM && xfrmService != nil {
+				if snapshot, snapshotErr := xfrmService.Snapshot(r.Context()); snapshotErr == nil {
+					gateway["xfrm"] = snapshot
+				} else {
+					gateway["xfrm_error"] = snapshotErr.Error()
+				}
+			}
+			result["gateway"] = gateway
+		}
+	}
+	writeJSON(w, http.StatusOK, result)
 }
 
 // getSystemOverview intentionally exposes only readiness/capability data. It

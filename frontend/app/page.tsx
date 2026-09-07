@@ -13,7 +13,7 @@ export default function Home() {
       <HeroAscii />
 
       <div className="relative isolate overflow-hidden">
-        <NoiseOverlay position="absolute" layer="over" opacity={0.14} />
+        <NoiseOverlay position="absolute" layer="behind" opacity={0.055} />
         <div className="relative z-10">
           <FeaturesSection />
           <EvidenceStorySection />
