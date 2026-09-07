@@ -104,6 +104,7 @@ func main() {
 	mlService := coreml.New(mlWorker, 2*time.Second, workspaceService, inputService, sensorServices.Flows)
 	analysisService.SetReadModels(coreanalysis.ReadModels{Fusion: fusionService, Security: securityService, Risk: riskService, ML: mlService})
 	reportService := corereport.New(analysisService, fusionService, artifactService, workspaceService, securityService, riskService, mlService, coreEventService)
+	reportService.SetDashboardSources(protocolService, sensorServices.Flows, systemService)
 	analysisService.SetPipeline(&coreanalysis.Pipeline{Sensor: sensorServices, Input: inputService, Ingest: fusionRuntime.Ingest, Fusion: fusionRuntime.Fusion, ML: mlService, Security: securityService, Risk: riskService, Events: coreEventService, VICI: viciService, XFRM: xfrmService, VICIURI: envOrDefault("VICI_SOCKET_URI", vici.DefaultSocketURI)})
 	// Apply safe runtime changes to the services that own these settings.
 	runtimeConfigService.Subscribe(func(config *runtimeconfigv1.RuntimeConfig) {

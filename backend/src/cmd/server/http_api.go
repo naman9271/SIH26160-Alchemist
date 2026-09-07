@@ -455,7 +455,7 @@ func getAnalysis(w http.ResponseWriter, r *http.Request, analysis *coreanalysis.
 }
 
 func generateReport(w http.ResponseWriter, r *http.Request, reports *corereport.Service) {
-	record, err := reports.Generate(r.Context(), &reportv1.GenerateReportRequest{AnalysisId: r.PathValue("analysisID"), Type: reportv1.ReportType_EXECUTIVE, Format: reportv1.ReportFormat_PDF, IncludeTimeline: true, IncludeThreatMatrix: true, IncludeEvidenceChain: true})
+	record, err := reports.Generate(r.Context(), &reportv1.GenerateReportRequest{AnalysisId: r.PathValue("analysisID"), Type: reportv1.ReportType_EXECUTIVE, Format: reportv1.ReportFormat_PDF, IncludeTimeline: true, IncludeThreatMatrix: true, IncludeShap: true, IncludeEvidenceChain: true})
 	if err != nil {
 		writeWorkflowError(w, err)
 		return

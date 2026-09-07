@@ -14,15 +14,20 @@ import (
 	eventv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/event"
 	fusionv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/fusion"
 	reportv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/report"
+	flowv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/sensor/v1/flow"
 	coreanalysis "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/analysis"
 	coreartifact "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/artifact"
 	corefusion "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/fusion"
 	coreinput "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/input"
 	coreml "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/ml"
+	coreprotocol "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/protocolread"
 	corerisk "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/risk"
 	coresecurity "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/security"
+	coresystem "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/system"
 	coreworkspace "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/workspace"
 	shared "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/domain/sensor"
+	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/fusion/query"
+	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/sensor/flow"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -45,6 +50,9 @@ type Service struct {
 	security  *coresecurity.Service
 	risk      *corerisk.Service
 	ml        *coreml.Service
+	protocol  *coreprotocol.Service
+	flows     *flow.Service
+	system    coresystem.Service
 	events    interface {
 		Publish(context.Context, string, eventv1.CoreEventCategory)
 	}
@@ -54,6 +62,12 @@ func New(analysis *coreanalysis.Service, fusion *corefusion.Service, artifacts *
 	Publish(context.Context, string, eventv1.CoreEventCategory)
 }) *Service {
 	return &Service{records: map[string]*Record{}, analysis: analysis, fusion: fusion, artifacts: artifacts, workspace: workspace, security: security, risk: risk, ml: ml, events: events}
+}
+
+// SetDashboardSources adds the read models used by the dashboard so a PDF can
+// carry the same analysis detail without coupling report generation to HTTP.
+func (s *Service) SetDashboardSources(protocol *coreprotocol.Service, flows *flow.Service, system coresystem.Service) {
+	s.protocol, s.flows, s.system = protocol, flows, system
 }
 func (s *Service) Generate(ctx context.Context, request *reportv1.GenerateReportRequest) (Record, error) {
 	if err := contextError(ctx); err != nil {
@@ -193,6 +207,12 @@ func (s *Service) render(ctx context.Context, r *reportv1.GenerateReportRequest,
 	analysisRecord, _ := s.analysis.Get(ctx, r.GetAnalysisId())
 	inputSource, sourceErr := s.analysis.Source(ctx, r.GetAnalysisId())
 	payload := map[string]interface{}{"analysis_id": r.GetAnalysisId(), "report_type": r.GetType().String(), "generated_at": generatedAt.Format(time.RFC3339), "analysis_mode": analysisRecord.Mode.String(), "analysis_state": analysisRecord.State.String(), "analysis_stage": analysisRecord.Stage.String(), "source_id": analysisRecord.SourceID, "options": map[string]bool{"include_timeline": r.GetIncludeTimeline(), "include_threat_matrix": r.GetIncludeThreatMatrix(), "include_shap": r.GetIncludeShap(), "include_evidence_chain": r.GetIncludeEvidenceChain()}, "fused_conclusions": conclusions}
+	if progress, err := s.analysis.ProgressDetails(ctx, r.GetAnalysisId()); err == nil {
+		payload["analysis_progress"] = progress
+	}
+	if summary, err := s.analysis.SummaryDetails(ctx, r.GetAnalysisId()); err == nil {
+		payload["analysis_summary"] = summary
+	}
 	if sourceErr == nil {
 		payload["input"] = map[string]interface{}{"mode": inputSource.Mode.String(), "filename": inputSource.Filename, "size_bytes": inputSource.Size, "packets_total": inputSource.Counters.PacketsTotal, "bytes_total": inputSource.Counters.BytesTotal, "ike_packets": inputSource.Counters.IKEPackets, "esp_packets": inputSource.Counters.ESPPackets, "ah_packets": inputSource.Counters.AHPackets, "nat_t_packets": inputSource.Counters.NATTPackets, "packet_drops": inputSource.Counters.PacketDrops}
 	}
@@ -215,10 +235,45 @@ func (s *Service) render(ctx context.Context, r *reportv1.GenerateReportRequest,
 				if breakdown, breakdownErr := s.risk.Breakdown(ctx, assessment.ID); breakdownErr == nil {
 					payload["risk_breakdown"] = breakdown
 				}
+				if overrides, overridesErr := s.risk.Overrides(ctx, assessment.ID); overridesErr == nil {
+					payload["critical_overrides"] = overrides
+				}
 				if r.GetIncludeThreatMatrix() {
 					payload["threat_matrix"] = assessment.Result.ThreatMatrix
 				}
 			}
+		}
+	}
+	if status, err := s.fusion.Status(ctx, r.GetAnalysisId()); err == nil {
+		payload["fusion_status"] = status
+	}
+	if summary, err := s.fusion.Summary(ctx, r.GetAnalysisId()); err == nil {
+		payload["fusion_summary"] = summary
+	}
+	if s.protocol != nil {
+		if sessions, _, err := s.protocol.Sessions(ctx, r.GetAnalysisId(), 1000, ""); err == nil {
+			payload["vpn_sessions"] = sessions
+		}
+		if exchanges, _, err := s.protocol.IKE(ctx, r.GetAnalysisId(), "", 1000, ""); err == nil {
+			payload["ike_exchanges"] = exchanges
+		}
+		if associations, _, err := s.protocol.SAs(ctx, r.GetAnalysisId(), "", 1000, ""); err == nil {
+			payload["security_associations"] = associations
+		}
+		if nat, err := s.protocol.NAT(ctx, r.GetAnalysisId(), ""); err == nil {
+			payload["nat_traversal"] = nat
+		}
+		if evidence, _, err := s.protocol.Evidence(ctx, r.GetAnalysisId(), query.Filter{}, 1000, ""); err == nil {
+			payload["protocol_evidence"] = evidence
+		}
+	}
+	if inputSource.SessionID != "" && s.flows != nil {
+		if records, _, err := s.flows.List(ctx, &flowv1.ListFlowsRequest{SensorSessionId: inputSource.SessionID, PageSize: 1000}); err == nil {
+			flows := make([]reportFlow, 0, len(records))
+			for _, record := range records {
+				flows = append(flows, reportFlow{Flow: flow.ToProto(record), Stats: flow.Stats(record)})
+			}
+			payload["flow_records"] = flows
 		}
 	}
 	if r.GetIncludeEvidenceChain() {
@@ -231,12 +286,26 @@ func (s *Service) render(ctx context.Context, r *reportv1.GenerateReportRequest,
 		payload["evidence_chains"] = chains
 	}
 	if s.ml != nil {
+		if worker, err := s.ml.WorkerStatus(ctx); err == nil {
+			payload["ml_worker"] = worker
+		}
 		if inferenceID, predictions, explanations, err := s.ml.LatestForAnalysis(ctx, r.GetAnalysisId()); err == nil {
 			payload["ml_inference_id"] = inferenceID
 			payload["ml_predictions"] = predictions
 			if r.GetIncludeShap() {
 				payload["shap_explanations"] = explanations
 			}
+		}
+	}
+	if s.system != nil {
+		if readiness, err := s.system.Readiness(ctx); err == nil {
+			payload["system_readiness"] = readiness
+		}
+		if capabilities, err := s.system.Capabilities(ctx); err == nil {
+			payload["system_capabilities"] = capabilities
+		}
+		if stats, err := s.system.RuntimeStats(ctx); err == nil {
+			payload["system_runtime"] = stats
 		}
 	}
 	raw, _ := json.MarshalIndent(payload, "", "  ")
@@ -249,6 +318,11 @@ func (s *Service) render(ctx context.Context, r *reportv1.GenerateReportRequest,
 	}
 	document := buildReportDocument(analysisRecord, source, conclusions, payload, generatedAt)
 	return buildReportPDF(document), "application/pdf", "alchemist-ipsec-analysis-report.pdf"
+}
+
+type reportFlow struct {
+	Flow  *flowv1.Flow
+	Stats *flowv1.FlowStats
 }
 
 // reportPDF deliberately uses a small, dependency-free PDF writer. It keeps

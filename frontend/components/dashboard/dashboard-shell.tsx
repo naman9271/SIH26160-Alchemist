@@ -17,7 +17,6 @@ const navigation = [
   { slug: "evidence", name: "Evidence", description: "Trace observations, derived facts, fused conclusions, and missing sources." },
   { slug: "findings", name: "Security findings", description: "Read deterministic findings and the evidence behind each one." },
   { slug: "risk", name: "Risk & fixes", description: "Understand score drivers and prioritized remediation guidance." },
-  { slug: "reports", name: "Generate report", description: "Create and download the professional analysis PDF." },
   { slug: "chat", name: "Report assistant", description: "Ask plain-language questions about a saved analysis snapshot." },
   { slug: "health", name: "System health", description: "Check Core, local sensor, gateway, and ML readiness." },
   { slug: "history", name: "History", description: "Reopen analysis snapshots stored in this browser." },

@@ -8,11 +8,14 @@ import (
 	"time"
 
 	commonv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/common/v1"
+	analysisv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/analysis"
 	fusionv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/fusion"
 	mlv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/ml"
+	protocolv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/protocolread"
 	riskv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/risk"
 	coreanalysis "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/analysis"
 	coreinput "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/input"
+	coresystem "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/system"
 	rules "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/security"
 )
 
@@ -103,6 +106,12 @@ func buildReportDocument(record coreanalysis.Record, source *coreinput.Source, c
 	}
 	document.Sections = append(document.Sections, reportSection{Title: "Analysis Overview", Tables: []reportTable{{Headers: []string{"Metric", "Value"}, Rows: overviewRows, Widths: []int{28, 66}}}})
 
+	if progress, ok := payload["analysis_progress"].(*analysisv1.AnalysisProgress); ok && progress != nil {
+		document.Sections = append(document.Sections, progressSection(progress))
+	} else {
+		document.Sections = append(document.Sections, reportSection{Title: "Progress Flow", Paragraphs: []string{fmt.Sprintf("Detailed pipeline counters were unavailable. The final recorded stage was %s.", humanValue(record.Stage.String()))}})
+	}
+
 	if source != nil || len(traffic) > 0 {
 		trafficRows := [][]string{}
 		if source != nil {
@@ -121,10 +130,16 @@ func buildReportDocument(record coreanalysis.Record, source *coreinput.Source, c
 		}
 		document.Sections = append(document.Sections, reportSection{Title: "Traffic Analysis", Paragraphs: []string{"These values describe observable packet and flow metadata. They do not reveal encrypted ESP payload content."}, Tables: []reportTable{{Headers: []string{"Traffic metric", "Observed value"}, Rows: uniqueRows(trafficRows), Widths: []int{42, 52}}}})
 	}
+	if flows, ok := payload["flow_records"].([]reportFlow); ok && len(flows) > 0 {
+		document.Sections = append(document.Sections, flowsSection(flows))
+	} else {
+		document.Sections = append(document.Sections, reportSection{Title: "Flows", Paragraphs: []string{"No analysis-scoped flow telemetry was available for this report."}})
+	}
 
 	if len(protocol) > 0 {
 		document.Sections = append(document.Sections, reportSection{Title: "IPSEC / VPN Analysis", Paragraphs: []string{"The table presents the winning IPsec-related conclusions selected by Fusion from the available sources."}, Tables: []reportTable{conclusionTable(protocol)}})
 	}
+	document.Sections = append(document.Sections, vpnSessionsSection(payload))
 
 	if record.Mode.String() != "DEEP_ASSESSMENT" {
 		passive := reportSection{Title: "Passive Analysis", Paragraphs: []string{"Observed information: packet headers and IPsec metadata were collected without decrypting ESP payloads."}}
@@ -149,7 +164,10 @@ func buildReportDocument(record coreanalysis.Record, source *coreinput.Source, c
 
 	if len(predictions) > 0 {
 		document.Sections = append(document.Sections, classificationSection(predictions))
+	} else {
+		document.Sections = append(document.Sections, reportSection{Title: "Traffic Classification", Paragraphs: []string{"No ML traffic prediction was produced. This commonly occurs when the capture contains negotiation packets but no eligible encrypted ESP or NAT-T flow."}})
 	}
+	document.Sections = append(document.Sections, evidenceSection(payload))
 
 	if hasAssessment {
 		findings := reportSection{Title: "Security Findings"}
@@ -168,7 +186,11 @@ func buildReportDocument(record coreanalysis.Record, source *coreinput.Source, c
 			}
 			document.Sections = append(document.Sections, recommendations)
 		}
+	} else {
+		document.Sections = append(document.Sections, reportSection{Title: "Security Findings", Paragraphs: []string{"A completed deterministic security assessment was unavailable, so no supported findings or remediation actions can be reported."}})
 	}
+	document.Sections = append(document.Sections, riskAndFixesSection(payload, assessment, hasAssessment))
+	document.Sections = append(document.Sections, systemHealthSection(payload))
 
 	conclusion := reportSection{Title: "Conclusion"}
 	if hasAssessment {
@@ -182,6 +204,142 @@ func buildReportDocument(record coreanalysis.Record, source *coreinput.Source, c
 		document.Sections = append(document.Sections, reportSection{Title: "Appendix: Evidence Conclusions", Paragraphs: []string{"This technical appendix lists Fusion's winning conclusions. Status identifies whether a fact was observed, derived, inferred, gateway-verified, or unknown."}, Tables: []reportTable{conclusionTable(conclusions)}})
 	}
 	return document
+}
+
+func progressSection(progress *analysisv1.AnalysisProgress) reportSection {
+	rows := [][]string{
+		{"Pipeline stage", humanValue(progress.GetStage().String())},
+		{"Packets processed", formatUint(progress.GetPacketsProcessed())},
+		{"Bytes processed", formatBytes(progress.GetBytesProcessed())},
+		{"Flows processed", formatUint(progress.GetFlowsProcessed())},
+		{"VPN sessions found", formatUint(progress.GetSessionsFound())},
+		{"Security associations found", formatUint(progress.GetSasFound())},
+		{"Evidence records", formatUint(progress.GetEvidenceCount())},
+		{"Findings generated", formatUint(progress.GetFindingsGenerated())},
+		{"ML predictions", formatUint(progress.GetMlPredictions())},
+		{"VICI availability", humanValue(progress.GetViciState().String())},
+		{"XFRM availability", humanValue(progress.GetXfrmState().String())},
+	}
+	return reportSection{Title: "Progress Flow", Paragraphs: []string{"The completed pipeline counters below mirror the dashboard progress view."}, Tables: []reportTable{{Headers: []string{"Pipeline metric", "Final value"}, Rows: rows, Widths: []int{42, 52}}}}
+}
+
+func flowsSection(flows []reportFlow) reportSection {
+	rows := make([][]string, 0, len(flows))
+	for _, item := range flows {
+		if item.Flow == nil || item.Stats == nil {
+			continue
+		}
+		endpoint := fmt.Sprintf("%s:%d -> %s:%d", item.Flow.GetSourceAddress(), item.Flow.GetSourcePort(), item.Flow.GetDestinationAddress(), item.Flow.GetDestinationPort())
+		rows = append(rows, []string{humanValue(item.Flow.GetProtocol().String()), endpoint, formatUint(item.Stats.GetPacketCount()), formatBytes(item.Stats.GetByteCount()), fmt.Sprintf("%d ms", item.Stats.GetDurationMs())})
+	}
+	return reportSection{Title: "Flows", Paragraphs: []string{"Each row is payload-free flow telemetry derived from the uploaded or authorized live capture."}, Tables: []reportTable{{Headers: []string{"Protocol", "Endpoints", "Packets", "Bytes", "Duration"}, Rows: rows, Widths: []int{14, 38, 12, 15, 15}}}}
+}
+
+func vpnSessionsSection(payload map[string]interface{}) reportSection {
+	section := reportSection{Title: "VPN Sessions", Paragraphs: []string{"Observed VPN sessions, IKE exchanges, security associations, and NAT traversal are summarized below."}}
+	if sessions, ok := payload["vpn_sessions"].([]*protocolv1.VpnSession); ok && len(sessions) > 0 {
+		rows := make([][]string, 0, len(sessions))
+		for _, item := range sessions {
+			if item != nil {
+				rows = append(rows, []string{item.GetSessionId(), humanValue(item.GetMode()), item.GetState(), strconv.Itoa(len(item.GetFlowIds())), strings.Join(item.GetSpiValues(), ", ")})
+			}
+		}
+		section.Tables = append(section.Tables, reportTable{Headers: []string{"Session", "Mode", "State", "Flows", "SPI values"}, Rows: rows, Widths: []int{25, 17, 15, 9, 28}})
+	}
+	if exchanges, ok := payload["ike_exchanges"].([]*protocolv1.IkeExchange); ok && len(exchanges) > 0 {
+		rows := make([][]string, 0, len(exchanges))
+		for _, item := range exchanges {
+			if item != nil {
+				rows = append(rows, []string{item.GetExchangeId(), humanValue(item.GetIkeVersion()), item.GetInitiatorSpi(), item.GetResponderSpi(), formatPercent(item.GetConfidence())})
+			}
+		}
+		section.Tables = append(section.Tables, reportTable{Headers: []string{"IKE exchange", "Version", "Initiator SPI", "Responder SPI", "Confidence"}, Rows: rows, Widths: []int{24, 12, 22, 22, 14}})
+	}
+	if associations, ok := payload["security_associations"].([]*protocolv1.SecurityAssociation); ok && len(associations) > 0 {
+		rows := make([][]string, 0, len(associations))
+		for _, item := range associations {
+			if item != nil {
+				rows = append(rows, []string{item.GetSecurityAssociationId(), humanValue(item.GetProtocol()), humanValue(item.GetMode()), humanValue(item.GetState()), strings.Join(item.GetSpiValues(), ", ")})
+			}
+		}
+		section.Tables = append(section.Tables, reportTable{Headers: []string{"Security association", "Protocol", "Mode", "State", "SPI values"}, Rows: rows, Widths: []int{30, 14, 14, 14, 22}})
+	}
+	if nat, ok := payload["nat_traversal"].(*protocolv1.NatTraversalSummary); ok && nat != nil {
+		rows := [][]string{{"NAT-T observed", strconv.FormatBool(nat.GetObserved())}, {"NAT-T packets", formatUint(nat.GetNatTPackets())}, {"Evidence status", evidenceStatus(nat.GetEvidenceStatus())}, {"Unavailable reason", fallback(nat.GetUnavailableReason(), "None")}}
+		section.Tables = append(section.Tables, reportTable{Headers: []string{"NAT traversal", "Value"}, Rows: rows, Widths: []int{32, 62}})
+	}
+	if len(section.Tables) == 0 {
+		section.Paragraphs = append(section.Paragraphs, "No VPN session, IKE exchange, security-association, or NAT traversal records were available.")
+	}
+	return section
+}
+
+func evidenceSection(payload map[string]interface{}) reportSection {
+	section := reportSection{Title: "Evidence", Paragraphs: []string{"This section mirrors the dashboard evidence view: collection records are kept separate from Fusion's selected conclusions."}}
+	if status, ok := payload["fusion_status"].(*fusionv1.FusionStatus); ok && status != nil {
+		rows := [][]string{{"Fusion state", humanValue(status.GetState())}, {"Evidence count", formatUint(status.GetEvidenceCount())}, {"Conclusion count", formatUint(status.GetConclusionCount())}, {"Conflict count", formatUint(status.GetConflictCount())}}
+		section.Tables = append(section.Tables, reportTable{Headers: []string{"Fusion metric", "Value"}, Rows: rows, Widths: []int{36, 58}})
+	}
+	if evidence, ok := payload["protocol_evidence"].([]*protocolv1.ProtocolEvidence); ok && len(evidence) > 0 {
+		rows := make([][]string, 0, len(evidence))
+		for _, item := range evidence {
+			if item != nil {
+				rows = append(rows, []string{humanLabel(item.GetPropertyKey()), humanValue(item.GetValue()), evidenceStatus(item.GetEvidenceStatus()), formatPercent(item.GetConfidence()), fallback(item.GetSource(), "Not recorded")})
+			}
+		}
+		section.Tables = append(section.Tables, reportTable{Headers: []string{"Evidence property", "Value", "Status", "Confidence", "Source"}, Rows: rows, Widths: []int{25, 24, 13, 12, 20}})
+	}
+	if len(section.Tables) == 0 {
+		section.Paragraphs = append(section.Paragraphs, "No protocol evidence or Fusion status records were available.")
+	}
+	return section
+}
+
+func riskAndFixesSection(payload map[string]interface{}, assessment rules.Assessment, hasAssessment bool) reportSection {
+	section := reportSection{Title: "Risk & Fixes"}
+	if score, ok := payload["risk_score"].(*riskv1.SecurityScore); ok && score != nil {
+		section.Tables = append(section.Tables, reportTable{Headers: []string{"Risk metric", "Value"}, Rows: [][]string{{"Observed-check score", fmt.Sprintf("%d/100", score.GetScore())}, {"Risk level", humanValue(score.GetRiskLevel())}, {"Assessment confidence", formatPercent(score.GetConfidence())}, {"Unknown critical facts", formatUint(score.GetUnknownEvidenceCount())}}, Widths: []int{40, 54}})
+	}
+	if breakdown, ok := payload["risk_breakdown"].(*riskv1.RiskBreakdown); ok && breakdown != nil {
+		categories := []struct {
+			name string
+			item *riskv1.RiskCategory
+		}{{"Cryptography", breakdown.GetCryptography()}, {"Authentication", breakdown.GetAuthentication()}, {"Key exchange", breakdown.GetKeyExchange()}, {"PFS", breakdown.GetPfs()}, {"Replay protection", breakdown.GetReplay()}, {"Lifecycle", breakdown.GetLifecycle()}, {"Metadata", breakdown.GetMetadata()}}
+		rows := make([][]string, 0, len(categories))
+		for _, category := range categories {
+			if category.item != nil {
+				rows = append(rows, []string{category.name, fmt.Sprintf("%d/%d", category.item.GetScore(), category.item.GetMaximum())})
+			}
+		}
+		section.Tables = append(section.Tables, reportTable{Headers: []string{"Risk category", "Supported-evidence score"}, Rows: rows, Widths: []int{48, 46}})
+	}
+	if hasAssessment && len(assessment.Findings) == 0 {
+		section.Paragraphs = append(section.Paragraphs, "No remediation was generated because no supported finding failed. Unknown evidence remains unresolved and must not be interpreted as safe.")
+	}
+	if len(section.Tables) == 0 && len(section.Paragraphs) == 0 {
+		section.Paragraphs = append(section.Paragraphs, "Risk scoring and remediation data were unavailable for this analysis.")
+	}
+	return section
+}
+
+func systemHealthSection(payload map[string]interface{}) reportSection {
+	section := reportSection{Title: "System Health", Paragraphs: []string{"This is a point-in-time service and capability snapshot captured when the report was generated."}}
+	if readiness, ok := payload["system_readiness"].(coresystem.Dependencies); ok {
+		rows := [][]string{{"In-memory store", readiness.InMemoryStore.String()}, {"Temporary storage", readiness.TempStorage.String()}, {"Sensor", readiness.Sensor.String()}, {"ML worker", readiness.MLWorker.String()}, {"Fusion engine", readiness.FusionEngine.String()}}
+		section.Tables = append(section.Tables, reportTable{Headers: []string{"Dependency", "State"}, Rows: rows, Widths: []int{44, 50}})
+	}
+	if capabilities, ok := payload["system_capabilities"].(coresystem.Capabilities); ok {
+		rows := [][]string{{"Passive PCAP", strconv.FormatBool(capabilities.PassivePCAP)}, {"Passive live capture", strconv.FormatBool(capabilities.PassiveLive)}, {"Deep assessment", strconv.FormatBool(capabilities.DeepAssessment)}, {"Security assessment", strconv.FormatBool(capabilities.SecurityAssessment)}, {"Risk scoring", strconv.FormatBool(capabilities.RiskScoring)}, {"ML classification", strconv.FormatBool(capabilities.MLClassification)}, {"Evidence explanations", strconv.FormatBool(capabilities.SHAP)}, {"PDF reporting", strconv.FormatBool(capabilities.ExecutiveReport)}}
+		section.Tables = append(section.Tables, reportTable{Headers: []string{"Capability", "Available"}, Rows: rows, Widths: []int{44, 50}})
+	}
+	if worker, ok := payload["ml_worker"].(*mlv1.MLWorkerStatus); ok && worker != nil {
+		rows := [][]string{{"Available", strconv.FormatBool(worker.GetAvailable())}, {"Model loaded", strconv.FormatBool(worker.GetModelLoaded())}, {"Model version", fallback(worker.GetModelVersion(), "Not reported")}, {"Feature schema", fallback(worker.GetFeatureSchemaVersion(), "Not reported")}, {"Status", fallback(worker.GetStatusMessage(), "Not reported")}}
+		section.Tables = append(section.Tables, reportTable{Headers: []string{"ML worker", "Value"}, Rows: rows, Widths: []int{36, 58}})
+	}
+	if len(section.Tables) == 0 {
+		section.Paragraphs = append(section.Paragraphs, "The point-in-time dependency, capability, and ML worker health snapshot was unavailable.")
+	}
+	return section
 }
 
 func classificationSection(predictions []*mlv1.TrafficPrediction) reportSection {
