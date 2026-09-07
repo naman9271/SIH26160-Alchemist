@@ -24,8 +24,10 @@ export function ReadinessSection() {
             <span className="border border-teal-100/25 bg-teal-100/[.06] px-2.5 py-1 text-teal-100/70">EVIDENCE READY</span>
           </div>
         </div>
-        <Link href="/workspace" className="relative z-10 mt-9 inline-flex overflow-hidden border border-teal-100/75 bg-teal-100/10 px-7 py-3.5 text-xs font-bold tracking-[.14em] text-teal-50 shadow-[0_0_34px_rgba(94,234,212,.15)] transition-all duration-300 hover:bg-teal-100 hover:text-slate-950 hover:shadow-[0_0_46px_rgba(94,234,212,.32)] lg:mt-0">
-          <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+        <Link href="/workspace" className="group relative z-10 mt-9 inline-flex overflow-hidden border border-teal-100/75 bg-teal-100/10 px-7 py-3.5 text-xs font-bold tracking-[.14em] text-teal-50 shadow-[0_0_28px_rgba(255,255,255,.12)] transition-all duration-300 hover:border-teal-200 hover:bg-teal-200/15 hover:text-teal-100 hover:shadow-[0_0_38px_rgba(94,234,212,.28)] lg:mt-0">
+          <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-teal-100/25 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+          <span className="absolute -left-1 -top-1 hidden h-3 w-3 border-l border-t border-white/70 group-hover:border-teal-100 lg:block" />
+          <span className="absolute -bottom-1 -right-1 hidden h-3 w-3 border-b border-r border-white/70 group-hover:border-teal-100 lg:block" />
           <span className="relative">OPEN WORKSPACE</span>
         </Link>
       </div>
