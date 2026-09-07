@@ -64,6 +64,7 @@ function FeatureCard({ feature, index }: { feature: Feature; index: number }) {
   return (
     <article ref={cardRef} className={`group relative flex cursor-pointer flex-col justify-between overflow-hidden border border-border/40 bg-black p-4 transition-all duration-500 md:p-5 ${feature.span} ${active ? "border-primary/60" : ""}`} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
       <div aria-hidden="true" className={`absolute inset-0 bg-primary/5 transition-opacity duration-500 ${active ? "opacity-100" : "opacity-0"}`} />
+      <span aria-hidden="true" className="evidence-stage-scan pointer-events-none absolute inset-x-0 top-0 h-14 opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
       <div className="relative z-10">
         <p className="font-mono text-[10px] uppercase tracking-widest text-foreground/40">{feature.label}</p>
         <h3 className={`mt-3 font-mono text-lg font-bold leading-tight tracking-[.02em] transition-colors duration-300 md:text-xl ${active ? "text-primary" : "text-foreground"}`}>{feature.title}</h3>
