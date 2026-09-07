@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useEffect } from "react";
+import GatewayFlow from "@/components/ui/gateway-flow";
+import { MeshGradientSVG } from "@/components/ui/shader-svg";
 
 declare global {
   interface Window {
@@ -14,9 +16,7 @@ const signalBars = [7, 15, 10, 22, 14, 28, 18, 9];
 export function HeroAscii() {
   useEffect(() => {
     const existing = document.querySelector<HTMLScriptElement>('script[data-unicorn-studio="true"]');
-    const initialize = () => {
-      window.UnicornStudio?.init();
-    };
+    const initialize = () => window.UnicornStudio?.init();
 
     if (existing) {
       existing.addEventListener("load", initialize, { once: true });
@@ -35,30 +35,29 @@ export function HeroAscii() {
 
   return (
     <section className="hero-ascii relative min-h-svh overflow-hidden bg-black font-mono text-white">
-      <div className="absolute inset-0 hidden lg:block" aria-hidden="true">
-        <div data-us-project="whwOGlfJ5Rz2rHaEUgHl" className="h-full w-full min-h-svh" />
-      </div>
-      <div className="hero-ascii-stars absolute inset-0 lg:hidden" aria-hidden="true" />
+      <div className="hero-ascii-stars absolute inset-0" aria-hidden="true" />
+      <GatewayFlow density={0.9} opacity={0.7} className="pointer-events-none absolute -inset-[18%] z-[1] h-[136%] w-[136%] scale-[1.55]" />
+      <div aria-hidden="true" className="absolute inset-0 z-[2] bg-[radial-gradient(circle_at_50%_50%,transparent_18%,#00000033_72%,#000000b3_100%)]" />
 
       <div aria-hidden="true" className="absolute left-0 top-0 z-20 h-8 w-8 border-l-2 border-t-2 border-white/30 lg:h-12 lg:w-12" />
       <div aria-hidden="true" className="absolute right-0 top-0 z-20 h-8 w-8 border-r-2 border-t-2 border-white/30 lg:h-12 lg:w-12" />
       <div aria-hidden="true" className="absolute bottom-[5vh] left-0 z-20 h-8 w-8 border-b-2 border-l-2 border-white/30 lg:h-12 lg:w-12" />
       <div aria-hidden="true" className="absolute bottom-[5vh] right-0 z-20 h-8 w-8 border-b-2 border-r-2 border-white/30 lg:h-12 lg:w-12" />
 
-      <div className="relative z-10 flex min-h-svh items-start pt-[6vh] sm:pt-[7vh] lg:pt-[7vh]">
-        <div className="mx-auto w-full max-w-7xl px-5 lg:ml-[2%] lg:px-12">
+      <div className="relative z-10 flex min-h-svh items-start pt-[4vh] sm:pt-[5vh] lg:items-center lg:pt-0">
+        <div className="mx-auto grid w-full max-w-7xl items-center gap-8 px-5 lg:grid-cols-[minmax(0,1fr)_minmax(17rem,.58fr)] lg:px-12">
           <div className="relative max-w-3xl">
             <div className="mb-5 flex items-center gap-3 text-[10px] font-bold tracking-[.2em] text-teal-100/70"><span className="h-px w-10 bg-teal-100/70" /><span>001 / IPSEC SENTINEL TWIN</span><span className="h-px flex-1 bg-white/20" /></div>
             <div className="relative">
               <div aria-hidden="true" className="hero-ascii-dither absolute -left-4 top-0 hidden h-full w-1 opacity-55 lg:block" />
-              <h1 className="mb-5 text-4xl font-bold leading-[1.04] tracking-[.1em] text-white drop-shadow-[0_0_28px_rgba(255,255,255,.16)] sm:text-5xl lg:mb-6 lg:text-7xl">
+              <h1 className="mb-5 text-3xl font-bold leading-[1.04] tracking-[.08em] text-white drop-shadow-[0_0_28px_rgba(255,255,255,.16)] sm:text-4xl lg:mb-6 lg:text-6xl">
                 READ THE
                 <span className="block text-teal-100">EVIDENCE</span>
                 <span className="mt-2 block text-white/82 lg:mt-3">NOT THE PAYLOAD</span>
               </h1>
             </div>
             <div aria-hidden="true" className="mb-5 hidden gap-1 opacity-45 lg:flex">{Array.from({ length: 48 }, (_, index) => <span key={index} className="h-0.5 w-0.5 rounded-full bg-teal-100" />)}</div>
-            <div className="relative border-l border-teal-100/35 pl-4"><p className="mb-5 max-w-2xl text-sm leading-7 text-gray-200/82 lg:text-lg lg:leading-8">Turn passive IPsec VPN captures into explainable protocol facts and deterministic security findings—without decrypting ESP traffic.</p><span aria-hidden="true" className="absolute -right-4 top-1/2 hidden h-3 w-3 -translate-y-1/2 border border-teal-100/45 lg:block" /></div>
+            <div className="relative border-l border-teal-100/35 pl-4"><p className="mb-5 max-w-2xl text-sm leading-7 text-gray-200/82 lg:text-base lg:leading-7">Turn passive IPsec VPN captures into explainable protocol facts and deterministic security findings—without decrypting ESP traffic.</p><span aria-hidden="true" className="absolute -right-4 top-1/2 hidden h-3 w-3 -translate-y-1/2 border border-teal-100/45 lg:block" /></div>
             <div className="mb-7 flex flex-wrap gap-2 text-[9px] font-bold tracking-[.13em] text-white/45">
               <span className="border border-white/15 bg-black/30 px-2.5 py-1">IKE</span>
               <span className="border border-white/15 bg-black/30 px-2.5 py-1">ESP</span>
@@ -67,9 +66,15 @@ export function HeroAscii() {
             </div>
             <div className="flex flex-col gap-3 lg:flex-row lg:gap-4">
               <Link href="/workspace" className="group relative overflow-hidden border border-white/70 bg-white/10 px-6 py-3 text-center text-xs font-bold tracking-[.16em] text-white shadow-[0_0_28px_rgba(255,255,255,.12)] backdrop-blur-sm transition-all duration-300 hover:border-teal-200 hover:bg-teal-200/15 hover:text-teal-100 hover:shadow-[0_0_38px_rgba(94,234,212,.28)] lg:px-8 lg:py-3.5 lg:text-sm"><span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-teal-100/25 to-transparent transition-transform duration-700 group-hover:translate-x-full" /><span className="absolute -left-1 -top-1 hidden h-3 w-3 border-l border-t border-white/70 group-hover:border-teal-100 lg:block" /><span className="absolute -bottom-1 -right-1 hidden h-3 w-3 border-b border-r border-white/70 group-hover:border-teal-100 lg:block" /><span className="relative">START ANALYSIS</span></Link>
-              <Link href="/#features" className="border border-white px-5 py-2 text-center text-xs transition-all duration-200 hover:bg-white hover:text-black lg:px-6 lg:py-2.5 lg:text-sm">LEARN MORE</Link>
+              <Link href="/dashboard" className="group relative overflow-hidden border border-indigo-200/70 bg-indigo-200/[.06] px-5 py-2 text-center text-xs text-indigo-50 shadow-[0_0_18px_rgba(129,140,248,.1)] transition-all duration-300 hover:-translate-y-0.5 hover:border-indigo-100 hover:bg-indigo-200 hover:text-slate-950 hover:shadow-[0_0_32px_rgba(129,140,248,.35)] focus-visible:-translate-y-0.5 focus-visible:border-indigo-100 focus-visible:bg-indigo-200 focus-visible:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-200/70 lg:px-6 lg:py-2.5 lg:text-sm"><span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/45 to-transparent transition-transform duration-700 group-hover:translate-x-full group-focus-visible:translate-x-full" /><span className="relative">LEARN MORE</span></Link>
             </div>
             <div className="mt-6 hidden items-center gap-2 opacity-40 lg:flex"><span className="text-[9px]">∞</span><span className="h-px flex-1 bg-white" /><span className="text-[9px]">IPSEC SENTINEL</span></div>
+          </div>
+          <div className="relative hidden min-h-[26rem] overflow-visible lg:block" aria-hidden="true">
+            <div className="absolute inset-0 opacity-75" data-us-project="whwOGlfJ5Rz2rHaEUgHl" />
+            <div className="pointer-events-none absolute inset-0 grid place-items-center bg-black/10">
+              <MeshGradientSVG />
+            </div>
           </div>
         </div>
       </div>

@@ -118,7 +118,7 @@ export function PrinciplesSection({ items = principles }: { items?: Principle[] 
       <div className="relative z-10 mx-auto max-w-[1440px]">
         <header data-principles-header className="mb-16">
           <p className="font-mono text-[10px] uppercase tracking-[.3em] text-primary">APPROACH</p>
-          <h2 className="mt-5 uppercase [font-family:var(--serif)] text-4xl font-normal leading-[.92] tracking-[-.06em] md:text-6xl lg:text-7xl">
+          <h2 className="mt-5 uppercase [font-family:var(--serif)] text-3xl font-normal leading-[.92] tracking-[-.06em] md:text-5xl lg:text-6xl">
             HOW IT WORKS
           </h2>
         </header>
@@ -137,7 +137,7 @@ export function PrinciplesSection({ items = principles }: { items?: Principle[] 
                 <p className="font-mono text-[10px] uppercase tracking-[.24em] text-white/45">
                   {principle.number} / {principle.highlight}
                 </p>
-                <h3 className="mt-5 uppercase [font-family:var(--serif)] text-4xl font-normal leading-[.92] tracking-[-.06em] md:text-6xl lg:text-[96px]">
+                <h3 className="mt-5 uppercase [font-family:var(--serif)] text-3xl font-normal leading-[.96] tracking-[-.05em] md:text-5xl lg:text-7xl">
                   <HighlightText title={principle.title} highlight={principle.highlight} />
                 </h3>
                 <p className={`mt-6 max-w-md font-mono text-sm leading-7 text-white/50 ${isRight ? "ml-auto" : ""}`}>

@@ -44,11 +44,11 @@ export function FeaturesSection() {
         <div ref={headerRef} className="mb-12 flex items-end justify-between gap-8">
           <div>
             <p className="font-mono text-[10px] uppercase tracking-[.3em] text-primary">FEATURES</p>
-            <h2 className="mt-4 font-mono text-3xl font-bold tracking-[.04em] md:text-5xl lg:text-6xl">WHAT YOU GET</h2>
+            <h2 className="mt-4 font-mono text-2xl font-bold tracking-[.04em] md:text-4xl lg:text-5xl">WHAT YOU GET</h2>
           </div>
           <p className="hidden max-w-xs text-right font-mono text-xs leading-relaxed text-foreground/50 md:block">The capture-to-report workflow for protocol evidence, bounded inference, and deterministic security assessment.</p>
         </div>
-        <div ref={gridRef} className="grid grid-cols-1 auto-rows-[156px] gap-3 sm:grid-cols-2 md:auto-rows-[170px] md:grid-cols-4 md:gap-5">
+        <div ref={gridRef} className="grid grid-cols-1 auto-rows-[142px] gap-3 sm:grid-cols-2 md:auto-rows-[150px] md:grid-cols-4 md:gap-4">
           {features.map((feature, index) => <FeatureCard key={feature.title} feature={feature} index={index} />)}
         </div>
       </div>
@@ -66,7 +66,7 @@ function FeatureCard({ feature, index }: { feature: Feature; index: number }) {
       <div aria-hidden="true" className={`absolute inset-0 bg-primary/5 transition-opacity duration-500 ${active ? "opacity-100" : "opacity-0"}`} />
       <div className="relative z-10">
         <p className="font-mono text-[10px] uppercase tracking-widest text-foreground/40">{feature.label}</p>
-        <h3 className={`mt-3 font-mono text-xl font-bold leading-tight tracking-[.02em] transition-colors duration-300 md:text-3xl ${active ? "text-primary" : "text-foreground"}`}>{feature.title}</h3>
+        <h3 className={`mt-3 font-mono text-lg font-bold leading-tight tracking-[.02em] transition-colors duration-300 md:text-xl ${active ? "text-primary" : "text-foreground"}`}>{feature.title}</h3>
       </div>
       <p className={`relative z-10 max-w-[280px] font-mono text-[11px] leading-5 text-foreground/50 transition-all duration-500 motion-reduce:translate-y-0 motion-reduce:opacity-100 ${active ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"}`}>{feature.description}</p>
       <span className={`absolute bottom-4 right-4 font-mono text-[10px] transition-colors duration-300 ${active ? "text-primary" : "text-foreground/20"}`}>{String(index + 1).padStart(2, "0")}</span>
