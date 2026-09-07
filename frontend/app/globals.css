@@ -129,12 +129,13 @@ body { overflow-x: clip; }
 
 @media (min-width: 1024px) {
   .dashboard-shell-grid {
-    grid-template-columns: 4.75rem minmax(0, 1fr);
-    transition: grid-template-columns .32s ease;
+    grid-template-columns: 7.5rem minmax(0, 1fr);
+    transition: grid-template-columns .3s ease;
   }
 
-  .dashboard-shell-grid:has(.dashboard-sidebar:hover) {
-    grid-template-columns: 17rem minmax(0, 1fr);
+  .dashboard-shell-grid:has(.dashboard-sidebar:hover),
+  .dashboard-shell-grid:has(.dashboard-sidebar:focus-within) {
+    grid-template-columns: 18rem minmax(0, 1fr);
   }
 
   .dashboard-sidebar-label {
@@ -142,51 +143,55 @@ body { overflow-x: clip; }
     transform: translateX(-.45rem);
   }
 
-  .dashboard-sidebar:hover .dashboard-sidebar-label {
+  .dashboard-sidebar:hover .dashboard-sidebar-label,
+  .dashboard-sidebar:focus-within .dashboard-sidebar-label {
     opacity: 1;
     transform: translateX(0);
   }
 
-  .dashboard-sidebar-brand,
-  .dashboard-sidebar-link {
-    grid-template-columns: 2rem minmax(0, 1fr);
-    width: 100%;
-  }
-
-  .dashboard-sidebar:not(:hover) .dashboard-sidebar-nav {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .dashboard-sidebar:not(:hover) .dashboard-sidebar-brand,
-  .dashboard-sidebar:not(:hover) .dashboard-sidebar-link {
-    width: 3rem;
-    min-width: 3rem;
-    max-width: 3rem;
-    place-self: center;
-    grid-template-columns: 1fr;
-    gap: 0;
-    padding-inline: .45rem;
-  }
-
-  .dashboard-sidebar:not(:hover) .dashboard-sidebar-link {
+  .dashboard-sidebar:not(:hover):not(:focus-within) .dashboard-sidebar-link {
     border-color: transparent;
     background: transparent;
     box-shadow: none;
   }
 
-  .dashboard-sidebar:not(:hover) .dashboard-sidebar-link > span:first-child {
-    margin-inline: auto;
-  }
-
-  .dashboard-sidebar:not(:hover) .dashboard-sidebar-label {
-    display: none;
-  }
-
-  .dashboard-sidebar:not(:hover) .dashboard-sidebar-link:hover,
-  .dashboard-sidebar:not(:hover) .dashboard-sidebar-link:focus-visible {
+  .dashboard-sidebar:not(:hover):not(:focus-within) .dashboard-sidebar-link:hover,
+  .dashboard-sidebar:not(:hover):not(:focus-within) .dashboard-sidebar-link:focus-visible {
     border-color: rgba(94, 234, 212, .55);
     background: rgba(94, 234, 212, .08);
   }
+}
+
+html,
+.dashboard-sidebar,
+.workspace-sidebar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(94, 234, 212, .7) rgba(15, 23, 42, .85);
+}
+
+html::-webkit-scrollbar,
+.dashboard-sidebar::-webkit-scrollbar,
+.workspace-sidebar::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+html::-webkit-scrollbar-track,
+.dashboard-sidebar::-webkit-scrollbar-track,
+.workspace-sidebar::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+
+html::-webkit-scrollbar-thumb,
+.dashboard-sidebar::-webkit-scrollbar-thumb,
+.workspace-sidebar::-webkit-scrollbar-thumb {
+  border: 2px solid #0f172a;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #5eead4, #38bdf8);
+}
+
+html::-webkit-scrollbar-thumb:hover,
+.dashboard-sidebar::-webkit-scrollbar-thumb:hover,
+.workspace-sidebar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #99f6e4, #7dd3fc);
 }

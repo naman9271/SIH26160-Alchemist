@@ -494,7 +494,7 @@ func downloadReport(w http.ResponseWriter, r *http.Request, reports *corereport.
 	}
 	defer reader.Close()
 	w.Header().Set("Content-Type", artifact.MIMEType)
-	w.Header().Set("Content-Disposition", "attachment; filename=analysis-report.pdf")
+	w.Header().Set("Content-Disposition", "attachment; filename=alchemist-ipsec-analysis-report.pdf")
 	_, _ = io.Copy(w, reader)
 }
 

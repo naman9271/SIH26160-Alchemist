@@ -2,10 +2,8 @@
 package report
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"strings"
 	"sync"
@@ -19,6 +17,7 @@ import (
 	coreanalysis "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/analysis"
 	coreartifact "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/artifact"
 	corefusion "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/fusion"
+	coreinput "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/input"
 	coreml "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/ml"
 	corerisk "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/risk"
 	coresecurity "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/security"
@@ -190,7 +189,13 @@ func (s *Service) ArtifactOpen(ctx context.Context, id string) (io.ReadCloser, c
 	return s.artifacts.Open(ctx, id)
 }
 func (s *Service) render(ctx context.Context, r *reportv1.GenerateReportRequest, conclusions []*fusionv1.FusedConclusion) ([]byte, string, string) {
-	payload := map[string]interface{}{"analysis_id": r.GetAnalysisId(), "report_type": r.GetType().String(), "generated_at": time.Now().UTC().Format(time.RFC3339), "options": map[string]bool{"include_timeline": r.GetIncludeTimeline(), "include_threat_matrix": r.GetIncludeThreatMatrix(), "include_shap": r.GetIncludeShap(), "include_evidence_chain": r.GetIncludeEvidenceChain()}, "fused_conclusions": conclusions}
+	generatedAt := time.Now().UTC()
+	analysisRecord, _ := s.analysis.Get(ctx, r.GetAnalysisId())
+	inputSource, sourceErr := s.analysis.Source(ctx, r.GetAnalysisId())
+	payload := map[string]interface{}{"analysis_id": r.GetAnalysisId(), "report_type": r.GetType().String(), "generated_at": generatedAt.Format(time.RFC3339), "analysis_mode": analysisRecord.Mode.String(), "analysis_state": analysisRecord.State.String(), "analysis_stage": analysisRecord.Stage.String(), "source_id": analysisRecord.SourceID, "options": map[string]bool{"include_timeline": r.GetIncludeTimeline(), "include_threat_matrix": r.GetIncludeThreatMatrix(), "include_shap": r.GetIncludeShap(), "include_evidence_chain": r.GetIncludeEvidenceChain()}, "fused_conclusions": conclusions}
+	if sourceErr == nil {
+		payload["input"] = map[string]interface{}{"mode": inputSource.Mode.String(), "filename": inputSource.Filename, "size_bytes": inputSource.Size, "packets_total": inputSource.Counters.PacketsTotal, "bytes_total": inputSource.Counters.BytesTotal, "ike_packets": inputSource.Counters.IKEPackets, "esp_packets": inputSource.Counters.ESPPackets, "ah_packets": inputSource.Counters.AHPackets, "nat_t_packets": inputSource.Counters.NATTPackets, "packet_drops": inputSource.Counters.PacketDrops}
+	}
 	if r.GetIncludeTimeline() {
 		timeline := make([]map[string]interface{}, 0, len(conclusions))
 		for _, conclusion := range conclusions {
@@ -238,161 +243,22 @@ func (s *Service) render(ctx context.Context, r *reportv1.GenerateReportRequest,
 	if r.GetFormat() == reportv1.ReportFormat_JSON_FORMAT {
 		return raw, "application/json", "analysis-report.json"
 	}
-	return reportPDF(r.GetAnalysisId(), conclusions, payload), "application/pdf", "analysis-report.pdf"
+	var source *coreinput.Source
+	if sourceErr == nil {
+		source = &inputSource
+	}
+	document := buildReportDocument(analysisRecord, source, conclusions, payload, generatedAt)
+	return buildReportPDF(document), "application/pdf", "alchemist-ipsec-analysis-report.pdf"
 }
 
 // reportPDF deliberately uses a small, dependency-free PDF writer. It keeps
 // reports readable when a heavier rendering runtime is unavailable and avoids
 // exposing raw evidence payloads or key material.
 func reportPDF(analysisID string, conclusions []*fusionv1.FusedConclusion, payload map[string]interface{}) []byte {
-	sections := []pdfSection{
-		{"Executive Summary", []string{"Analysis: " + analysisID, "Generated: " + time.Now().UTC().Format(time.RFC3339), fmt.Sprintf("Fused conclusions: %d", len(conclusions)), "This report is based on Fusion winning conclusions; raw source precedence is not re-evaluated here."}},
-		{"Protocol / IPsec Details", conclusionLines(conclusions, []string{"ike.", "child.", "esp.", "ah.", "nat_"})},
-		{"Security Findings", payloadLines(payload, "security_assessment", "No completed security assessment was available.")},
-		{"Risk Score", payloadLines(payload, "risk_score", "No risk score was available.")},
-		{"Fusion / Evidence Table", conclusionLines(conclusions, nil)},
-		{"Traffic Summary", conclusionLines(conclusions, []string{"traffic."})},
-		{"ML Results", payloadLines(payload, "ml_predictions", "No ML predictions were available.")},
-		{"Technical Appendix", []string{"Evidence chains, source availability, and optional timelines are included according to the requested report options.", compactJSON(payload)}},
-	}
-	return buildPDF(sections)
+	record := coreanalysis.Record{ID: analysisID, CreatedAt: time.Now().UTC(), UpdatedAt: time.Now().UTC()}
+	return buildReportPDF(buildReportDocument(record, nil, conclusions, payload, time.Now().UTC()))
 }
 
-type pdfSection struct {
-	title string
-	lines []string
-}
-
-func conclusionLines(conclusions []*fusionv1.FusedConclusion, prefixes []string) []string {
-	lines := make([]string, 0, len(conclusions))
-	for _, conclusion := range conclusions {
-		if conclusion == nil {
-			continue
-		}
-		if len(prefixes) > 0 {
-			matched := false
-			for _, prefix := range prefixes {
-				if strings.HasPrefix(conclusion.GetPropertyKey(), prefix) {
-					matched = true
-					break
-				}
-			}
-			if !matched {
-				continue
-			}
-		}
-		value := conclusion.GetValue()
-		lines = append(lines, fmt.Sprintf("%-38s %-20s confidence %.2f (%s)", conclusion.GetPropertyKey(), value, conclusion.GetConfidence(), conclusion.GetRationaleCode()))
-	}
-	if len(lines) == 0 {
-		return []string{"No data available."}
-	}
-	return lines
-}
-func payloadLines(payload map[string]interface{}, key, fallback string) []string {
-	value, ok := payload[key]
-	if !ok {
-		return []string{fallback}
-	}
-	return wrapPDFText(compactJSON(value), 100)
-}
-func compactJSON(value interface{}) string {
-	raw, err := json.Marshal(value)
-	if err != nil {
-		return fmt.Sprint(value)
-	}
-	return string(raw)
-}
-func buildPDF(sections []pdfSection) []byte {
-	pages := [][]string{}
-	current := []string{}
-	appendLine := func(line string) {
-		if len(current) >= 45 {
-			pages = append(pages, current)
-			current = []string{}
-		}
-		current = append(current, line)
-	}
-	for _, section := range sections {
-		appendLine("# " + section.title)
-		for _, line := range section.lines {
-			for _, wrapped := range wrapPDFText(line, 100) {
-				appendLine(wrapped)
-			}
-		}
-		appendLine("")
-	}
-	if len(current) > 0 {
-		pages = append(pages, current)
-	}
-	if len(pages) == 0 {
-		pages = append(pages, []string{"# Report", "No content available."})
-	}
-	objects := []string{"<</Type/Catalog/Pages 2 0 R>>"}
-	kids := make([]string, len(pages))
-	for index := range pages {
-		kids[index] = fmt.Sprintf("%d 0 R", 3+index*2)
-	}
-	objects = append(objects, fmt.Sprintf("<</Type/Pages/Count %d/Kids[%s]>>", len(pages), strings.Join(kids, " ")))
-	fontObject := 3 + len(pages)*2
-	for index, lines := range pages {
-		pageObject := 3 + index*2
-		contentObject := pageObject + 1
-		objects = append(objects, fmt.Sprintf("<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]/Resources<</Font<</F1 %d 0 R/F2 %d 0 R>>>>/Contents %d 0 R>>", fontObject, fontObject+1, contentObject))
-		stream := pdfStream(lines)
-		objects = append(objects, fmt.Sprintf("<</Length %d>>stream\n%s\nendstream", len(stream), stream))
-	}
-	objects = append(objects, "<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>", "<</Type/Font/Subtype/Type1/BaseFont/Helvetica-Bold>>")
-	var out bytes.Buffer
-	out.WriteString("%PDF-1.4\n")
-	offsets := make([]int, len(objects)+1)
-	for index, object := range objects {
-		offsets[index+1] = out.Len()
-		fmt.Fprintf(&out, "%d 0 obj\n%s\nendobj\n", index+1, object)
-	}
-	xref := out.Len()
-	fmt.Fprintf(&out, "xref\n0 %d\n0000000000 65535 f \n", len(objects)+1)
-	for _, offset := range offsets[1:] {
-		fmt.Fprintf(&out, "%010d 00000 n \n", offset)
-	}
-	fmt.Fprintf(&out, "trailer\n<</Size %d/Root 1 0 R>>\nstartxref\n%d\n%%%%EOF\n", len(objects)+1, xref)
-	return out.Bytes()
-}
-func pdfStream(lines []string) string {
-	var builder strings.Builder
-	builder.WriteString("BT\n40 760 Td\n")
-	for _, line := range lines {
-		font := "/F1 9 Tf"
-		if strings.HasPrefix(line, "# ") {
-			font = "/F2 14 Tf"
-			line = strings.TrimPrefix(line, "# ")
-		}
-		fmt.Fprintf(&builder, "%s (%s) Tj 0 -15 Td\n", font, escapePDF(line))
-	}
-	builder.WriteString("ET")
-	return builder.String()
-}
-func escapePDF(value string) string {
-	value = strings.ToValidUTF8(value, "?")
-	value = strings.ReplaceAll(value, "\\", "\\\\")
-	value = strings.ReplaceAll(value, "(", "\\(")
-	return strings.ReplaceAll(value, ")", "\\)")
-}
-func wrapPDFText(value string, width int) []string {
-	if width <= 0 || len(value) <= width {
-		return []string{value}
-	}
-	out := []string{}
-	for len(value) > width {
-		cut := strings.LastIndex(value[:width], " ")
-		if cut <= 0 {
-			cut = width
-		}
-		out = append(out, value[:cut])
-		value = strings.TrimSpace(value[cut:])
-	}
-	return append(out, value)
-}
 func contextError(ctx context.Context) error {
 	if ctx == nil {
 		return shared.NewError(shared.InvalidArgument, "", "context is required")

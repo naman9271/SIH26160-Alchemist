@@ -133,6 +133,20 @@ func (s *Service) Get(ctx context.Context, id string) (Record, error) {
 	}
 	return *record, nil
 }
+
+// Source returns the immutable input metadata associated with an analysis.
+// Report generation uses this to describe the real capture without exposing
+// packet payloads or reaching into the input service directly.
+func (s *Service) Source(ctx context.Context, id string) (coreinput.Source, error) {
+	record, err := s.Get(ctx, id)
+	if err != nil {
+		return coreinput.Source{}, err
+	}
+	if s.source == nil {
+		return coreinput.Source{}, shared.NewError(shared.Internal, "", "analysis source provider is not configured")
+	}
+	return s.source.Get(ctx, record.SourceID)
+}
 func (s *Service) Cancel(ctx context.Context, id string) (Record, error) {
 	record, err := s.Get(ctx, id)
 	if err != nil {
