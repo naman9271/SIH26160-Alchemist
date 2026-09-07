@@ -18,7 +18,7 @@ from src.features import (
 from src.predict import Predictor
 from src.schemas import FlowFeatures
 from tests.test_predict import prepare_predictor_config
-from tests.test_preprocess import write_two_packet_capture
+from tests.test_preprocess import write_two_packet_capture, write_two_packet_esp_capture
 
 
 def configured_predictor(tmp_path: Path) -> tuple[Path, Predictor, FeatureExtractionConfig]:
@@ -38,7 +38,7 @@ def test_capture_to_prediction_pipeline_with_small_fixture(
     tmp_path: Path, suffix: str, pcapng: bool
 ) -> None:
     capture = tmp_path / f"fixture{suffix}"
-    write_two_packet_capture(capture, pcapng=pcapng)
+    write_two_packet_esp_capture(capture, pcapng=pcapng)
     _, predictor, feature_config = configured_predictor(tmp_path)
 
     report = analyze_capture(capture, predictor, feature_config)
@@ -59,7 +59,7 @@ def test_capture_to_prediction_pipeline_with_small_fixture(
 
 def test_window_extractor_produces_strict_flow_features(tmp_path: Path) -> None:
     capture = tmp_path / "strict.pcap"
-    write_two_packet_capture(capture)
+    write_two_packet_esp_capture(capture)
     config = FeatureExtractionConfig(
         window_duration_seconds=30.0,
         burst_gap_seconds=0.1,
@@ -78,7 +78,7 @@ def test_cli_emits_capture_windows_and_summary(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     capture = tmp_path / "cli-fixture.pcap"
-    write_two_packet_capture(capture)
+    write_two_packet_esp_capture(capture)
     config_path, _, _ = configured_predictor(tmp_path)
     monkeypatch.setattr(
         "sys.argv",
@@ -90,6 +90,18 @@ def test_cli_emits_capture_windows_and_summary(
 
     assert output["summary"]["valid_windows"] == 1
     assert output["windows"][0]["predicted_class"] in {"web", "video", "voip"}
+
+
+def test_capture_analysis_does_not_classify_plain_ip_traffic(tmp_path: Path) -> None:
+    capture = tmp_path / "plain-udp.pcap"
+    write_two_packet_capture(capture)
+    _, predictor, feature_config = configured_predictor(tmp_path)
+
+    report = analyze_capture(capture, predictor, feature_config)
+
+    assert report["windows"] == []
+    assert report["summary"]["valid_windows"] == 0
+    assert report["summary"]["class_distribution"] == {}
 
 
 def test_feature_extraction_config_rejects_overlapping_timing_thresholds(

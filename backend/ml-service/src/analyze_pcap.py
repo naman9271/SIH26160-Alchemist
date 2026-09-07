@@ -158,7 +158,16 @@ def analyze_capture(
         raise PcapAnalysisError("Capture must use a .pcap or .pcapng extension")
     windows: list[dict[str, Any]] = []
     try:
-        extracted = extract_window_features(path, path.name, feature_config)
+        # The selected classifier is fitted only on ESP traffic (including
+        # RFC 3948 UDP encapsulation).  Feeding IKE or ordinary IP flows here
+        # would be an out-of-contract distribution shift and can produce
+        # confidently meaningless classifications.
+        extracted = extract_window_features(
+            path,
+            path.name,
+            feature_config,
+            encrypted_ipsec_only=True,
+        )
         for raw_features in extracted:
             try:
                 features = FlowFeatures.model_validate(raw_features)

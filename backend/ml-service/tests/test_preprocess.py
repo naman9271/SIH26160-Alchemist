@@ -65,10 +65,10 @@ def write_two_packet_capture(path: Path, pcapng: bool = False) -> None:
         writer.close()
 
 
-def write_two_packet_esp_capture(path: Path) -> None:
+def write_two_packet_esp_capture(path: Path, pcapng: bool = False) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("wb") as file:
-        writer = dpkt.pcap.Writer(file)
+        writer = dpkt.pcapng.Writer(file) if pcapng else dpkt.pcap.Writer(file)
         for timestamp, source, destination, spi in (
             (1.0, "10.0.0.1", "10.0.0.2", 0x11111111),
             (1.5, "10.0.0.2", "10.0.0.1", 0x22222222),

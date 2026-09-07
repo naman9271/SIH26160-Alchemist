@@ -131,7 +131,16 @@ func (s *Service) Start(ctx context.Context, analysisID string, sequence, shap b
 	type inferenceWork struct{ feature *flowv1.FeatureWindow }
 	work := make([]inferenceWork, 0)
 	for _, f := range flows {
-		windows, _, e := s.flows.Windows(jobContext, flow.ToProto(f).GetFlowId(), 1000, "")
+		flowRecord := flow.ToProto(f)
+		// The persisted classifier is trained on encrypted IPsec data packets
+		// only.  IKE, AH, and generic outer traffic have a different feature
+		// distribution and must not be presented to it as in-domain samples.
+		// acquisition classifies UDP-encapsulated ESP as NAT_T after excluding
+		// IKE and keepalive packets, so both cases below are encrypted data.
+		if !isClassifierTraffic(flowRecord.GetProtocol()) {
+			continue
+		}
+		windows, _, e := s.flows.Windows(jobContext, flowRecord.GetFlowId(), 1000, "")
 		if e != nil {
 			return s.fail(id, e)
 		}
@@ -195,13 +204,18 @@ func (s *Service) Start(ctx context.Context, analysisID string, sequence, shap b
 	s.mu.Unlock()
 	return &mlv1.RunInferenceResponse{InferenceId: id, State: "COMPLETED"}, nil
 }
+
+func isClassifierTraffic(protocol flowv1.FlowProtocol) bool {
+	return protocol == flowv1.FlowProtocol_ESP || protocol == flowv1.FlowProtocol_NAT_T
+}
+
 func (s *Service) storeResult(id string, result *worker.PredictionResult, shap bool) {
 	if result == nil {
 		return
 	}
-	p := &mlv1.TrafficPrediction{PredictionId: id + ":" + result.GetFlowId(), FlowId: result.GetFlowId(), TrafficClass: result.GetPredictedClass().String(), Confidence: result.GetConfidence(), IsUnknown: result.GetIsUnknown(), ModelVersion: result.GetModelVersion(), FeatureSchemaVersion: "flow.v2", InferenceTimeMs: result.GetInferenceTimeMs(), ClassProbabilities: map[string]float64{}}
+	p := &mlv1.TrafficPrediction{PredictionId: id + ":" + result.GetFlowId(), FlowId: result.GetFlowId(), TrafficClass: trafficClassName(result.GetPredictedClass()), Confidence: result.GetConfidence(), IsUnknown: result.GetIsUnknown(), ModelVersion: result.GetModelVersion(), FeatureSchemaVersion: "flow.v2", InferenceTimeMs: result.GetInferenceTimeMs(), ClassProbabilities: map[string]float64{}}
 	for _, top := range result.GetTopPredictions() {
-		p.ClassProbabilities[top.GetTrafficClass().String()] = top.GetConfidence()
+		p.ClassProbabilities[trafficClassName(top.GetTrafficClass())] = top.GetConfidence()
 	}
 	explanation := &mlv1.PredictionExplanation{PredictionId: p.PredictionId}
 	if shap && len(result.GetTopExplanations()) > 0 {
@@ -218,6 +232,10 @@ func (s *Service) storeResult(id string, result *worker.PredictionResult, shap b
 		item.explanations[p.PredictionId] = explanation
 	}
 	s.mu.Unlock()
+}
+
+func trafficClassName(class worker.TrafficClass) string {
+	return strings.TrimPrefix(class.String(), "TRAFFIC_CLASS_")
 }
 func (s *Service) fail(id string, e error) (*mlv1.RunInferenceResponse, error) {
 	s.mu.Lock()
