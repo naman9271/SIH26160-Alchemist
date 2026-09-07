@@ -133,7 +133,10 @@ func (p *Provider) Capabilities(ctx context.Context) (coresystem.Capabilities, e
 	}
 	passiveLive := p.sensorAvailable(ctx)
 	mlAvailable := p.mlAvailable(ctx)
+	probe, _ := p.SensorProbe(ctx)
 	return coresystem.Capabilities{
+		DeepAssessment:  probe.VICI.Available || probe.XFRM.Available,
+		ExecutiveReport: true, TechnicalReport: true,
 		PassiveLive: passiveLive,
 		// The capture package can decode an uploaded classic-PCAP stream without
 		// relying on tcpdump or local capture privileges. PCAPNG is intentionally
@@ -186,7 +189,9 @@ func (p *Provider) SensorCapabilities(ctx context.Context) (localsensor.Capabili
 		return localsensor.Capabilities{}, err
 	}
 	live := p.sensorAvailable(ctx)
+	probe, _ := p.SensorProbe(ctx)
 	return localsensor.Capabilities{
+		PassivePCAP: true, IKEv1: true, IKEv2: true, VICI: probe.VICI.Available, XFRM: probe.XFRM.Available, SequenceSketches: true,
 		PassiveLive: live,
 		IPv4:        true, IPv6: true,
 		ESP: true, AH: true, NATT: true,

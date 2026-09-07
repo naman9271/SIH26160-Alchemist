@@ -1,0 +1,17 @@
+# Local Ubuntu capture: shares the host network and existing StrongSwan socket.
+services:
+  ml:
+    ports:
+      - "127.0.0.1:50051:50051"
+  backend:
+    network_mode: host
+    ports: !reset []
+    user: "0:0"
+    cap_drop: [ALL]
+    cap_add: [NET_RAW, NET_ADMIN]
+    environment:
+      ML_GRPC_ADDRESS: 127.0.0.1:50051
+      CORE_HTTP_ADDRESS: 127.0.0.1:8080
+      CORE_GRPC_ADDRESS: 127.0.0.1:50052
+    volumes:
+      - /var/run/charon.vici:/var/run/charon.vici:ro

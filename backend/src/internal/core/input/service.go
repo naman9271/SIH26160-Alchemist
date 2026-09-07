@@ -117,12 +117,20 @@ func (s *Service) StopLive(ctx context.Context, id string) (Source, error) {
 	if src.CaptureID == "" {
 		return Source{}, shared.NewError(shared.FailedPrecondition, "", "source is not a live capture")
 	}
+	if src.State == inputv1.InputState_STOPPED {
+		return src, nil
+	}
 	if _, e = s.sensor.Sessions.Stop(ctx, src.SessionID); e != nil {
+		return Source{}, e
+	}
+	counters, _, _, _, e := s.sensor.Captures.Stats(ctx, src.CaptureID)
+	if e != nil {
 		return Source{}, e
 	}
 	s.mu.Lock()
 	stored := s.sources[id]
 	stored.State = inputv1.InputState_STOPPED
+	stored.Counters = counters
 	stored.UpdatedAt = time.Now().UTC()
 	out := *stored
 	s.mu.Unlock()

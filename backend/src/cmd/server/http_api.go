@@ -41,7 +41,7 @@ func registerWorkflowAPI(mux *http.ServeMux, input *coreinput.Service, analysis 
 	mux.HandleFunc("GET /api/v1/system/overview", func(w http.ResponseWriter, r *http.Request) { getSystemOverview(w, r, system, localSensor) })
 	mux.HandleFunc("GET /api/v1/live-capture/interfaces", func(w http.ResponseWriter, r *http.Request) { listCaptureInterfaces(w, r, interfaces) })
 	mux.HandleFunc("POST /api/v1/live-captures", func(w http.ResponseWriter, r *http.Request) {
-		startLiveCapture(w, r, input, sessions, captures, viciService, xfrmService)
+		startLiveCapture(w, r, input, sessions, captures, viciService, xfrmService, workspace)
 	})
 	mux.HandleFunc("GET /api/v1/live-captures/{sourceID}", func(w http.ResponseWriter, r *http.Request) {
 		getLiveCapture(w, r, input, sessions, captures, viciService, xfrmService)
@@ -78,7 +78,7 @@ func listCaptureInterfaces(w http.ResponseWriter, r *http.Request, interfaces *n
 	writeJSON(w, http.StatusOK, map[string]any{"interfaces": result})
 }
 
-func startLiveCapture(w http.ResponseWriter, r *http.Request, input *coreinput.Service, sessions *session.Service, captures *capture.Service, viciService *vici.Service, xfrmService *xfrm.Service) {
+func startLiveCapture(w http.ResponseWriter, r *http.Request, input *coreinput.Service, sessions *session.Service, captures *capture.Service, viciService *vici.Service, xfrmService *xfrm.Service, workspace *coreworkspace.Service) {
 	if sessions == nil || captures == nil {
 		writeWorkflowError(w, shared.NewError(shared.Unavailable, "", "live capture service is unavailable"))
 		return
@@ -90,12 +90,25 @@ func startLiveCapture(w http.ResponseWriter, r *http.Request, input *coreinput.S
 		EnableVICI    bool   `json:"enable_vici"`
 		EnableXFRM    bool   `json:"enable_xfrm"`
 		SavePCAP      bool   `json:"save_pcap"`
+		Consent       bool   `json:"consent"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		writeWorkflowError(w, shared.NewError(shared.InvalidArgument, "", "invalid JSON request"))
 		return
 	}
 	mode := inputv1.InputMode_PASSIVE_LIVE
+	if !request.Consent {
+		writeWorkflowError(w, shared.NewError(shared.FailedPrecondition, "", "Capture consent is required"))
+		return
+	}
+	if request.Mode != "live" && request.Mode != "deep" {
+		writeWorkflowError(w, shared.NewError(shared.InvalidArgument, "", "Choose live or deep mode"))
+		return
+	}
+	if captures.Active() {
+		writeWorkflowError(w, shared.NewError(shared.FailedPrecondition, "", "Stop the active capture first"))
+		return
+	}
 	if request.Mode == "deep" {
 		if !request.Authorized {
 			writeWorkflowError(w, shared.NewError(shared.FailedPrecondition, "", "Deep Assessment requires explicit authorization"))
@@ -107,7 +120,13 @@ func startLiveCapture(w http.ResponseWriter, r *http.Request, input *coreinput.S
 		}
 		mode = inputv1.InputMode_DEEP_ASSESSMENT
 	}
-	source, err := input.StartLive(r.Context(), &inputv1.StartLiveInputRequest{Mode: mode, InterfaceName: request.InterfaceName, FilterMode: inputv1.CaptureFilterMode_IPSEC_ONLY, SavePcap: request.SavePCAP, EnableVici: request.EnableVICI, EnableXfrm: request.EnableXFRM})
+	if workspace != nil {
+		if _, err := workspace.Create(r.Context(), "Capture: "+request.InterfaceName, ""); err != nil {
+			writeWorkflowError(w, err)
+			return
+		}
+	}
+	source, err := input.StartLive(r.Context(), &inputv1.StartLiveInputRequest{Mode: mode, InterfaceName: request.InterfaceName, FilterMode: inputv1.CaptureFilterMode_IPSEC_ONLY, SavePcap: request.SavePCAP, EnableVici: request.EnableVICI, EnableXfrm: request.EnableXFRM, MaxDurationSeconds: 300, MaxCaptureBytes: 64 << 20})
 	if err != nil {
 		writeWorkflowError(w, err)
 		return

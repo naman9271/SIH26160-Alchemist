@@ -8,6 +8,7 @@ import (
 	commonv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/common/v1"
 	analysisv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/analysis"
 	eventv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/event"
+	workspacev1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/workspace"
 	flowv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/sensor/v1/flow"
 	viciv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/sensor/v1/vici"
 	xfrmv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/sensor/v1/xfrm"
@@ -115,6 +116,10 @@ func (p *Pipeline) Run(ctx context.Context, record Record, advance func(analysis
 }
 
 func (p *Pipeline) collectVICI(ctx context.Context, record Record) error {
+	if record.Mode != workspacev1.AnalysisMode_DEEP_ASSESSMENT {
+		_, err := p.Ingest.MarkSourceUnavailable(ctx, ingest.MarkSourceUnavailableRequest{FusionRunID: record.FusionRunID, Source: model.SourceVICI, ReasonCode: "PASSIVE_MODE"})
+		return err
+	}
 	p.publish(ctx, record.ID, eventv1.CoreEventCategory_VICI_COLLECTION_STARTED)
 	if p.VICI == nil {
 		_, err := p.Ingest.MarkSourceUnavailable(ctx, ingest.MarkSourceUnavailableRequest{FusionRunID: record.FusionRunID, Source: model.SourceVICI, ReasonCode: "VICI_NOT_CONFIGURED"})
@@ -142,6 +147,10 @@ func (p *Pipeline) collectVICI(ctx context.Context, record Record) error {
 }
 
 func (p *Pipeline) collectXFRM(ctx context.Context, record Record) error {
+	if record.Mode != workspacev1.AnalysisMode_DEEP_ASSESSMENT {
+		_, err := p.Ingest.MarkSourceUnavailable(ctx, ingest.MarkSourceUnavailableRequest{FusionRunID: record.FusionRunID, Source: model.SourceXFRM, ReasonCode: "PASSIVE_MODE"})
+		return err
+	}
 	p.publish(ctx, record.ID, eventv1.CoreEventCategory_XFRM_COLLECTION_STARTED)
 	if p.XFRM == nil {
 		_, err := p.Ingest.MarkSourceUnavailable(ctx, ingest.MarkSourceUnavailableRequest{FusionRunID: record.FusionRunID, Source: model.SourceXFRM, ReasonCode: "XFRM_NOT_CONFIGURED"})

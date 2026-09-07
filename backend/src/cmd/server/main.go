@@ -79,9 +79,9 @@ func main() {
 		Metrics:      provider,
 		Workspace:    workspaceService,
 	})
-	protocolService := coreprotocol.New(coreprotocol.WorkspaceRunResolver{Workspace: workspaceService}, fusionRuntime.Query, sensorServices)
 	inputService := coreinput.New(sensorServices)
 	analysisService := coreanalysis.New(inputService, fusionRuntime.Sessions, workspaceService)
+	protocolService := coreprotocol.New(analysisService, fusionRuntime.Query, sensorServices)
 	runtimeConfigService := coreruntimeconfig.New(coreruntimeconfig.Defaults(envOrDefault("REPORT_TEMP_DIRECTORY", "")))
 	artifactService := coreartifact.New(runtimeConfigService.ReportDirectory)
 	coreEventService := coreevents.New()
@@ -89,7 +89,7 @@ func main() {
 	policyService := corepolicy.New(fusionRuntime.Policy)
 	localSensorService := localsensor.New(provider)
 	sensorSystemService := sensorsystem.New(sensorsystem.Options{Dependencies: dependencies.SensorSystemProvider{Provider: provider}, Metrics: dependencies.SensorSystemProvider{Provider: provider}})
-	fusionService := corefusion.New(coreprotocol.WorkspaceRunResolver{Workspace: workspaceService}, fusionRuntime.Fusion, fusionRuntime.Provenance, fusionRuntime.Ingest)
+	fusionService := corefusion.New(analysisService, fusionRuntime.Fusion, fusionRuntime.Provenance, fusionRuntime.Ingest)
 	securityService := coresecurity.New(fusionService)
 	riskService := corerisk.New(securityService)
 	mlConnection, mlConnectionErr := grpc.NewClient(provider.MLAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))

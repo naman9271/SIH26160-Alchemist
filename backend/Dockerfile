@@ -11,7 +11,7 @@ RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/ipsec-core ./src/c
 FROM alpine:3.20
 
 RUN addgroup -S app && adduser -S -G app app \
-    && apk add --no-cache ca-certificates
+    && apk add --no-cache ca-certificates tcpdump
 COPY --from=build /out/ipsec-core /usr/local/bin/ipsec-core
 
 USER app
