@@ -8,13 +8,13 @@ import { SectionGrid } from "@/components/ui/section-grid";
 type Feature = { title: string; label: string; description: string; span: string };
 
 export const features: Feature[] = [
-  { title: "Passive PCAP Analysis", label: "Capture Input", description: "Upload a classic PCAP and inspect IPsec metadata without decrypting ESP payloads.", span: "md:col-span-2 md:row-span-2" },
-  { title: "Protocol Evidence", label: "Observed", description: "Read IKE, ESP, AH, NAT-T, timing, and transport facts directly from captured packets.", span: "" },
-  { title: "Flow Classification", label: "Inferred", description: "Classify aggregate flow metadata when ML is ready, while preserving UNKNOWN at low confidence.", span: "md:row-span-2" },
-  { title: "Deterministic Derivations", label: "Derived", description: "Convert observations into flow statistics, protocol summaries, and source coverage.", span: "" },
-  { title: "Risk & Remediation", label: "Assessment", description: "Explain deterministic security findings, risk drivers, threat context, and recommended actions.", span: "md:col-span-2" },
-  { title: "Gateway Boundaries", label: "Authorized", description: "Keep gateway facts unavailable until an authorized Deep Assessment establishes provenance.", span: "" },
-  { title: "Executive Reports", label: "Export", description: "Generate a concise evidence-led PDF report after an analysis completes.", span: "" },
+  { title: "Passive PCAP Analysis", label: "Capture Input", description: "Upload a classic PCAP and inspect IPsec metadata without decrypting ESP payloads.", span: "md:col-start-1 md:row-start-1 md:col-span-2 md:row-span-2" },
+  { title: "Protocol Evidence", label: "Observed", description: "Read IKE, ESP, AH, NAT-T, timing, and transport facts directly from captured packets.", span: "md:col-start-3 md:row-start-1" },
+  { title: "Flow Classification", label: "Inferred", description: "Classify aggregate flow metadata when ML is ready, while preserving UNKNOWN at low confidence.", span: "md:col-start-4 md:row-start-1 md:row-span-2" },
+  { title: "Deterministic Derivations", label: "Derived", description: "Convert observations into flow statistics, protocol summaries, and source coverage.", span: "md:col-start-3 md:row-start-2" },
+  { title: "Risk & Remediation", label: "Assessment", description: "Explain deterministic security findings, risk drivers, threat context, and recommended actions.", span: "md:col-start-1 md:row-start-3 md:col-span-2" },
+  { title: "Gateway Boundaries", label: "Authorized", description: "Keep gateway facts unavailable until an authorized Deep Assessment establishes provenance.", span: "md:col-start-3 md:row-start-3" },
+  { title: "Executive Reports", label: "Export", description: "Generate a concise evidence-led PDF report after an analysis completes.", span: "md:col-start-4 md:row-start-3" },
 ];
 
 export function FeaturesSection() {
