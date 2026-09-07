@@ -20,19 +20,15 @@ export const features: Feature[] = [
 export function FeaturesSection() {
   const sectionRef = useRef<HTMLElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
-  const gridRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const section = sectionRef.current;
     const header = headerRef.current;
-    const grid = gridRef.current;
-    if (!section || !header || !grid || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!section || !header || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     gsap.registerPlugin(ScrollTrigger);
     const context = gsap.context(() => {
-      const cards = grid.querySelectorAll<HTMLElement>("article");
       gsap.from(header, { x: -60, duration: 1, ease: "power3.out", scrollTrigger: { trigger: header, start: "top 90%" } });
-      gsap.from(cards, { y: 60, duration: 0.8, stagger: 0.1, ease: "power3.out", scrollTrigger: { trigger: grid, start: "top 90%" } });
     }, section);
     return () => context.revert();
   }, []);
@@ -48,7 +44,7 @@ export function FeaturesSection() {
           </div>
           <p className="hidden max-w-xs text-right font-mono text-xs leading-relaxed text-foreground/50 md:block">The capture-to-report workflow for protocol evidence, bounded inference, and deterministic security assessment.</p>
         </div>
-        <div ref={gridRef} className="grid grid-cols-1 auto-rows-[142px] gap-3 sm:grid-cols-2 md:auto-rows-[150px] md:grid-cols-4 md:gap-4">
+        <div className="grid grid-cols-1 auto-rows-[142px] gap-3 sm:grid-cols-2 md:auto-rows-[150px] md:grid-cols-4 md:gap-4">
           {features.map((feature, index) => <FeatureCard key={feature.title} feature={feature} index={index} />)}
         </div>
       </div>
