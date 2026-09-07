@@ -19,7 +19,7 @@ export function LandingNavigation({ overlay = false }: { overlay?: boolean }) {
 
   return (
     <header className={`${overlay ? "absolute" : "sticky"} inset-x-0 top-0 z-30 font-mono text-white transition-[padding] duration-300 ${isCompact ? "px-3 pt-2 sm:px-5" : ""}`}>
-      <div className={`mx-auto flex items-center justify-between gap-4 border-b border-teal-200/20 bg-black/90 px-4 backdrop-blur-sm transition-all duration-300 sm:px-6 lg:px-8 ${isCompact ? "h-11 max-w-6xl border border-teal-200/25 shadow-[0_10px_28px_rgba(0,0,0,.4)]" : "h-13 max-w-none"}`}>
+      <div className={`mx-auto flex items-center justify-between gap-4 border-b border-teal-200/20 bg-black/90 px-4 backdrop-blur-sm transition-all duration-300 sm:px-6 lg:px-8 ${isCompact ? "h-12 max-w-6xl border border-teal-200/25 shadow-[0_10px_28px_rgba(0,0,0,.4)]" : "h-16 max-w-none"}`}>
         <Link href="/" aria-label="Alchemist home" className="shrink-0 border border-transparent px-1.5 py-1 text-white/80 transition-all duration-300 hover:border-teal-200/40 hover:bg-teal-200/[.06] hover:text-teal-100"><span className="text-base font-bold italic tracking-widest [transform:skewX(-12deg)] sm:text-lg">ALCHEMIST</span></Link>
         <nav className="hidden items-center gap-2 xl:flex" aria-label="Primary navigation">
           <Link className={navLinkClass} href="/#features">CAPABILITIES</Link>

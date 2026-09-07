@@ -10,7 +10,7 @@ type Upload = { source_id: string; filename: string; packets: number; esp_packet
 type Analysis = { analysis_id: string; state: string; stage: string; failure_reason?: string };
 type WorkspaceMode = "pcap" | "live" | "deep";
 type CaptureInterface = { name: string; addresses: string[]; up: boolean; loopback: boolean; capture_supported: boolean };
-type LiveCapture = { capture_id: string; state: string; interface_name: string; packets_total: number; esp_packets: number; packets_per_second?: number; active_flows: number; packet_drops: number; gateway?: { authorized: boolean; vici_error?: string; xfrm_error?: string } };
+type LiveCapture = { source_id: string; capture_id: string; state: string; interface_name: string; packets_total: number; esp_packets: number; packets_per_second?: number; active_flows: number; packet_drops: number; gateway?: { authorized: boolean; vici_error?: string; xfrm_error?: string } };
 
 const workspaceSteps = [
   ["01", "MODE", "Choose PCAP, live, or deep assessment."],
@@ -37,6 +37,8 @@ export default function WorkspacePage() {
   const [interfaces, setInterfaces] = useState<CaptureInterface[]>([]);
   const [interfaceName, setInterfaceName] = useState("");
   const [deepAuthorized, setDeepAuthorized] = useState(false);
+  const [captureConsent, setCaptureConsent] = useState(false);
+  const [permissionPrompt, setPermissionPrompt] = useState(false);
   const [liveCapture, setLiveCapture] = useState<LiveCapture>();
   const [error, setError] = useState<string>();
 
@@ -69,10 +71,10 @@ export default function WorkspacePage() {
   }, [analysis, phase]);
 
   useEffect(() => {
-    if (!liveCapture || phase !== "running") return;
+    if (!liveCapture || liveCapture.state !== "CAPTURING" || phase !== "running") return;
     const interval = window.setInterval(async () => {
       try {
-        const next = await coreRequest<LiveCapture>(`/api/v1/live-captures/${encodeURIComponent(liveCapture.capture_id)}`);
+        const next = await coreRequest<LiveCapture>(`/api/v1/live-captures/${encodeURIComponent(liveCapture.source_id)}`);
         setLiveCapture(next);
         if (next.state === "FAILED" || next.state === "STOPPED") setPhase("complete");
       } catch (captureError) {
@@ -91,21 +93,26 @@ export default function WorkspacePage() {
     setPhase("idle");
   }
 
+  async function beginLiveCapture() {
+    if (!interfaceName) { setError("Select a capture-capable network interface."); return; }
+    if (mode === "deep" && !deepAuthorized) { setError("Confirm authorization before starting Deep Assessment."); return; }
+    setError(undefined);
+    setPhase("starting");
+    try {
+      const started = await coreRequest<LiveCapture>("/api/v1/live-captures", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ interface_name: interfaceName, mode, authorized: deepAuthorized, enable_vici: mode === "deep", enable_xfrm: mode === "deep", save_pcap: true }) });
+      setLiveCapture(started);
+      setPhase("running");
+    } catch (requestError) {
+      setPhase("failed");
+      setError(requestError instanceof Error ? requestError.message : "The live capture could not start.");
+    }
+  }
+
   async function startWorkflow(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (mode !== "pcap") {
-      if (!interfaceName) { setError("Select a capture-capable network interface."); return; }
-      if (mode === "deep" && !deepAuthorized) { setError("Confirm authorization before starting Deep Assessment."); return; }
-      setError(undefined);
-      setPhase("starting");
-      try {
-        const started = await coreRequest<LiveCapture>("/api/v1/live-captures", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ interface_name: interfaceName, mode, authorized: deepAuthorized, enable_vici: mode === "deep", enable_xfrm: mode === "deep", save_pcap: true }) });
-        setLiveCapture(started);
-        setPhase("running");
-      } catch (requestError) {
-        setPhase("failed");
-        setError(requestError instanceof Error ? requestError.message : "The live capture could not start.");
-      }
+      if (!captureConsent) { setPermissionPrompt(true); return; }
+      await beginLiveCapture();
       return;
     }
     if (!file) return;
@@ -141,9 +148,12 @@ export default function WorkspacePage() {
   async function stopCapture() {
     if (!liveCapture) return;
     try {
-      const stopped = await coreRequest<LiveCapture>(`/api/v1/live-captures/${encodeURIComponent(liveCapture.capture_id)}/stop`, { method: "POST" });
+      const stopped = await coreRequest<LiveCapture & { analysis_id?: string; analysis_state?: string; stage?: string }>(`/api/v1/live-captures/${encodeURIComponent(liveCapture.source_id)}/stop`, { method: "POST" });
       setLiveCapture((current) => current ? { ...current, ...stopped } : current);
-      setPhase("complete");
+      if (stopped.analysis_id) {
+        setAnalysis({ analysis_id: stopped.analysis_id, state: stopped.analysis_state ?? "ANALYSIS_STATE_RUNNING", stage: stopped.stage ?? "INITIALIZING" });
+        setPhase("running");
+      } else setPhase("complete");
     } catch (stopError) {
       setError(stopError instanceof Error ? stopError.message : "The capture could not be stopped.");
     }
@@ -207,7 +217,7 @@ export default function WorkspacePage() {
             <form className="border-b border-r border-white/20 p-6 sm:p-9" onSubmit={startWorkflow}>
             <p className="text-[10px] tracking-[.16em] text-white/45">ANALYSIS MODE</p>
             <div className="mt-5 grid gap-2 sm:grid-cols-3">
-              {([['pcap', 'PASSIVE PCAP', 'Upload an offline capture.'], ['live', 'PASSIVE LIVE', 'Observe an authorized interface.'], ['deep', 'DEEP ASSESSMENT', 'Verify authorized gateway facts.']] as const).map(([value, label, detail]) => <label key={value} className={`cursor-pointer border p-3 transition ${mode === value ? "border-teal-200 bg-teal-200/10" : "border-white/20 hover:border-white/55"}`}><input className="sr-only" type="radio" name="mode" value={value} checked={mode === value} onChange={() => { setMode(value); setLiveCapture(undefined); setPhase("idle"); setError(undefined); }} /><span className="block text-[10px] font-bold tracking-[.1em]">{label}</span><span className="mt-2 block text-[10px] leading-4 text-white/50">{detail}</span></label>)}
+              {([['pcap', 'PASSIVE PCAP', 'Upload an offline capture.'], ['live', 'PASSIVE LIVE', 'Observe an authorized interface.'], ['deep', 'DEEP ASSESSMENT', 'Verify authorized gateway facts.']] as const).map(([value, label, detail]) => <label key={value} className={`cursor-pointer border p-3 transition ${mode === value ? "border-teal-200 bg-teal-200/10" : "border-white/20 hover:border-white/55"}`}><input className="sr-only" type="radio" name="mode" value={value} checked={mode === value} onChange={() => { setMode(value); setCaptureConsent(false); setLiveCapture(undefined); setPhase("idle"); setError(undefined); }} /><span className="block text-[10px] font-bold tracking-[.1em]">{label}</span><span className="mt-2 block text-[10px] leading-4 text-white/50">{detail}</span></label>)}
             </div>
             {mode === "pcap" ? <>
             <p className="mt-7 text-[10px] tracking-[.16em] text-white/45">SOURCE / CLASSIC PCAP OR CAP</p>
@@ -260,7 +270,7 @@ export default function WorkspacePage() {
               <div><dt className="text-white/50">VERIFIED GATEWAY</dt><dd className="mt-2 text-white/55">{liveCapture?.gateway?.authorized ? "AUTHORIZED · read-only gateway telemetry requested" : "UNAVAILABLE in Passive PCAP mode. Authorized Deep Assessment is required."}</dd></div>
             </dl>
             <div className="mt-7 border border-dashed border-sky-300/35 bg-sky-300/[.04] p-4">
-              <p className="text-[10px] font-bold tracking-[.14em] text-sky-200">LIVE CAPTURE CONSOLE</p>
+              <div className="flex items-center justify-between gap-3"><p className="text-[10px] font-bold tracking-[.14em] text-sky-200">LIVE CAPTURE CONSOLE</p>{(phase === "starting" || liveCapture?.state === "CAPTURING") && <span className="relative flex h-6 w-12 items-center justify-center" aria-label="Capture active"><i className="absolute h-5 w-5 animate-ping rounded-full border border-teal-200/70" /><i className="absolute h-3 w-3 animate-spin rounded-full border-2 border-teal-200 border-t-transparent" /><i className="absolute h-1.5 w-1.5 rounded-full bg-teal-100 shadow-[0_0_12px_3px_rgba(94,234,212,.65)]" /></span>}</div>
               <div className="mt-4 flex items-center justify-between border-y border-white/10 py-3 text-[10px]"><span className="text-white/55">INTERFACE</span><span className={liveCapture ? "text-teal-100" : "text-white/35"}>{liveCapture?.interface_name ?? "NOT STARTED"}</span></div>
               <div className="mt-3 flex items-center justify-between text-[10px]"><span className="text-white/55">PACKETS / RATE</span><span className={liveCapture ? "text-teal-100" : "text-white/35"}>{liveCapture ? `${liveCapture.packets_total.toLocaleString()} · ${(liveCapture.packets_per_second ?? 0).toFixed(1)} PKTS/S` : "— PKTS/S"}</span></div>
               <div className="mt-3 flex items-center justify-between text-[10px]"><span className="text-white/55">ESP / FLOWS</span><span className={liveCapture ? "text-teal-100" : "text-white/35"}>{liveCapture ? `${liveCapture.esp_packets.toLocaleString()} · ${liveCapture.active_flows}` : "—"}</span></div>
@@ -277,6 +287,7 @@ export default function WorkspacePage() {
           </section>
         </main>
       </div>
+      {permissionPrompt && <div className="fixed inset-0 z-50 grid place-items-center bg-black/75 p-5 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="capture-permission-title"><div className="w-full max-w-lg border border-teal-200/35 bg-[#070b10] p-6 shadow-[0_0_50px_rgba(94,234,212,.14)]"><p className="text-[10px] font-bold tracking-[.16em] text-teal-200">CAPTURE PERMISSION REQUIRED</p><h2 id="capture-permission-title" className="mt-4 text-xl font-bold tracking-[.06em]">ALLOW PASSIVE {mode === "deep" ? "DEEP ASSESSMENT" : "LIVE CAPTURE"}?</h2><p className="mt-4 text-sm leading-7 text-white/65">This will ask the Core service to capture IPsec packet metadata from <b className="text-white">{interfaceName}</b>. ESP payloads are never decrypted. {mode === "deep" ? "Read-only VICI/XFRM gateway telemetry will also be requested; no gateway configuration is changed." : ""}</p><div className="mt-6 flex flex-wrap justify-end gap-3"><button type="button" className="border border-white/25 px-4 py-2 text-[10px] font-bold tracking-[.12em] text-white/70" onClick={() => setPermissionPrompt(false)}>CANCEL</button><button type="button" className="border border-teal-200 bg-teal-200 px-4 py-2 text-[10px] font-bold tracking-[.12em] text-slate-950" onClick={() => { setCaptureConsent(true); setPermissionPrompt(false); void beginLiveCapture(); }}>ALLOW & START</button></div></div></div>}
       <LandingFooter />
     </div>
   );
