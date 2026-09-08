@@ -16,37 +16,27 @@ does not decrypt ESP payloads.
 - Node.js 20+ and Corepack (for the frontend)
 - `curl` (optional, for the health check and demo)
 
-### 1. Start the backend services
+### 1. Configure and start all services
 
 From the repository root:
 
 ```bash
+cp .env.example .env
 make up
 ```
 
-This builds and starts Go Core plus the Python ML worker. Wait a moment, then
-verify Core:
+This builds and starts the Next.js dashboard, Go Core, and Python ML worker.
+Wait a moment, then verify Core:
 
 ```bash
 curl http://127.0.0.1:8080/health
 ```
 
-### 2. Start the dashboard
-
-In another terminal:
-
-```bash
-cd frontend
-corepack enable
-pnpm install --frozen-lockfile
-pnpm dev
-```
-
 Open <http://localhost:3000>, upload a classic `.pcap`/`.cap` file, and start
-an analysis. The dashboard communicates with Core at
-`http://127.0.0.1:8080` by default.
+an analysis. Change URLs and ports only in the ignored `.env`; the complete
+variable list is documented in `.env.example`.
 
-### 3. Try the included demo (optional)
+### 2. Try the included demo (optional)
 
 From the repository root, while the backend services are running:
 
@@ -129,6 +119,7 @@ CORE_HTTP_URL=http://host.docker.internal:8080 pnpm dev
 - [Submission guide](docs/SUBMISSION_GUIDE.md)
 - [ML validation protocol](docs/MODEL_VALIDATION.md)
 - [Deep Assessment lab validation](docs/DEEP_ASSESSMENT_LAB.md)
+- [Azure Container Apps deployment](docs/AZURE_DEPLOYMENT.md)
 
 ## Team
 

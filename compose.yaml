@@ -3,17 +3,68 @@ services:
     build:
       context: ./backend/ml-service
       dockerfile: Dockerfile
+    init: true
+    environment:
+      ML_GRPC_HOST: ${ML_GRPC_HOST:-0.0.0.0}
+      ML_GRPC_PORT: ${ML_GRPC_PORT:-50051}
+    expose:
+      - "50051"
+    restart: unless-stopped
 
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     depends_on:
-      - ml
+      ml:
+        condition: service_started
+    init: true
     environment:
-      ML_GRPC_ADDRESS: ml:50051
-      CORE_HTTP_ADDRESS: 0.0.0.0:8080
-      CORE_GRPC_ADDRESS: 0.0.0.0:50052
+      ML_GRPC_ADDRESS: ${ML_GRPC_ADDRESS:-ml:50051}
+      CORE_HTTP_ADDRESS: ${CORE_HTTP_ADDRESS:-0.0.0.0:8080}
+      CORE_GRPC_ADDRESS: ${CORE_GRPC_ADDRESS:-0.0.0.0:50052}
+      REPORT_TEMP_DIRECTORY: ${REPORT_TEMP_DIRECTORY:-/var/lib/alchemist/reports}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      CORS_ALLOWED_METHODS: ${CORS_ALLOWED_METHODS:-GET,POST,OPTIONS}
+      CORS_ALLOWED_HEADERS: ${CORS_ALLOWED_HEADERS:-Authorization,Content-Type,X-Requested-With}
+      CORS_EXPOSED_HEADERS: ${CORS_EXPOSED_HEADERS:-Content-Disposition,Content-Type}
+      CORS_ALLOW_CREDENTIALS: ${CORS_ALLOW_CREDENTIALS:-false}
+      CORS_MAX_AGE: ${CORS_MAX_AGE:-600}
     ports:
-      - "8080:8080"
-      - "50052:50052"
+      - "${CORE_BIND_HOST:-127.0.0.1}:${CORE_HTTP_PORT:-8080}:8080"
+      - "${CORE_BIND_HOST:-127.0.0.1}:${CORE_GRPC_PORT:-50052}:50052"
+    volumes:
+      - report-data:/var/lib/alchemist/reports
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    depends_on:
+      backend:
+        condition: service_healthy
+    init: true
+    environment:
+      NODE_ENV: production
+      HOSTNAME: 0.0.0.0
+      PORT: 3000
+      CORE_HTTP_URL: ${CORE_HTTP_URL:-http://backend:8080}
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost:3000}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_MODEL: ${GROQ_MODEL:-llama-3.3-70b-versatile}
+    ports:
+      - "${FRONTEND_BIND_HOST:-0.0.0.0}:${FRONTEND_PORT:-3000}:3000"
+    volumes:
+      - frontend-cache:/app/.next/cache
+    restart: unless-stopped
+
+volumes:
+  report-data:
+  frontend-cache:

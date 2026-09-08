@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
+import { hasAllowedBrowserOrigin } from "@/lib/request-origin";
 
 type RouteContext = {
   params: Promise<{ path: string[] }>;
 };
 
 async function forward(request: Request, { params }: RouteContext) {
+  if (!hasAllowedBrowserOrigin(request)) {
+    return NextResponse.json({ error: "Origin rejected" }, { status: 403 });
+  }
   const { path } = await params;
   const baseUrl = (process.env.CORE_HTTP_URL ?? "http://127.0.0.1:8080").replace(/\/$/, "");
   const target = new URL(`${baseUrl}/${path.join("/")}`);

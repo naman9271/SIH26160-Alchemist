@@ -5,6 +5,11 @@ __pycache__/
 .venv/
 backend/ml-service/.venv/
 
+# Local deployment configuration and secrets. Commit only templates.
+.env
+.env.*
+!.env.example
+
 # Public datasets and generated ML products stay local. Keep the checked-in
 # IPsec lab manifest/metadata while excluding any restored capture corpus.
 backend/ml-service/data/external/*

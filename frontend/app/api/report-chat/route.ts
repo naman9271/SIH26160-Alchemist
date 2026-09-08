@@ -1,3 +1,5 @@
+import { hasAllowedBrowserOrigin } from "@/lib/request-origin";
+
 const REPORT_CONTEXT_LIMIT = 40_000;
 const MESSAGE_CONTEXT_LIMIT = 1_500;
 const MESSAGE_HISTORY_LIMIT = 6;
@@ -7,7 +9,7 @@ function truncate(value: string, limit: number) {
 }
 
 export async function POST(request: Request) {
-  if (request.headers.get("origin") && request.headers.get("origin") !== new URL(request.url).origin) return Response.json({error: "Origin rejected"}, {status: 403});
+  if (!hasAllowedBrowserOrigin(request)) return Response.json({error: "Origin rejected"}, {status: 403});
   const raw = await request.text();
   if (raw.length > 200000) return Response.json({error: "Report is too large for chat."}, {status: 413});
   let body;

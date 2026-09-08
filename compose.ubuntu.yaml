@@ -2,7 +2,7 @@
 services:
   ml:
     ports:
-      - "127.0.0.1:50051:50051"
+      - "127.0.0.1:${ML_GRPC_PORT:-50051}:50051"
   backend:
     network_mode: host
     ports: !reset []
@@ -10,8 +10,8 @@ services:
     cap_drop: [ALL]
     cap_add: [NET_RAW, NET_ADMIN]
     environment:
-      ML_GRPC_ADDRESS: 127.0.0.1:50051
-      CORE_HTTP_ADDRESS: 127.0.0.1:8080
-      CORE_GRPC_ADDRESS: 127.0.0.1:50052
+      ML_GRPC_ADDRESS: ${UBUNTU_ML_GRPC_ADDRESS:-127.0.0.1:50051}
+      CORE_HTTP_ADDRESS: ${UBUNTU_CORE_HTTP_ADDRESS:-127.0.0.1:8080}
+      CORE_GRPC_ADDRESS: ${UBUNTU_CORE_GRPC_ADDRESS:-127.0.0.1:50052}
     volumes:
       - /var/run/charon.vici:/var/run/charon.vici:ro

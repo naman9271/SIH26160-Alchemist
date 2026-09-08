@@ -25,9 +25,11 @@ workflow.
 
 ## Start with Docker (recommended)
 
-From the repository root, build and start both backend services:
+From the repository root, copy the environment template and start the complete
+three-container stack:
 
 ```bash
+cp .env.example .env
 docker compose up --build --detach
 ```
 
@@ -113,9 +115,14 @@ CORE_HTTP_URL=http://127.0.0.1:8080 pnpm dev
 | Python ML gRPC worker | `127.0.0.1:50051` | `ML_GRPC_ADDRESS` (used by Go Core) |
 | Temporary PDF report directory | system temporary directory | `REPORT_TEMP_DIRECTORY` |
 
-Docker Compose exposes ports `8080` and `50052` from Go Core and connects Core
-to the ML worker over the private Compose network. It sets the Core listener
-addresses to `0.0.0.0` inside the container.
+Core's browser HTTP surface is wrapped by an exact-origin CORS policy configured
+with `CORS_ALLOWED_ORIGINS` and the related `CORS_*` variables listed in
+`backend/.env.example`. The normal dashboard still uses the same-origin Next.js
+proxy. CORS does not apply to gRPC and is not a substitute for authentication.
+
+Docker Compose binds Core ports `8080` and `50052` to host loopback by default
+and connects Core to the ML worker over the private Compose network. It sets the
+Core listener addresses to `0.0.0.0` inside the container.
 
 ## API workflow
 

@@ -1,0 +1,87 @@
+# Replace every <PLACEHOLDER> before running `az containerapp update --yaml`.
+# The frontend, Core, and ML worker are intentionally co-located: they are a
+# tightly coupled analysis unit, share one lifecycle, and communicate privately
+# over localhost. Only the frontend port is exposed through Azure ingress.
+identity:
+  type: UserAssigned
+  userAssignedIdentities:
+    <ACR_PULL_IDENTITY_RESOURCE_ID>: {}
+properties:
+  managedEnvironmentId: <CONTAINER_APPS_ENVIRONMENT_RESOURCE_ID>
+  configuration:
+    activeRevisionsMode: Single
+    ingress:
+      external: true
+      allowInsecure: false
+      targetPort: 3000
+      transport: auto
+    registries:
+      - server: <ACR_NAME>.azurecr.io
+        identity: <ACR_PULL_IDENTITY_RESOURCE_ID>
+  template:
+    containers:
+      - name: frontend
+        image: <ACR_NAME>.azurecr.io/alchemist/frontend:<IMAGE_TAG>
+        env:
+          - name: NODE_ENV
+            value: production
+          - name: HOSTNAME
+            value: 0.0.0.0
+          - name: PORT
+            value: "3000"
+          - name: CORE_HTTP_URL
+            value: http://127.0.0.1:8080
+          - name: APP_PUBLIC_URL
+            value: <APP_PUBLIC_URL>
+          - name: GROQ_MODEL
+            value: llama-3.3-70b-versatile
+        resources:
+          cpu: 0.5
+          memory: 1Gi
+      - name: core
+        image: <ACR_NAME>.azurecr.io/alchemist/core:<IMAGE_TAG>
+        env:
+          - name: CORE_HTTP_ADDRESS
+            value: 0.0.0.0:8080
+          - name: CORE_GRPC_ADDRESS
+            value: 0.0.0.0:50052
+          - name: ML_GRPC_ADDRESS
+            value: 127.0.0.1:50051
+          - name: REPORT_TEMP_DIRECTORY
+            value: /var/lib/alchemist/reports
+          - name: CORS_ALLOWED_ORIGINS
+            value: <APP_PUBLIC_URL>
+          - name: CORS_ALLOWED_METHODS
+            value: GET,POST,OPTIONS
+          - name: CORS_ALLOWED_HEADERS
+            value: Authorization,Content-Type,X-Requested-With
+          - name: CORS_EXPOSED_HEADERS
+            value: Content-Disposition,Content-Type
+          - name: CORS_ALLOW_CREDENTIALS
+            value: "false"
+          - name: CORS_MAX_AGE
+            value: "600"
+        resources:
+          cpu: 0.5
+          memory: 1Gi
+        volumeMounts:
+          - volumeName: report-volume
+            mountPath: /var/lib/alchemist/reports
+      - name: ml
+        image: <ACR_NAME>.azurecr.io/alchemist/ml:<IMAGE_TAG>
+        env:
+          - name: ML_GRPC_HOST
+            value: 0.0.0.0
+          - name: ML_GRPC_PORT
+            value: "50051"
+        resources:
+          cpu: 1.0
+          memory: 2Gi
+    scale:
+      minReplicas: 1
+      maxReplicas: 1
+    volumes:
+      - name: report-volume
+        storageType: AzureFile
+        storageName: <STORAGE_LINK_NAME>
+        mountOptions: uid=10001,gid=10001,file_mode=0600,dir_mode=0700

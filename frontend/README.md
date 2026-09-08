@@ -15,6 +15,11 @@ pnpm dev
 Open `http://localhost:3000`. Set `CORE_HTTP_URL` only when Core is not on
 `http://127.0.0.1:8080`.
 
+Copy `.env.example` to `.env.local` for local overrides. `CORE_HTTP_URL` and
+`APP_PUBLIC_URL` are server-side runtime values; secrets must never use the
+`NEXT_PUBLIC_` prefix. Production Docker and Azure instructions are in
+[`../docs/AZURE_DEPLOYMENT.md`](../docs/AZURE_DEPLOYMENT.md).
+
 ## Supported workflow
 
 1. Upload a classic `.pcap`/`.cap` file.
