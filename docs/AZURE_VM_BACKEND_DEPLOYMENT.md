@@ -18,13 +18,13 @@ On macOS or Linux, run locally (replace the file path and IP):
 
 ```bash
 chmod 400 ~/Downloads/alchemist-vm.pem
-ssh -i ~/Downloads/alchemist-vm.pem azureuser@VM_PUBLIC_IP
+ssh -i ~/Downloads/alchemist-vm.pem azureuser@20.2.67.170
 ```
 
 On Windows PowerShell:
 
 ```powershell
-ssh -i "$HOME\Downloads\alchemist-vm.pem" azureuser@VM_PUBLIC_IP
+ssh -i "$HOME\Downloads\alchemist-vm.pem" azureuser@20.2.67.170
 ```
 
 ## 3. Install Docker once
@@ -55,7 +55,7 @@ only for SSH access to the VM; it is unrelated to GitHub.
 Clone only deployment files instead of cloning then deleting `frontend/`:
 
 ```bash
-git clone --filter=blob:none --sparse https://github.com/naman9271/SIH26160---Team-Alchemist.git alchemist
+git clone --filter=blob:none --sparse https://github.com/naman9271/SIH26160-Alchemist.git alchemist
 cd alchemist
 git sparse-checkout set backend deploy
 ```
@@ -78,7 +78,7 @@ Keep `CORS_ALLOWED_ORIGINS=https://alchemist160.vercel.app` unless another front
 make up
 make status
 docker compose logs --tail=100 backend ml
-curl --fail http://VM_PUBLIC_IP:8080/health
+curl --fail http://20.2.67.170:8080/health
 ```
 
 The health response must contain `"ready": true`. Only Core's HTTP API is public on port 8080; the ML gRPC port remains private.
@@ -88,7 +88,7 @@ The health response must contain `"ready": true`. Only Core's HTTP API is public
 In the Vercel frontend project, open **Settings** > **Environment Variables**, add this server-only value for Production (and Preview if desired), then redeploy:
 
 ```text
-CORE_HTTP_URL=http://VM_PUBLIC_IP:8080
+CORE_HTTP_URL=http://20.2.67.170:8080
 ```
 
 Do **not** set `NEXT_PUBLIC_CORE_HTTP_URL` in Vercel for this simple HTTP setup. The frontend keeps browser traffic on its HTTPS Vercel origin and Vercel forwards API requests server-to-server to the VM. The backend CORS configuration allows only the Vercel frontend origin.

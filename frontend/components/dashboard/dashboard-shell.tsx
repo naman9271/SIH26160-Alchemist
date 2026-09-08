@@ -18,9 +18,9 @@ const navigation = [
   { slug: "findings", name: "Security findings", description: "Read deterministic findings and the evidence behind each one." },
   { slug: "risk", name: "Risk & fixes", description: "Understand score drivers and prioritized remediation guidance." },
   { slug: "chat", name: "Report assistant", description: "Ask plain-language questions about a saved analysis snapshot." },
-  { slug: "health", name: "System health", description: "Check Core, local sensor, gateway, and ML readiness." },
   { slug: "history", name: "History", description: "Reopen analysis snapshots stored in this browser." },
   { slug: "compare", name: "Compare analyses", description: "Compare two saved snapshots without changing their original data." },
+  { slug: "health", name: "System health", description: "Check Core, local sensor, gateway, and ML readiness." },
 ];
 
 export function DashboardShell({ view = "overview" }: { view?: string }) {
