@@ -46,28 +46,16 @@ exit
 
 Reconnect with SSH, then confirm `docker --version` and `docker compose version` work.
 
-## 4. Add a GitHub deploy key and sparse-clone
+## 4. Clone the public repository
 
-Create the deploy key on the VM. The private key stays on the VM; add only the printed public key in GitHub: repository **Settings** > **Deploy keys** > **Add deploy key**. Leave write access unchecked.
-
-```bash
-ssh-keygen -t ed25519 -C "alchemist-azure-vm" -f ~/.ssh/alchemist_github
-cat ~/.ssh/alchemist_github.pub
-cat >> ~/.ssh/config <<'EOF'
-Host github.com
-  HostName github.com
-  User git
-  IdentityFile ~/.ssh/alchemist_github
-  IdentitiesOnly yes
-EOF
-chmod 600 ~/.ssh/config
-ssh -T git@github.com
-```
+Because the repository is public, no GitHub SSH key, deploy key, personal
+access token, or GitHub login is required on the VM. The Azure `.pem` key is
+only for SSH access to the VM; it is unrelated to GitHub.
 
 Clone only deployment files instead of cloning then deleting `frontend/`:
 
 ```bash
-git clone --filter=blob:none --sparse git@github.com:naman9271/SIH26160---Team-Alchemist.git alchemist
+git clone --filter=blob:none --sparse https://github.com/naman9271/SIH26160---Team-Alchemist.git alchemist
 cd alchemist
 git sparse-checkout set backend deploy
 ```

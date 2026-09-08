@@ -33,7 +33,7 @@ Wait a moment, then verify Core:
 curl http://127.0.0.1:8080/health
 ```
 
-For Azure VM setup, HTTPS, GitHub deploy-key, and `.pem` SSH commands, see
+For Azure VM setup, public-repository clone, and `.pem` SSH commands, see
 [the backend VM runbook](docs/AZURE_VM_BACKEND_DEPLOYMENT.md).
 
 ### 2. Try the included demo (optional)
