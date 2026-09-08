@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { readHistory, saveSnapshot } from "./history-store";
+import { coreURL } from "@/lib/core-url";
 import { ResultCards } from "./result-cards";
 import { ClassificationCards } from "./classification-cards";
 import { RiskCards } from "./risk-cards";
@@ -28,7 +29,7 @@ const sectionsForView: Record<string, Array<[string, string[]]>> = {
 };
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`/api/core${path}`, { ...init, cache: "no-store" });
+  const response = await fetch(coreURL(path), { ...init, cache: "no-store" });
   const contentType = response.headers.get("content-type") ?? "";
   const body: (T & { error?: string }) | undefined = contentType.includes("application/json") ? await response.json() : undefined;
   if (!response.ok) throw new Error(body?.error ?? `Go Server request failed (${response.status}).`);

@@ -16,7 +16,7 @@ does not decrypt ESP payloads.
 - Node.js 20+ and Corepack (for the frontend)
 - `curl` (optional, for the health check and demo)
 
-### 1. Configure and start all services
+### 1. Configure and start backend services
 
 From the repository root:
 
@@ -25,16 +25,16 @@ cp .env.example .env
 make up
 ```
 
-This builds and starts the Next.js dashboard, Go Core, and Python ML worker.
+This builds and starts the Go Core API and Python ML worker. The frontend is
+deployed separately on Vercel.
 Wait a moment, then verify Core:
 
 ```bash
 curl http://127.0.0.1:8080/health
 ```
 
-Open <http://localhost:3000>, upload a classic `.pcap`/`.cap` file, and start
-an analysis. Change URLs and ports only in the ignored `.env`; the complete
-variable list is documented in `.env.example`.
+For Azure VM setup, HTTPS, GitHub deploy-key, and `.pem` SSH commands, see
+[the backend VM runbook](docs/AZURE_VM_BACKEND_DEPLOYMENT.md).
 
 ### 2. Try the included demo (optional)
 
@@ -53,7 +53,9 @@ analysis to finish.
 make down
 ```
 
-Use `make logs` to follow their logs.
+Use `make logs` to follow their logs. The Azure VM runbook deploys the API on
+port 8080 and uses the Vercel server-side proxy, so no frontend container or
+HTTPS gateway is required.
 
 ## Local development without Docker
 
@@ -99,7 +101,7 @@ CORE_HTTP_URL=http://host.docker.internal:8080 pnpm dev
 ├── frontend/       Next.js dashboard
 ├── ipsec_esp/      Sample/legacy PCAP fixtures (not ML training data)
 ├── scripts/        End-to-end demonstration script
-└── compose.yaml    Backend + ML-worker Docker setup
+└── compose.yaml    Backend + ML worker Docker setup
 ```
 
 ## Key details

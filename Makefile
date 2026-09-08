@@ -1,4 +1,4 @@
-.PHONY: up down logs demo check
+.PHONY: up down logs status check-backend
 
 up:
 	docker compose up --build --detach
@@ -9,10 +9,9 @@ down:
 logs:
 	docker compose logs --follow
 
-demo:
-	./scripts/demo-check.sh
+status:
+	docker compose ps
 
-check:
+check-backend:
 	cd backend && go vet ./... && go test ./...
 	cd backend/ml-service && python3 -m pytest
-	cd frontend && npm run lint && npm run build

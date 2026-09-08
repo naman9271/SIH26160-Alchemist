@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ChangeEvent, FormEvent, useEffect, useState, useRef, useCallback } from "react";
 import { LandingFooter } from "@/components/ui/site-chrome";
 import { saveSnapshot } from "@/components/dashboard/history-store";
+import { coreURL } from "@/lib/core-url";
 import { analysisPhase } from "./analysis-state";
 
 type Health = { status?: string };
@@ -21,7 +22,7 @@ const workspaceSteps = [
 ];
 
 async function coreRequest<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`/api/core${path}`, { ...init, cache: "no-store" });
+  const response = await fetch(coreURL(path), { ...init, cache: "no-store" });
   const body = (await response.json()) as T & { error?: string };
   if (!response.ok) throw new Error(body.error ?? "The Go Server could not complete this request.");
   return body;
