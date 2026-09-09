@@ -3,8 +3,8 @@ import { LandingNavigation } from "@/components/ui/site-chrome";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "IPsec Sentinel Twin · Evidence Workspace",
-  description: "Evidence-led IPsec traffic analysis and security assessment.",
+  title: "IPSEC PRISM · Evidence Workspace",
+  description: "IPSEC PRISM provides evidence-led IPsec traffic analysis and security assessment.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

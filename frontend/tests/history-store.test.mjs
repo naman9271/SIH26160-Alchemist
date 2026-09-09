@@ -13,6 +13,6 @@ test('history preserves snapshots and original chronology when an old report is 
  saveSnapshot('old',{analysis:{created_at:'2026-01-01T00:00:00Z'},security:{assessment:{score:71}}});
  assert.deepEqual(readHistory().map(v=>v.id),['new','old']);
  assert.equal(readHistory()[1].data.security.assessment.score,71);
- values.set('alchemist.analysis-history.v1','invalid JSON');
+ values.set('ipsec-prism.analysis-history.v1','invalid JSON');
  assert.deepEqual(readHistory(),[]);
 });

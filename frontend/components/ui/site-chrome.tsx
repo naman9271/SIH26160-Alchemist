@@ -31,7 +31,7 @@ export function LandingNavigation({ overlay = false }: { overlay?: boolean }) {
   return (
     <header className={`${isLandingPage ? "fixed" : overlay ? "absolute" : "relative"} inset-x-0 top-0 z-30 px-3 pt-2 font-mono text-white transition-transform duration-300 sm:px-5 ${isLandingPage && !isNavVisible ? "-translate-y-full" : "translate-y-0"}`}>
       <div className="mx-auto flex h-12 max-w-6xl items-center justify-between gap-4 border border-teal-200/25 bg-black/90 px-4 shadow-[0_10px_28px_rgba(0,0,0,.4)] backdrop-blur-sm sm:px-6 lg:px-8">
-        <Link href="/" aria-label="Alchemist home" className="shrink-0 border border-transparent px-1.5 py-1 text-white/80 transition-all duration-300 hover:border-teal-200/40 hover:bg-teal-200/[.06] hover:text-teal-100"><span className="text-base font-bold italic tracking-widest [transform:skewX(-12deg)] sm:text-lg">ALCHEMIST</span></Link>
+        <Link href="/" aria-label="IPSEC PRISM home" className="shrink-0 border border-transparent px-1.5 py-1 text-white/80 transition-all duration-300 hover:border-teal-200/40 hover:bg-teal-200/[.06] hover:text-teal-100"><span className="text-base font-bold italic tracking-widest [transform:skewX(-12deg)] sm:text-lg">IPSEC PRISM</span></Link>
         <nav className="hidden items-center gap-2 xl:flex" aria-label="Primary navigation">
           <Link className={navLinkClass} href="/#features">CAPABILITIES</Link>
           <Link className={navLinkClass} href="/dashboard">DASHBOARD</Link>
@@ -68,7 +68,7 @@ export function LandingFooter() {
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(rgba(94,234,212,.12)_1px,transparent_1px),linear-gradient(90deg,rgba(94,234,212,.12)_1px,transparent_1px)] [background-size:42px_42px] opacity-55" />
       <div className="relative z-10 mx-auto grid max-w-7xl gap-5 lg:grid-cols-[minmax(0,0.85fr)_minmax(34rem,1.15fr)] lg:items-start">
         <div className="max-w-md">
-          <Link href="/" className="inline-flex border border-teal-200/25 bg-teal-200/[.035] px-3 py-1.5 text-white transition-all duration-300 hover:border-teal-100/60 hover:text-teal-100 hover:shadow-[0_0_28px_rgba(94,234,212,.16)]"><span className="text-xl font-bold italic tracking-widest [transform:skewX(-12deg)] lg:text-2xl">ALCHEMIST</span></Link>
+          <Link href="/" className="inline-flex border border-teal-200/25 bg-teal-200/[.035] px-3 py-1.5 text-white transition-all duration-300 hover:border-teal-100/60 hover:text-teal-100 hover:shadow-[0_0_28px_rgba(94,234,212,.16)]"><span className="text-xl font-bold italic tracking-widest [transform:skewX(-12deg)] lg:text-2xl">IPSEC PRISM</span></Link>
           <p className="mt-2 leading-5 text-white/52">Evidence-led IPsec analysis for passive captures and authorized Deep Assessment.</p>
         </div>
         <nav className="grid w-full grid-cols-1 gap-2 border border-teal-200/10 bg-black/25 p-2 sm:grid-cols-3" aria-label="Footer navigation">
@@ -89,7 +89,7 @@ export function LandingFooter() {
           </Link>
         </nav>
         <div className="pointer-events-auto hidden h-56 border-y border-teal-200/10 lg:col-span-2 lg:block">
-          <TextHoverEffect text="ALCHEMIST" className="h-full w-full" />
+          <TextHoverEffect text="IPSEC PRISM" className="h-full w-full" />
         </div>
         <div className="border-t border-sky-200/15 pt-3 lg:col-span-2 sm:flex sm:justify-between">
           <span>EVIDENCE WORKSPACE</span>

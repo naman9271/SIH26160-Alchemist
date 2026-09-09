@@ -1,5 +1,5 @@
 export type Snapshot = { id: string; time: string; data: Record<string, unknown> };
-const key = "alchemist.analysis-history.v1";
+const key = "ipsec-prism.analysis-history.v1";
 export function readHistory(): Snapshot[] {
   try { const value = JSON.parse(localStorage.getItem(key) ?? "[]"); return Array.isArray(value) ? value.filter(v => typeof v?.id === "string" && v.data && typeof v.time === "string") : []; } catch { return []; }
 }
