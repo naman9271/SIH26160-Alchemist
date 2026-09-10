@@ -37,32 +37,7 @@ The application accepts a classic PCAP capture and runs a passive analysis workf
 
 See [docs/architecture.md](docs/architecture.md) for the detailed architecture.
 
-```text
-Security Analyst / Authorised Browser
-                  |
-                HTTPS
-                  v
-Azure Container Apps — managed HTTPS ingress / TLS
-                  |
-      ┌───────────┴──────────────────────────┐
-      v                                      v
-Next.js Dashboard + BFF              Qwen LLM Report Assistant
-upload, orchestration, results       plain-language report explanations
-      |
-      | HTTP proxy
-      v
-Go Core — Trusted Analysis Plane
-  ├── PCAP ingest and protocol sensor (IKE, ESP, AH, NAT-T)
-  ├── Flow metadata windows
-  ├── Security & risk assessment
-  ├── Evidence fusion
-  └── Report engine (dashboard + PDF)
-      | private gRPC                   |
-      v                                v
-Python ML worker                  Azure Files
-metadata-only classification      persistent generated PDF reports
-confidence and UNKNOWN
-```
+![alt text](assets/screenshots/architechure.png)
 
 ## Repository Structure
 
