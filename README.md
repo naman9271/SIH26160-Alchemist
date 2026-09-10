@@ -136,6 +136,15 @@ pnpm dev
 
 The API listens on `http://127.0.0.1:8080`; the ML worker defaults to `127.0.0.1:50051`. If Core is remote, set `CORE_HTTP_URL` before starting the frontend.
 
+## Team Members
+
+- Naman Jain
+- Daksh Pathak
+- Anvay
+- Riya Shukla
+- Yatika Goel
+- Shubh Gautam
+
 ## Usage
 
 1. Open the dashboard and upload a classic `.pcap` or `.cap` file.
