@@ -10,7 +10,9 @@ Reviewing the security posture of an IPsec VPN can require packet-level expertis
 
 ## Proposed Solution
 
-**Live Deployment:** [https://alchemist160.vercel.app](https://alchemist160.vercel.app)
+- **Live Deployment:** [https://alchemist160.vercel.app](https://alchemist160.vercel.app)
+
+- **Demo Video:** [https://youtu.be/NNhGEnqu5p4](https://youtu.be/NNhGEnqu5p4)
 
 The application accepts a classic PCAP capture and runs a passive analysis workflow. The Go backend extracts IPsec/IKE evidence and calculates security findings; a Python ML worker optionally classifies observable encrypted-flow metadata; and a Next.js dashboard presents the results and generates an executive PDF report. The ML model is trained using the team's [IPsec PCAP Lab dataset](https://github.com/naman9271/ipsec-pcap-lab).
 
@@ -75,16 +77,14 @@ SIH26160/
 
 ## Installation and Run
 
-### Prerequisites
+### With Docker (recommended)
 
-- Docker Engine/Desktop with Docker Compose (recommended)
-- Node.js 20+ with Corepack, Go 1.22+, and Python 3.11+ for local development
-
-### Recommended: run the backend services with Docker
+Install Docker Engine/Desktop with Docker Compose, plus Node.js 20+ with
+Corepack for the dashboard. From the repository root, run:
 
 ```bash
-git clone <YOUR_REPOSITORY_URL>
-cd SIH26160
+git clone https://github.com/naman9271/SIH26160-Alchemist.git
+cd SIH26160-Alchemist
 cp .env.example .env
 make up
 ```
@@ -95,7 +95,7 @@ Verify that the Core API is ready:
 curl http://127.0.0.1:8080/health
 ```
 
-Start the frontend in another terminal:
+Then start the frontend in another terminal:
 
 ```bash
 cd frontend
@@ -106,9 +106,10 @@ pnpm dev
 
 Open `http://localhost:3000`. Stop backend services with `make down`; use `make logs` to inspect service logs.
 
-### Local development without Docker
+### Without Docker
 
-Run these in separate terminals:
+Install Node.js 20+ with Corepack, Go 1.22+, and Python 3.11+. Run the
+services in separate terminals:
 
 ```bash
 # Terminal 1 — ML worker
