@@ -10,7 +10,9 @@ Reviewing the security posture of an IPsec VPN can require packet-level expertis
 
 ## Proposed Solution
 
-The application accepts a classic PCAP capture and runs a passive analysis workflow. The Go backend extracts IPsec/IKE evidence and calculates security findings; a Python ML worker optionally classifies observable encrypted-flow metadata; and a Next.js dashboard presents the results and generates an executive PDF report.
+**Live Deployment:** [https://alchemist160.vercel.app](https://alchemist160.vercel.app)
+
+The application accepts a classic PCAP capture and runs a passive analysis workflow. The Go backend extracts IPsec/IKE evidence and calculates security findings; a Python ML worker optionally classifies observable encrypted-flow metadata; and a Next.js dashboard presents the results and generates an executive PDF report. The ML model is trained using the team's [IPsec PCAP Lab dataset](https://github.com/naman9271/ipsec-pcap-lab).
 
 ## Key Features
 
@@ -62,12 +64,14 @@ SIH26160/
 
 ## Submission Material
 
-- [Demo video](submission/DEMO.md)
-- [Landing page screenshot](assets/screenshots/landing_page.png)
-- [PCAP upload screenshot](assets/screenshots/pcap_upload.png)
-- [Analysis dashboard screenshot](assets/screenshots/analysis_dashboard.png)
-- [Traffic classifier screenshot](assets/screenshots/traffic_classifier.png)
-- [Sample generated analysis report](assets/alchemist-ipsec-analysis-report.pdf)
+| Material | Direct link |
+| --- | --- |
+| Demo video | [Watch on YouTube](https://youtu.be/NNhGEnqu5p4) |
+| Product screenshots | [Open screenshots folder](assets/screenshots/) |
+| Sample generated analysis report | [Open PDF report](assets/alchemist-ipsec-analysis-report.pdf) |
+| Final presentation | [Open presentation PDF](submission/SIH26160-Team-Alchemist.pdf) |
+| Team-created ML training dataset | [Open IPsec PCAP Lab dataset](https://github.com/naman9271/ipsec-pcap-lab) |
+| Live deployment | [alchemist160.vercel.app](https://alchemist160.vercel.app) |
 
 ## Installation and Run
 
