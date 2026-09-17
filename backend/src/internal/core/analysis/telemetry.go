@@ -38,6 +38,7 @@ func VICIEvidence(snapshot *viciv1.GatewaySnapshot) []ingest.EvidenceInput {
 			items = appendString(items, model.SourceVICI, key, value, "VICI_IKE_SA", id, at, metadata, "vici:ike-sa/"+ike.GetName())
 		}
 		items = appendNumber(items, model.SourceVICI, "ike.established_duration_seconds", float64(ike.GetEstablishedDuration()), "VICI_IKE_SA", id, at, metadata)
+		if ike.GetEncryptionKeySize()>0 { items=appendNumber(items,model.SourceVICI,"ike.encryption_key_bits",float64(ike.GetEncryptionKeySize()),"VICI_IKE_SA",id,at,metadata) }
 		items = appendNumber(items, model.SourceVICI, "ike.rekey_seconds", float64(ike.GetRekeyTime()), "VICI_IKE_SA", id, at, metadata)
 		items = appendNumber(items, model.SourceVICI, "ike.reauth_seconds", float64(ike.GetReauthTime()), "VICI_IKE_SA", id, at, metadata)
 		for _, child := range ike.GetAssociatedChildSas() {
@@ -62,7 +63,8 @@ func VICIEvidence(snapshot *viciv1.GatewaySnapshot) []ingest.EvidenceInput {
 		for key, value := range map[string]string{"child.state": child.GetState(), "child.mode": child.GetMode(), "child.protocol": child.GetProtocol(), "child.encryption_algorithm": child.GetEncryptionAlgorithm(), "child.integrity_algorithm": child.GetIntegrityAlgorithm(), "child.spi_in": fmt.Sprintf("0x%08x", child.GetSpiIn()), "child.spi_out": fmt.Sprintf("0x%08x", child.GetSpiOut()), "child.local_traffic_selectors": strings.Join(child.GetLocalTrafficSelectors(), ","), "child.remote_traffic_selectors": strings.Join(child.GetRemoteTrafficSelectors(), ",")} {
 			items = appendString(items, model.SourceVICI, key, value, "VICI_CHILD_SA", id, childAt, metadata, "vici:child-sa/"+child.GetName())
 		}
-		for key, value := range map[string]uint64{"child.bytes_in": child.GetBytesIn(), "child.bytes_out": child.GetBytesOut(), "child.packets_in": child.GetPacketsIn(), "child.packets_out": child.GetPacketsOut(), "child.rekey_seconds": child.GetRekeyTime(), "child.lifetime_seconds": child.GetLifeTime()} {
+		if child.GetKeyLength()>0 { items=appendNumber(items,model.SourceVICI,"child.encryption_key_bits",float64(child.GetKeyLength()),"VICI_CHILD_SA",id,at,metadata) }
+		for key, value := range map[string]uint64{"child.bytes_in": child.GetBytesIn(), "child.bytes_out": child.GetBytesOut(), "child.packets_in": child.GetPacketsIn(), "child.packets_out": child.GetPacketsOut(), "child.rekey_seconds": child.GetRekeyTime(), "child.remaining_lifetime_seconds": child.GetLifeTime()} {
 			items = appendNumber(items, model.SourceVICI, key, float64(value), "VICI_CHILD_SA", id, childAt, metadata)
 		}
 	}
@@ -102,7 +104,7 @@ func XFRMEvidence(snapshot *xfrmv1.KernelSnapshot) []ingest.EvidenceInput {
 		if state == nil {
 			continue
 		}
-		id := fmt.Sprintf("xfrm-%s-%08x", strings.ToLower(state.GetProtocol()), state.GetSpi())
+		id := fmt.Sprintf("xfrm-%s-%s-%s-%08x", strings.ToLower(state.GetProtocol()), state.GetSource(),state.GetDestination(),state.GetSpi())
 		metadata := map[string]string{"reqid": fmt.Sprint(state.GetReqid()), "spi": fmt.Sprintf("0x%08x", state.GetSpi()), "source": state.GetSource(), "destination": state.GetDestination()}
 		for key, value := range map[string]string{"child.protocol": state.GetProtocol(), "esp.state": "INSTALLED", "esp.spi": fmt.Sprintf("0x%08x", state.GetSpi()), "child.mode": state.GetMode(), "child.encryption_algorithm": first(state.GetAeadAlgorithm(), state.GetEncryptionAlgorithm()), "child.integrity_algorithm": state.GetAuthenticationAlgorithm(), "child.encapsulation": state.GetEncapsulation(), "xfrm.direction": state.GetDirection()} {
 			items = appendString(items, model.SourceXFRM, key, value, "XFRM_STATE", id, at, metadata, "netlink:xfrm-state/"+id)
@@ -110,6 +112,7 @@ func XFRMEvidence(snapshot *xfrmv1.KernelSnapshot) []ingest.EvidenceInput {
 		items = appendBool(items, model.SourceXFRM, "replay.enabled", state.GetReplayWindow() > 0, "XFRM_STATE", id, at, metadata)
 		items = appendBool(items, model.SourceXFRM, "replay.extended_sequence_numbers", state.GetExtendedSequenceNumbers(), "XFRM_STATE", id, at, metadata)
 		items = appendBool(items, model.SourceXFRM, "sa.runtime_verified", true, "XFRM_STATE", id, at, metadata)
+		if state.GetEncryptionKeyLength()>0 { items=appendNumber(items,model.SourceXFRM,"child.encryption_key_bits",float64(state.GetEncryptionKeyLength()),"XFRM_STATE",id,at,metadata) }
 		for key, value := range map[string]uint64{"replay.window": uint64(state.GetReplayWindow()), "replay.sequence": state.GetSequence(), "traffic.bytes": state.GetBytes(), "traffic.packet_count": state.GetPackets(), "sa.byte_limit": state.GetByteLimit(), "sa.packet_limit": state.GetPacketLimit()} {
 			items = appendNumber(items, model.SourceXFRM, key, float64(value), "XFRM_STATE", id, at, metadata)
 		}

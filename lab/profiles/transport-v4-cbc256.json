@@ -1,0 +1,1 @@
+{"id":"transport-v4-cbc256","mode":"transport","ip_version":4,"cipher":"AES_CBC","key_bits":256,"integrity":"HMAC_SHA2_256_128","ike":"aes256-sha256-modp2048","esp":"aes256-sha256","dh":"MODP_2048","pfs":false,"encap":false}

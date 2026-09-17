@@ -34,6 +34,16 @@ type Assessment struct {
 	Findings      []Finding
 	ThreatMatrix  map[Severity]int
 	EvaluatedRule int
+	CoveragePercent int
+	ScoreAvailable bool
+	Controls []Control
+}
+
+type Control struct {
+	RuleID string `json:"rule_id"`
+	Property string `json:"property"`
+	State string `json:"state"`
+	Reason string `json:"reason"`
 }
 
 func Assess(facts Facts) Assessment {
@@ -52,7 +62,7 @@ func Assess(facts Facts) Assessment {
 		add(Finding{RuleID: "IPSEC_INTEGRITY_001", Severity: SeverityHigh, Title: "Weak integrity algorithm", Description: "The negotiated integrity algorithm is deprecated for new deployments.", Recommendation: "Use SHA-256 or stronger, or an approved AEAD suite.", EvidenceProperties: []string{"child.integrity_algorithm"}})
 	}
 	dh := strings.ToUpper(facts.DHGroup)
-	if containsAny(dh, "MODP768", "MODP1024", "MODP1536", "GROUP1", "GROUP2", "GROUP5") {
+	if containsAny(dh, "MODP768", "MODP1024", "MODP1536", "MODP_768", "MODP_1024", "MODP_1536") || dh == "GROUP1" || dh == "GROUP2" || dh == "GROUP5" || strings.HasPrefix(dh, "GROUP1-") || strings.HasPrefix(dh, "GROUP2-") || strings.HasPrefix(dh, "GROUP5-") {
 		add(Finding{RuleID: "IPSEC_DH_001", Severity: SeverityHigh, Title: "Weak Diffie-Hellman group", Description: "The negotiated DH group does not provide an acceptable modern security margin.", Recommendation: "Use MODP 2048 or an approved elliptic-curve group.", EvidenceProperties: []string{"ike.dh_group"}})
 	}
 	if facts.PFS != nil && !*facts.PFS {
@@ -82,7 +92,32 @@ func Assess(facts Facts) Assessment {
 	if score < 0 {
 		score = 0
 	}
-	return Assessment{Score: score, Grade: grade(score), Findings: findings, ThreatMatrix: matrix, EvaluatedRule: 8}
+	checks := []struct{ id, property string; known bool }{
+		{"IPSEC_IKE_001", "ike.version", strings.HasPrefix(ike, "IKEV1") || strings.HasPrefix(ike, "IKEV2")},
+		{"IPSEC_CIPHER_001", "child.encryption_algorithm", knownAlgorithm(cipher)},
+		{"IPSEC_INTEGRITY_001", "child.integrity_algorithm", knownAlgorithm(integrity)},
+		{"IPSEC_DH_001", "ike.dh_group", knownAlgorithm(dh)},
+		{"IPSEC_PFS_001", "child.pfs", facts.PFS != nil},
+		{"IPSEC_REPLAY_001", "replay.enabled", facts.ReplayProtection != nil},
+		{"IPSEC_LIFETIME_001", "child.lifetime_seconds", facts.SALifetimeSeconds > 0},
+		{"IPSEC_METADATA_001", "metadata.exposure", facts.MetadataExposure},
+	}
+	controls := make([]Control, 0, len(checks))
+	evaluated := 0
+	for _, check := range checks {
+		control := Control{RuleID: check.id, Property: check.property, State: "NOT_EVALUATED", Reason: "Required evidence is unavailable or unrecognized"}
+		if check.known { evaluated++; control.State = "PASS"; control.Reason = "Available evidence passed this baseline check" }
+		for _, finding := range findings { if finding.RuleID == check.id { control.State = "FAIL"; control.Reason = finding.Description } }
+		controls = append(controls, control)
+	}
+	label := grade(score)
+	if evaluated == 0 { score = 0; label = "N/A" } else if evaluated < len(checks) { label = "PROVISIONAL" }
+	return Assessment{Score: score, Grade: label, Findings: findings, ThreatMatrix: matrix, EvaluatedRule: evaluated, CoveragePercent: evaluated*100/len(checks), ScoreAvailable: evaluated > 0, Controls: controls}
+}
+
+func knownAlgorithm(s string) bool {
+	if s == "" || strings.Contains(s,"UNKNOWN") { return false }
+	return containsAny(s,"AES", "AEAD", "CHACHA20", "SHA", "MD5", "3DES", "MODP", "ECP", "CURVE25519", "CURVE448") || s=="DES" || s=="NULL" || s=="GROUP1" || s=="GROUP2" || s=="GROUP5"
 }
 
 func containsAny(value string, candidates ...string) bool {

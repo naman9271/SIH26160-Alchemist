@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/evidence"
 
 	commonv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/common/v1"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/fusion/model"
@@ -101,11 +102,7 @@ func NewDefault() *Memory {
 		ID:              model.DefaultPolicyID,
 		SchemaVersion:   SchemaVersion,
 		RequiredSources: []model.Source{model.SourcePacketParser, model.SourceFlowAnalyzer},
-		RequiredProperties: []string{
-			"ike.version", "ike.encryption", "ike.integrity", "ike.prf", "ike.dh_group",
-			"child.mode", "child.esp_encryption", "child.integrity", "child.pfs",
-			"replay.enabled", "traffic.class", "metadata.exposure",
-		},
+		RequiredProperties: evidence.RequiredProperties(),
 		SourceTrust: map[model.Source]float64{
 			model.SourcePacketParser: .95, model.SourceFlowAnalyzer: .90,
 			model.SourceVICI: 1, model.SourceXFRM: 1,

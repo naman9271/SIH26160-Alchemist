@@ -168,6 +168,8 @@ func readPCAP(reader io.Reader, writer io.Writer, h *tcpdumpHandle, config Confi
 	if !ok {
 		return errors.New("tcpdump emitted an unsupported capture format")
 	}
+	link:=format.order.Uint32(header[20:24])&0xffff
+	if !supportedLink(link) { return fmt.Errorf("unsupported live capture link type %d",link) }
 	select {
 	case h.started <- nil:
 	default:
@@ -194,6 +196,7 @@ func readPCAP(reader io.Reader, writer io.Writer, h *tcpdumpHandle, config Confi
 			fraction *= 1_000
 		}
 		seenAt := time.Unix(int64(format.order.Uint32(recordHeader[:4])), fraction).UTC()
+		packet = ethernetFrame(packet,link)
 		if config.PacketObserver != nil {
 			if metadata, ok := decodePacketMetadata(packet, uint64(length), seenAt); ok {
 				metadata.SessionID = config.SessionID
@@ -205,6 +208,7 @@ func readPCAP(reader io.Reader, writer io.Writer, h *tcpdumpHandle, config Confi
 		h.mu.Lock()
 		h.counters.PacketsTotal++
 		h.counters.BytesTotal += uint64(length)
+		if format.order.Uint32(recordHeader[12:16])>length { h.counters.TruncatedPackets++ }
 		classify(packet, &h.counters)
 		maximumReached := config.MaxCaptureBytes > 0 && h.counters.BytesTotal >= config.MaxCaptureBytes
 		h.mu.Unlock()
@@ -217,7 +221,7 @@ func readPCAP(reader io.Reader, writer io.Writer, h *tcpdumpHandle, config Confi
 // ReadOfflinePCAP decodes a finite classic-PCAP stream with the same metadata
 // decoder as live tcpdump capture. It is intentionally limited to classic
 // PCAP; PCAPNG is rejected until a real parser is added.
-func ReadOfflinePCAP(ctx context.Context, reader io.Reader, sessionID string, observer PacketObserver) (OfflineResult, error) {
+func readClassicPCAP(ctx context.Context, reader io.Reader, sessionID string, observer PacketObserver) (OfflineResult, error) {
 	if ctx == nil {
 		return OfflineResult{}, shared.NewError(shared.InvalidArgument, "", "context is required")
 	}
@@ -239,6 +243,8 @@ func ReadOfflinePCAP(ctx context.Context, reader io.Reader, sessionID string, ob
 		return OfflineResult{}, shared.NewError(shared.InvalidArgument, shared.InvalidPCAP, "unsupported PCAP format")
 	}
 	result := OfflineResult{}
+	link := format.order.Uint32(header[20:24]) & 0xffff
+	if !supportedLink(link) { return result, fmt.Errorf("unsupported PCAP link type %d",link) }
 	recordHeader := make([]byte, 16)
 	for {
 		if err := ctx.Err(); err != nil {
@@ -269,6 +275,10 @@ func ReadOfflinePCAP(ctx context.Context, reader io.Reader, sessionID string, ob
 		result.LastSeen = seenAt
 		result.Counters.PacketsTotal++
 		result.Counters.BytesTotal += uint64(length)
+		original := format.order.Uint32(recordHeader[12:16])
+		if original < length { return OfflineResult{}, fmt.Errorf("PCAP original length is smaller than captured length") }
+		if original > length { result.Counters.TruncatedPackets++ }
+		packet = ethernetFrame(packet,link)
 		classify(packet, &result.Counters)
 		if observer != nil {
 			if metadata, decoded := decodePacketMetadata(packet, uint64(length), seenAt); decoded {
@@ -303,14 +313,16 @@ func decodePacketMetadata(packet []byte, length uint64, seenAt time.Time) (Packe
 			case len(udpPayload) >= 4 && bytes.Equal(udpPayload[:4], []byte{0, 0, 0, 0}):
 				m.IKE = true
 				parseIKE(&m, udpPayload[4:])
-			case len(udpPayload) >= 4:
+			case len(udpPayload) >= 8:
 				m.EncapsulatedESP = true
 				m.SPI = binary.BigEndian.Uint32(udpPayload[:4])
+				m.ESPSequence = binary.BigEndian.Uint32(udpPayload[4:8])
 			}
 		}
 	}
-	if protocol == 50 && len(payload) >= 4 {
+	if protocol == 50 && len(payload) >= 8 {
 		m.SPI = binary.BigEndian.Uint32(payload[:4])
+		m.ESPSequence = binary.BigEndian.Uint32(payload[4:8])
 	}
 	if protocol == 51 && len(payload) >= 8 {
 		m.SPI = binary.BigEndian.Uint32(payload[4:8])
@@ -354,9 +366,7 @@ func parseIKE(metadata *PacketMetadata, payload []byte) {
 	major := payload[17] >> 4
 	firstPayload := payload[16]
 	if major == 2 {
-		if payload[19]&0x20 != 0 { // IKEv2 header: encrypted flag is set only with SK.
-			metadata.IKEPayloadEncrypted = true
-		}
+		// Bit 0x20 means response. Encryption is identified only by SK/SKF.
 		parseIKEv2Payloads(metadata, firstPayload, payload[28:declared])
 		return
 	}
@@ -398,6 +408,9 @@ func parseIKEv2Payloads(metadata *PacketMetadata, kind uint8, body []byte) {
 }
 
 func parseIKEv2SA(metadata *PacketMetadata, body []byte) {
+	start:=len(metadata.IKEProposals)
+	valid:=false
+	defer func(){ if !valid { metadata.IKEProposals=metadata.IKEProposals[:start] } }()
 	for len(body) >= 8 {
 		next, length := body[0], int(binary.BigEndian.Uint16(body[2:4]))
 		if length < 8 || length > len(body) {
@@ -409,22 +422,36 @@ func parseIKEv2SA(metadata *PacketMetadata, body []byte) {
 			return
 		}
 		part := body[8+spiSize : length]
+		proposal := IKEProposal{Number:body[4], Protocol:body[5], SPI:fmt.Sprintf("%x", body[8:8+spiSize])}
 		for i := 0; i < transforms && len(part) >= 8; i++ {
 			tNext, tLen := part[0], int(binary.BigEndian.Uint16(part[2:4]))
 			if tLen < 8 || tLen > len(part) {
 				return
 			}
-			transformType, transformID := part[4], binary.BigEndian.Uint16(part[6:8])
-			addTransform(metadata, transformType, transformID)
+			transform, valid := parseTransform(part[:tLen])
+			if !valid { return }
+			proposal.Transforms = append(proposal.Transforms, transform)
 			part = part[tLen:]
 			if tNext == 0 && i+1 < transforms {
 				return
 			}
 		}
+		if len(proposal.Transforms) != transforms || len(part) != 0 { return }
+		metadata.IKEProposals = append(metadata.IKEProposals, proposal)
+		for _, transform := range proposal.Transforms {
+			switch transform.Type {
+			case 1: metadata.IKEEncryptionAlgorithms = appendUnique(metadata.IKEEncryptionAlgorithms, transform.Name)
+			case 2: metadata.IKEPRFs = appendUnique(metadata.IKEPRFs, transform.Name)
+			case 3: metadata.IKEIntegrityAlgorithms = appendUnique(metadata.IKEIntegrityAlgorithms, transform.Name)
+			case 4: metadata.IKEDHGroups = appendUnique(metadata.IKEDHGroups, transform.Name)
+			}
+		}
 		body = body[length:]
 		if next == 0 {
+			valid = len(body)==0
 			return
 		}
+		if next!=2 { return }
 	}
 }
 
@@ -471,7 +498,6 @@ func parseIKEv1SA(metadata *PacketMetadata, body []byte) {
 				return
 			}
 			// Transform # / transform ID. Attribute decoding is bounded below.
-			metadata.IKEEncryptionAlgorithms = appendUnique(metadata.IKEEncryptionAlgorithms, "IKEv1_TRANSFORM_"+strconv.Itoa(int(binary.BigEndian.Uint16(part[6:8]))))
 			parseIKEv1Attributes(metadata, part[8:tLen])
 			part = part[tLen:]
 			if tNext == 0 && i+1 < transforms {
@@ -486,6 +512,8 @@ func parseIKEv1SA(metadata *PacketMetadata, body []byte) {
 }
 
 func parseIKEv1Attributes(metadata *PacketMetadata, attributes []byte) {
+	var cipher string
+	var keyBits uint16
 	for len(attributes) >= 4 {
 		typeAndFlag, value := binary.BigEndian.Uint16(attributes[:2]), binary.BigEndian.Uint16(attributes[2:4])
 		attributeType := typeAndFlag & 0x7fff
@@ -498,17 +526,25 @@ func parseIKEv1Attributes(metadata *PacketMetadata, attributes []byte) {
 			continue
 		}
 		switch attributeType {
+		case 1:
+			cipher = map[uint16]string{1:"DES",5:"3DES",7:"AES-CBC"}[value]
+			if cipher=="" { cipher=fmt.Sprintf("UNKNOWN-IKEv1-ENCR-%d",value) }
 		case 2:
-			metadata.IKEEncryptionAlgorithms = appendUnique(metadata.IKEEncryptionAlgorithms, "IKEv1_ENCR_"+strconv.Itoa(int(value)))
+			hash:=map[uint16]string{1:"MD5",2:"SHA1",4:"SHA256",5:"SHA384",6:"SHA512"}[value]
+			if hash=="" { hash=fmt.Sprintf("UNKNOWN-IKEv1-HASH-%d",value) }
+			metadata.IKEIntegrityAlgorithms = appendUnique(metadata.IKEIntegrityAlgorithms, hash)
 		case 3:
-			metadata.IKEIntegrityAlgorithms = appendUnique(metadata.IKEIntegrityAlgorithms, "IKEv1_HASH_"+strconv.Itoa(int(value)))
+			auth:=map[uint16]string{1:"PSK",3:"RSA_SIGNATURE"}[value]
+			if auth=="" { auth=fmt.Sprintf("UNKNOWN-IKEv1-AUTH-%d",value) }
+			metadata.IKEAuthMethods = appendUnique(metadata.IKEAuthMethods, auth)
 		case 4:
-			metadata.IKEAuthMethods = appendUnique(metadata.IKEAuthMethods, "IKEv1_AUTH_"+strconv.Itoa(int(value)))
-		case 5:
-			metadata.IKEDHGroups = appendUnique(metadata.IKEDHGroups, "DH_"+strconv.Itoa(int(value)))
+			metadata.IKEDHGroups = appendUnique(metadata.IKEDHGroups, transformLabel(4, value, 0))
+		case 14:
+			keyBits=value
 		}
 		attributes = attributes[4:]
 	}
+	if cipher!="" { if keyBits>0 { cipher=fmt.Sprintf("%s-%d",cipher,keyBits) };metadata.IKEEncryptionAlgorithms=appendUnique(metadata.IKEEncryptionAlgorithms,cipher) }
 }
 
 func parseTrafficSelectors(metadata *PacketMetadata, body []byte) {
@@ -562,8 +598,7 @@ func appendUnique(values []string, value string) []string {
 	return append(values, value)
 }
 func transformName(kind uint8, id uint16) string {
-	prefixes := map[uint8]string{1: "ENCR", 2: "PRF", 3: "INTEG", 4: "DH", 5: "ESN"}
-	return prefixes[kind] + "_" + strconv.Itoa(int(id))
+	return transformLabel(kind, id, 0)
 }
 func ikeAuthName(value byte) string     { return "AUTH_" + strconv.Itoa(int(value)) }
 func certificateName(value byte) string { return "CERT_" + strconv.Itoa(int(value)) }
@@ -590,8 +625,11 @@ func pcapFormatForMagic(magic []byte) (pcapFormat, bool) {
 func classify(packet []byte, counters *Counters) {
 	metadata, ok := decodePacketMetadata(packet, uint64(len(packet)), time.Time{})
 	if !ok {
+		counters.UndecodedPackets++
 		return
 	}
+	counters.DecodedPackets++
+	if strings.Contains(metadata.SourceAddress, ":") { counters.IPv6Packets++ } else { counters.IPv4Packets++ }
 	if metadata.NATT {
 		counters.NATTPackets++
 	}
@@ -627,6 +665,7 @@ func networkPayload(packet []byte) (uint8, []byte, string, string, bool) {
 			return 0, nil, "", "", false
 		}
 		ihl := int(packet[offset]&15) * 4
+		if binary.BigEndian.Uint16(packet[offset+6:offset+8])&0x1fff != 0 { return 0, nil, "", "", false }
 		if ihl < 20 || len(packet) < offset+ihl {
 			return 0, nil, "", "", false
 		}

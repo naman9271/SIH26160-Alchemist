@@ -8,6 +8,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"strconv"
+	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/evidence"
 
 	"github.com/google/uuid"
 	commonv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/common/v1"
@@ -127,6 +129,7 @@ func (s *Service) evaluate(ctx context.Context, id string) (Record, error) {
 	}
 	facts, unknown, metadata := facts(items)
 	result := rules.Assess(facts)
+	unknown = uint64(len(result.Controls) - result.EvaluatedRule)
 	s.mu.Lock()
 	stored := s.records[id]
 	stored.State, stored.Result, stored.UnknownEvidence, stored.MetadataExposure = securityv1.AssessmentState_ASSESSMENT_COMPLETED, result, unknown, metadata
@@ -204,14 +207,20 @@ func priority(severity rules.Severity) string {
 }
 func facts(items []model.FusedConclusion) (rules.Facts, uint64, bool) {
 	winners := map[string]model.FusedConclusion{}
+	conflicting := map[string]bool{}
 	for _, item := range items {
-		if item.Status == commonv1.EvidenceStatus_UNKNOWN {
+		item.PropertyKey = evidence.Canonical(item.PropertyKey)
+		if item.Status != commonv1.EvidenceStatus_OBSERVED && item.Status != commonv1.EvidenceStatus_VERIFIED_GATEWAY && item.Status != commonv1.EvidenceStatus_DERIVED {
 			continue
 		}
+		if old, ok := winners[item.PropertyKey]; ok && scalar(old) != scalar(item) { conflicting[item.PropertyKey] = true }
 		if old, ok := winners[item.PropertyKey]; !ok || item.Confidence > old.Confidence || item.Confidence == old.Confidence && item.ID < old.ID {
 			winners[item.PropertyKey] = item
 		}
 	}
+	// Until per-SA scoring is requested, never combine incompatible SA facts into
+	// one seemingly verified configuration. The affected control stays unknown.
+	for key := range conflicting { delete(winners,key) }
 	get := func(names ...string) string {
 		for _, name := range names {
 			if item, ok := winners[name]; ok {
@@ -223,13 +232,13 @@ func facts(items []model.FusedConclusion) (rules.Facts, uint64, bool) {
 	parseBool := func(names ...string) *bool {
 		for _, name := range names {
 			if item, ok := winners[name]; ok {
-				value := strings.EqualFold(scalar(item), "true") || scalar(item) == "1"
-				return &value
+				value, err := strconv.ParseBool(scalar(item))
+				if err == nil { return &value }
 			}
 		}
 		return nil
 	}
-	facts := rules.Facts{IKEVersion: get("ike.version"), EncryptionAlgorithm: get("child.encryption_algorithm", "ike.encryption"), IntegrityAlgorithm: get("child.integrity_algorithm", "ike.integrity"), DHGroup: get("ike.dh_group"), PFS: parseBool("child.pfs"), ReplayProtection: parseBool("replay.enabled"), MetadataExposure: get("metadata.exposure") != ""}
+	facts := rules.Facts{IKEVersion: get("ike.version"), EncryptionAlgorithm: get(evidence.ChildEncryption), IntegrityAlgorithm: get(evidence.ChildIntegrity), DHGroup: get("ike.dh_group"), PFS: parseBool(evidence.ChildPFS), ReplayProtection: parseBool(evidence.ReplayEnabled), MetadataExposure: get("metadata.exposure") != ""}
 	// AEAD transforms authenticate as well as encrypt, so a separate integrity
 	// transform is neither negotiated nor required. Preserve that fact for the
 	// rule engine and evidence-coverage calculation.
@@ -273,14 +282,5 @@ func scalar(item model.FusedConclusion) string {
 	if item.Value == nil {
 		return ""
 	}
-	if value := item.Value.GetStringValue(); value != "" {
-		return value
-	}
-	if item.Value.GetBoolValue() {
-		return "true"
-	}
-	if number := item.Value.GetNumberValue(); number != 0 {
-		return fmt.Sprint(number)
-	}
-	return ""
+	return fmt.Sprint(item.Value.AsInterface())
 }

@@ -37,7 +37,8 @@ func Generate(input Input) Output {
 	fmt.Fprintf(&executive, "# IPsec VPN Executive Assessment\n\n")
 	fmt.Fprintf(&executive, "- Analysis: `%s`\n", markdown(input.AnalysisID))
 	fmt.Fprintf(&executive, "- Generated: `%s`\n", generatedAt.Format(time.RFC3339))
-	fmt.Fprintf(&executive, "- Security score: **%d/100 (%s)**\n", input.Assessment.Score, input.Assessment.Grade)
+	if input.Assessment.ScoreAvailable { fmt.Fprintf(&executive, "- Security score: **%d/100 (%s)**\n", input.Assessment.Score, input.Assessment.Grade) } else { executive.WriteString("- Security score: **Not evaluated**\n") }
+	fmt.Fprintf(&executive,"- Evidence coverage: %d%% (%d/%d controls)\n",input.Assessment.CoveragePercent,input.Assessment.EvaluatedRule,len(input.Assessment.Controls))
 	fmt.Fprintf(&executive, "- Findings: **%d**\n\n", len(findings))
 	if len(findings) == 0 {
 		executive.WriteString("No deterministic rule finding was produced from the available evidence. Missing evidence is not treated as a pass.\n")

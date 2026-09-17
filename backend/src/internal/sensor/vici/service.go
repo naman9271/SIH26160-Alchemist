@@ -20,6 +20,11 @@ import (
 
 const DefaultSocketURI = "unix:///var/run/charon.vici"
 
+func ConfiguredSocketURI() string {
+	if value:=os.Getenv("VICI_SOCKET_URI"); strings.TrimSpace(value)!="" { return value }
+	return DefaultSocketURI
+}
+
 // Backend separates normalized VICI decoding from gRPC and makes a real VICI
 // decoder replaceable without ever accepting raw VICI from clients.
 type Backend interface {
@@ -43,7 +48,7 @@ type Service struct {
 func New(backend Backend) *Service { return &Service{backend: backend, dial: dial} }
 func URI(value string) (string, error) {
 	if strings.TrimSpace(value) == "" {
-		value = DefaultSocketURI
+		value = ConfiguredSocketURI()
 	}
 	u, e := url.Parse(value)
 	if e != nil || u.Scheme != "unix" || u.Path == "" || u.Host != "" {

@@ -4,8 +4,15 @@ import "testing"
 
 func TestAssessmentUsesOnlyAvailableFacts(t *testing.T) {
 	result := Assess(Facts{})
-	if result.Score != 100 || len(result.Findings) != 0 {
+	if result.ScoreAvailable || result.CoveragePercent != 0 || result.EvaluatedRule != 0 || len(result.Findings) != 0 {
 		t.Fatalf("unknown facts created findings: %+v", result)
+	}
+}
+
+func TestModernDHNamesDoNotMatchWeakGroupPrefixes(t *testing.T) {
+	for _, name:=range []string{"GROUP14-MODP2048","GROUP19-ECP256","ECP384","MODP2048"} {
+		result:=Assess(Facts{DHGroup:name})
+		if len(result.Findings)>0 { t.Fatalf("modern group %s incorrectly rejected",name) }
 	}
 }
 

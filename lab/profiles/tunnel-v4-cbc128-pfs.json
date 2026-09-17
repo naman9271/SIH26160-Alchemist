@@ -1,0 +1,1 @@
+{"id":"tunnel-v4-cbc128-pfs","mode":"tunnel","ip_version":4,"cipher":"AES_CBC","key_bits":128,"integrity":"HMAC_SHA2_256_128","ike":"aes128-sha256-modp2048","esp":"aes128-sha256-modp2048","dh":"MODP_2048","pfs":true,"encap":false}

@@ -4,9 +4,16 @@ import { securityScorePresentation } from "../components/dashboard/security-scor
 
 test("a score with missing configuration evidence is provisional", () => {
   assert.deepEqual(
-    securityScorePresentation({ score: 97, unknown_evidence_count: 6 }),
-    { assessedScore: 97, coveragePercent: 0, isProvisional: true, unknownEvidence: 6 },
+    securityScorePresentation({ score: 97, unknown_evidence_count: 8 }),
+    { assessedScore: 97, coveragePercent: 0, isProvisional: true, unknownEvidence: 8 },
   );
+});
+
+test("no evaluated controls do not display a numeric security score", () => {
+  const result = securityScorePresentation({score: 0, score_available: false, coverage_percent: 0, unknown_evidence_count: 8});
+  assert.equal(result.assessedScore, undefined);
+  assert.equal(result.coveragePercent, 0);
+  assert.equal(result.isProvisional, true);
 });
 
 test("a fully evidenced score is definitive", () => {

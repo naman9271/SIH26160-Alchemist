@@ -56,6 +56,8 @@ type PacketMetadata struct {
 	SPI                               uint32
 	IKEInitiatorSPI, IKEResponderSPI  uint64
 	IKEVersion                        string
+	IKEProposals                      []IKEProposal
+	ESPSequence                       uint32
 	IKEExchangeType, IKEFlags         uint8
 	IKEMessageID                      uint32
 	// The following fields are extracted only from clear-text IKE payloads.
@@ -84,6 +86,11 @@ type Counters struct {
 	AHPackets    uint64
 	NATTPackets  uint64
 	PacketDrops  uint64
+	DecodedPackets uint64
+	UndecodedPackets uint64
+	TruncatedPackets uint64
+	IPv4Packets uint64
+	IPv6Packets uint64
 }
 
 // OfflineResult summarizes one already-captured classic PCAP. It contains

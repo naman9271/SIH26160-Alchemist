@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/evidence"
 
 	commonv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/common/v1"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/fusion/model"
@@ -291,7 +292,7 @@ func (s *Service) prepare(run model.Run, input EvidenceInput) (model.EvidenceIte
 	if run.State != model.RunStateActive {
 		return model.EvidenceItem{}, model.NewError(model.ErrorFailedPrecondition, "evidence can only be added to an active Fusion run")
 	}
-	input.PropertyKey = strings.TrimSpace(input.PropertyKey)
+	input.PropertyKey = evidence.Canonical(strings.TrimSpace(input.PropertyKey))
 	input.ResourceType = strings.ToUpper(strings.TrimSpace(input.ResourceType))
 	input.ResourceID = strings.TrimSpace(input.ResourceID)
 	input.SourceReference = strings.TrimSpace(input.SourceReference)

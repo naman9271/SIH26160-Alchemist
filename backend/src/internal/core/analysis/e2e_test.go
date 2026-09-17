@@ -132,6 +132,7 @@ func classicPCAP(frame []byte) []byte {
 	var out bytes.Buffer
 	header := make([]byte, 24)
 	copy(header[:4], []byte{0xd4, 0xc3, 0xb2, 0xa1})
+	binary.LittleEndian.PutUint32(header[20:24],1)
 	out.Write(header)
 	record := make([]byte, 16)
 	binary.LittleEndian.PutUint32(record[:4], 1)

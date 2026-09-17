@@ -218,7 +218,7 @@ func (s *Service) SAs(ctx context.Context, analysisID, sessionID string, size ui
 	}
 	rows := map[string]*protocolv1.SecurityAssociation{}
 	for _, item := range response.Evidence {
-		if item.ResourceType != "CHILD_SA" && item.ResourceType != "ESP_STREAM" {
+		if item.ResourceType != "CHILD_SA" && item.ResourceType != "ESP_STREAM" && item.ResourceType != "AH_STREAM" && item.ResourceType != "VICI_CHILD_SA" && item.ResourceType != "XFRM_STATE" {
 			continue
 		}
 		if sessionID != "" && item.Metadata["sensor_session_id"] != sessionID {
@@ -236,7 +236,7 @@ func (s *Service) SAs(ctx context.Context, analysisID, sessionID string, size ui
 			row.Mode = value(item)
 		case "child.state":
 			row.State = value(item)
-		case "child.spi", "esp.spi":
+		case "child.spi", "esp.spi", "ah.spi", "child.spi_in", "child.spi_out":
 			row.SpiValues = append(row.SpiValues, value(item))
 		}
 	}

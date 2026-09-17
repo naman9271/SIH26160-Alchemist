@@ -42,7 +42,7 @@ func TestAssessmentAndRiskReuseDeterministicRules(t *testing.T) {
 	}
 }
 
-func TestIKEAEADFallbackCountsEncryptionAndIntegrityEvidence(t *testing.T) {
+func TestIKECipherNeverSubstitutesForChildCipher(t *testing.T) {
 	service := coresecurity.New(conclusionFixture{
 		{ID: "c1", PropertyKey: "ike.version", Value: structpb.NewStringValue("IKEv2.0"), Status: commonv1.EvidenceStatus_OBSERVED, Confidence: .95},
 		{ID: "c2", PropertyKey: "ike.encryption", Value: structpb.NewStringValue("ENCR_20"), Status: commonv1.EvidenceStatus_OBSERVED, Confidence: .95},
@@ -53,8 +53,8 @@ func TestIKEAEADFallbackCountsEncryptionAndIntegrityEvidence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if record.UnknownEvidence != 2 {
-		t.Fatalf("unknown evidence = %d, want 2 (only PFS and replay)", record.UnknownEvidence)
+	if record.UnknownEvidence != 7 {
+		t.Fatalf("unknown evidence = %d, want 7 (only IKE version evaluated)", record.UnknownEvidence)
 	}
 	if record.Result.Score != 100 || len(record.Result.Findings) != 0 {
 		t.Fatalf("assessment = %+v, want clean supported checks", record.Result)
@@ -65,7 +65,7 @@ func TestIKEAEADFallbackCountsEncryptionAndIntegrityEvidence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if score.UnknownEvidenceCount != 2 || score.Confidence != .9 {
-		t.Fatalf("risk score = %+v, want two unknown facts and 0.9 confidence", score)
+	if score.UnknownEvidenceCount != 7 || score.Confidence != .12 || score.RiskLevel != "INDETERMINATE" {
+		t.Fatalf("risk score = %+v, want explicit low coverage and indeterminate risk", score)
 	}
 }

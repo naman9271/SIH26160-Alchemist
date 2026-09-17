@@ -106,6 +106,7 @@ func TestReadPCAPPreservesNanosecondTimestamps(t *testing.T) {
 	var capture bytes.Buffer
 	header := make([]byte, 24)
 	copy(header[:4], []byte{0x4d, 0x3c, 0xb2, 0xa1})
+	binary.LittleEndian.PutUint32(header[20:24],1)
 	capture.Write(header)
 	record := make([]byte, 16)
 	binary.LittleEndian.PutUint32(record[:4], 7)
@@ -134,6 +135,7 @@ func TestReadOfflinePCAPUsesTheLivePacketDecoder(t *testing.T) {
 	var input bytes.Buffer
 	header := make([]byte, 24)
 	copy(header[:4], []byte{0xd4, 0xc3, 0xb2, 0xa1})
+	binary.LittleEndian.PutUint32(header[20:24],1)
 	input.Write(header)
 	record := make([]byte, 16)
 	binary.LittleEndian.PutUint32(record[:4], 7)
@@ -180,19 +182,22 @@ func TestDecodeIKEv2CleartextPayloadsAndEncryptedBoundary(t *testing.T) {
 	ike = append(ike, sa...)
 	ike = append(ike, auth...)
 	metadata, ok := decodePacketMetadata(ipv4UDPFrame(500, 500, ike), uint64(len(ike)), time.Now())
-	if !ok || !metadata.IKE || len(metadata.IKEEncryptionAlgorithms) != 1 || metadata.IKEEncryptionAlgorithms[0] != "ENCR_12" || len(metadata.IKEAuthMethods) != 1 || metadata.IKEPayloadEncrypted {
+	if !ok || !metadata.IKE || len(metadata.IKEEncryptionAlgorithms) != 1 || metadata.IKEEncryptionAlgorithms[0] != "AES-CBC" || len(metadata.IKEAuthMethods) != 1 || metadata.IKEPayloadEncrypted {
 		t.Fatalf("clear-text IKE parsing = %+v, ok=%v", metadata, ok)
 	}
-	ike[19] = 0x20 // encrypted IKEv2 body flag
+	ike[19] = 0x20 // Response bit does not imply encryption.
 	metadata, ok = decodePacketMetadata(ipv4UDPFrame(500, 500, ike), uint64(len(ike)), time.Now())
-	if !ok || !metadata.IKEPayloadEncrypted {
+	if !ok || metadata.IKEPayloadEncrypted { t.Fatal("response flag must not imply encryption") }
+	ike[16]=46 // SK payload: stop before interpreting ciphertext.
+	metadata, ok = decodePacketMetadata(ipv4UDPFrame(500, 500, ike), uint64(len(ike)), time.Now())
+	if !ok || !metadata.IKEPayloadEncrypted || len(metadata.IKEProposals)!=0 {
 		t.Fatalf("encrypted IKE payload was not marked: %+v", metadata)
 	}
 }
 
-func TestReadOfflinePCAPExplainsPCAPNGUnsupported(t *testing.T) {
+func TestReadOfflinePCAPRejectsMalformedPCAPNG(t *testing.T) {
 	_, err := ReadOfflinePCAP(context.Background(), bytes.NewReader(append([]byte{0x0a, 0x0d, 0x0d, 0x0a}, make([]byte, 20)...)), "session", nil)
-	if err == nil || !strings.Contains(err.Error(), "PCAPNG is not supported") {
+	if err == nil || !strings.Contains(err.Error(), "invalid byte-order magic") {
 		t.Fatalf("PCAPNG error = %v", err)
 	}
 }

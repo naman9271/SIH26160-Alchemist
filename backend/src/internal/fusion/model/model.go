@@ -16,7 +16,7 @@ import (
 )
 
 const DefaultPolicyID = "fusion-default-v1"
-const EvidenceSchemaVersion = "fusion-evidence.v1"
+const EvidenceSchemaVersion = "fusion-evidence.v1" // Wire envelope; property vocabulary is evidence.Version.
 
 type HealthStatus string
 

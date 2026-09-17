@@ -195,7 +195,8 @@ func (p *Pipeline) exportSensor(ctx context.Context, record Record) error {
 		return err
 	}
 	items := make([]ingest.EvidenceInput, 0)
-	for _, packet := range p.Sensor.Observations.List(ctx, source.SessionID) {
+	packets := p.Sensor.Observations.List(ctx, source.SessionID)
+	for _, packet := range packets {
 		if packet.IKE {
 			p.publish(ctx, record.ID, eventv1.CoreEventCategory_IKE_DETECTED)
 			p.publish(ctx, record.ID, eventv1.CoreEventCategory_IPSEC_DETECTED)
@@ -205,6 +206,8 @@ func (p *Pipeline) exportSensor(ctx context.Context, record Record) error {
 		}
 		items = append(items, packetEvidence(packet)...)
 	}
+	items = append(items, negotiationEvidence(packets)...)
+	items = append(items, streamEvidence(packets)...)
 	if err := p.Sensor.Flows.StopForSession(ctx, source.SessionID); err != nil {
 		return err
 	}
@@ -216,14 +219,25 @@ func (p *Pipeline) exportSensor(ctx context.Context, record Record) error {
 		v := flow.ToProto(item)
 		items = append(items, numberEvidence("traffic.packet_count", float64(v.GetPacketCount()), "FLOW", v.GetFlowId(), v.GetLastSeen().AsTime()), numberEvidence("traffic.bytes", float64(v.GetByteCount()), "FLOW", v.GetFlowId(), v.GetLastSeen().AsTime()))
 	}
-	if len(flows) > 0 {
+	if source.Counters.ESPPackets + source.Counters.AHPackets > 0 {
 		p.publish(ctx, record.ID, eventv1.CoreEventCategory_SA_DISCOVERED)
 	}
 	if len(items) == 0 {
 		return nil
 	}
-	_, err = p.Ingest.AddBatch(ctx, ingest.AddBatchRequest{FusionRunID: record.FusionRunID, Evidence: items})
-	return err
+	// Repeated packets support the same protocol fact, not independent votes.
+	seen:=map[string]bool{}
+	unique:=make([]ingest.EvidenceInput,0,len(items))
+	for _, item:=range items {
+		key:=item.ResourceType+"/"+item.ResourceID+"/"+item.PropertyKey+"/"+item.Value.String()
+		if !seen[key] { unique=append(unique,item); seen[key]=true }
+	}
+	for start:=0;start<len(unique);start+=1000 {
+		end:=start+1000;if end>len(unique){end=len(unique)}
+		response,batchErr:=p.Ingest.AddBatch(ctx,ingest.AddBatchRequest{FusionRunID:record.FusionRunID,Evidence:unique[start:end]})
+		if batchErr!=nil{return batchErr}; if response.RejectedCount>0{return fmt.Errorf("protocol evidence rejected: %v",response.ValidationErrors)}
+	}
+	return nil
 }
 
 func (p *Pipeline) ingestML(ctx context.Context, record Record, inferenceID string) error {
@@ -262,24 +276,26 @@ func (p *Pipeline) ingestML(ctx context.Context, record Record, inferenceID stri
 
 func packetEvidence(packet capture.PacketMetadata) []ingest.EvidenceInput {
 	at := packet.SeenAt
-	meta := map[string]string{"sensor_session_id": packet.SessionID}
+	meta := map[string]string{"sensor_session_id": packet.SessionID, "source":packet.SourceAddress, "destination":packet.DestinationAddress, "registry_version":capture.RegistryVersion}
 	items := []ingest.EvidenceInput{}
 	ikeID := fmt.Sprintf("%016x-%016x", packet.IKEInitiatorSPI, packet.IKEResponderSPI)
 	if packet.IKE && packet.IKEVersion != "" {
 		items = append(items, stringEvidence("ike.version", packet.IKEVersion, "IKE_SA", ikeID, at, meta), stringEvidence("ike.initiator_spi", fmt.Sprintf("0x%016x", packet.IKEInitiatorSPI), "IKE_SA", ikeID, at, meta), stringEvidence("ike.responder_spi", fmt.Sprintf("0x%016x", packet.IKEResponderSPI), "IKE_SA", ikeID, at, meta))
 	}
 	if packet.IKE {
+		prefix := "ike.offered."
+		if packet.IKEFlags&0x20 != 0 { prefix = "ike.response_candidate." }
 		for _, value := range packet.IKEEncryptionAlgorithms {
-			items = append(items, stringEvidence("ike.encryption", value, "IKE_SA", ikeID, at, meta))
+			items = append(items, stringEvidence(prefix+"encryption", value, "IKE_SA", ikeID, at, meta))
 		}
 		for _, value := range packet.IKEIntegrityAlgorithms {
-			items = append(items, stringEvidence("ike.integrity", value, "IKE_SA", ikeID, at, meta))
+			items = append(items, stringEvidence(prefix+"integrity", value, "IKE_SA", ikeID, at, meta))
 		}
 		for _, value := range packet.IKEPRFs {
-			items = append(items, stringEvidence("ike.prf", value, "IKE_SA", ikeID, at, meta))
+			items = append(items, stringEvidence(prefix+"prf", value, "IKE_SA", ikeID, at, meta))
 		}
 		for _, value := range packet.IKEDHGroups {
-			items = append(items, stringEvidence("ike.dh_group", value, "IKE_SA", ikeID, at, meta))
+			items = append(items, stringEvidence(prefix+"dh_group", value, "IKE_SA", ikeID, at, meta))
 		}
 		for _, value := range packet.IKEAuthMethods {
 			items = append(items, stringEvidence("ike.authentication_method", value, "IKE_SA", ikeID, at, meta))
@@ -292,12 +308,12 @@ func packetEvidence(packet capture.PacketMetadata) []ingest.EvidenceInput {
 		}
 	}
 	if packet.Protocol == 50 || packet.EncapsulatedESP {
-		id := fmt.Sprintf("0x%08x", packet.SPI)
-		items = append(items, stringEvidence("child.protocol", "ESP", "ESP_STREAM", id, at, meta), stringEvidence("esp.spi", id, "ESP_STREAM", id, at, meta), stringEvidence("metadata.exposure", "outer endpoints, timing, direction and volume", "ESP_STREAM", id, at, meta))
+		id := streamID(packet)
+		items = append(items, stringEvidence("child.protocol", "ESP", "ESP_STREAM", id, at, meta), stringEvidence("esp.spi", fmt.Sprintf("0x%08x",packet.SPI), "ESP_STREAM", id, at, meta), stringEvidence("metadata.exposure", "outer endpoints, timing, direction and volume", "ESP_STREAM", id, at, meta))
 	}
 	if packet.Protocol == 51 {
-		id := fmt.Sprintf("0x%08x", packet.SPI)
-		items = append(items, stringEvidence("child.protocol", "AH", "AH_STREAM", id, at, meta), stringEvidence("ah.spi", id, "AH_STREAM", id, at, meta))
+		id := streamID(packet)
+		items = append(items, stringEvidence("child.protocol", "AH", "AH_STREAM", id, at, meta), stringEvidence("ah.spi", fmt.Sprintf("0x%08x",packet.SPI), "AH_STREAM", id, at, meta))
 	}
 	if packet.NATT {
 		items = append(items, stringEvidence("nat_traversal.detected", "true", "NAT_TRAVERSAL", packet.SessionID, at, meta))

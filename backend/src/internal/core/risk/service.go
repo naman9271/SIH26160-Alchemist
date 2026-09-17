@@ -23,11 +23,10 @@ func (s *Service) Score(ctx context.Context, assessmentID string) (*riskv1.Secur
 	if err != nil {
 		return nil, err
 	}
-	confidence := 1.0 - float64(record.UnknownEvidence)*.05
-	if confidence < .5 {
-		confidence = .5
-	}
-	return &riskv1.SecurityScore{AssessmentId: record.ID, Score: uint32(record.Result.Score), RiskLevel: level(record.Result.Score), Confidence: confidence, UnknownEvidenceCount: record.UnknownEvidence}, nil
+	coverage := float64(record.Result.CoveragePercent)/100
+	riskLevel := level(record.Result.Score)
+	if !record.Result.ScoreAvailable || (record.UnknownEvidence > 0 && (riskLevel == "LOW" || riskLevel == "MODERATE")) { riskLevel = "INDETERMINATE" }
+	return &riskv1.SecurityScore{AssessmentId: record.ID, Score: uint32(record.Result.Score), RiskLevel: riskLevel, Confidence: coverage, UnknownEvidenceCount: record.UnknownEvidence}, nil
 }
 func (s *Service) Breakdown(ctx context.Context, assessmentID string) (*riskv1.RiskBreakdown, error) {
 	record, err := s.record(ctx, assessmentID)
@@ -40,6 +39,11 @@ func (s *Service) Breakdown(ctx context.Context, assessmentID string) (*riskv1.R
 		deductions[category] += uint32(penalty(finding.Severity))
 	}
 	makeCategory := func(name string, max uint32) *riskv1.RiskCategory {
+		known := false
+		for _, control := range record.Result.Controls {
+			if control.State != "NOT_EVALUATED" && category(rules.Finding{EvidenceProperties:[]string{control.Property}})==name { known=true }
+		}
+		if !known { return &riskv1.RiskCategory{} }
 		loss := deductions[name]
 		if loss > max {
 			loss = max

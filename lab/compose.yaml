@@ -1,0 +1,49 @@
+name: alchemist-ipsec-lab
+x-node: &node
+  build: .
+  image: alchemist-ipsec-lab:20250601
+  cap_drop: [ALL]
+  cap_add: [NET_ADMIN, NET_RAW, NET_BIND_SERVICE, SETUID, SETGID, CHOWN, DAC_OVERRIDE]
+  volumes:
+    - ./runs:/runs
+    - ./runtime:/runtime:ro
+  sysctls:
+    net.ipv6.conf.all.disable_ipv6: 0
+services:
+  left:
+    <<: *node
+    environment: {ROLE: gateway, SIDE: left}
+    sysctls: {net.ipv4.ip_forward: 1, net.ipv6.conf.all.forwarding: 1, net.ipv4.conf.all.rp_filter: 0, net.ipv6.conf.all.disable_ipv6: 0}
+    networks:
+      underlay: {ipv4_address: 172.30.160.2, ipv6_address: 'fd26:160:0::2'}
+      left_lan: {ipv4_address: 172.30.161.2, ipv6_address: 'fd26:160:1::2'}
+  right:
+    <<: *node
+    environment: {ROLE: gateway, SIDE: right}
+    sysctls: {net.ipv4.ip_forward: 1, net.ipv6.conf.all.forwarding: 1, net.ipv4.conf.all.rp_filter: 0, net.ipv6.conf.all.disable_ipv6: 0}
+    networks:
+      underlay: {ipv4_address: 172.30.160.3, ipv6_address: 'fd26:160:0::3'}
+      right_lan: {ipv4_address: 172.30.162.2, ipv6_address: 'fd26:160:2::2'}
+  client:
+    <<: *node
+    environment: {ROLE: client, SIDE: left}
+    networks:
+      left_lan: {ipv4_address: 172.30.161.10, ipv6_address: 'fd26:160:1::10'}
+  server:
+    <<: *node
+    environment: {ROLE: server, SIDE: right}
+    networks:
+      right_lan: {ipv4_address: 172.30.162.10, ipv6_address: 'fd26:160:2::10'}
+networks:
+  underlay:
+    internal: true
+    enable_ipv6: true
+    ipam: {config: [{subnet: 172.30.160.0/24}, {subnet: 'fd26:160:0::/64'}]}
+  left_lan:
+    internal: true
+    enable_ipv6: true
+    ipam: {config: [{subnet: 172.30.161.0/24}, {subnet: 'fd26:160:1::/64'}]}
+  right_lan:
+    internal: true
+    enable_ipv6: true
+    ipam: {config: [{subnet: 172.30.162.0/24}, {subnet: 'fd26:160:2::/64'}]}

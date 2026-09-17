@@ -273,6 +273,9 @@ func getAnalysisInsights(w http.ResponseWriter, r *http.Request, input *coreinpu
 		"progress": progress,
 		"summary":  summary,
 	}
+	if source, sourceErr := analysis.SourceDetails(r.Context(), analysisID); sourceErr == nil {
+		result["capture_quality"] = map[string]any{"sha256":source.SHA256,"filename":source.Filename,"counters":source.Counters,"drop_count_available":source.CaptureID!="","limitations":"Undecoded frames and truncated packets reduce coverage; zero recorded drops in offline files does not prove loss-free capture."}
+	}
 
 	if protocol != nil {
 		section := map[string]any{}
@@ -323,6 +326,12 @@ func getAnalysisInsights(w http.ResponseWriter, r *http.Request, input *coreinpu
 			findings, _ := security.Findings(r.Context(), assessment.ID, "")
 			recommendations, _ := security.Recommendations(r.Context(), assessment.ID)
 			section["assessment"] = map[string]any{"assessment_id": assessment.ID, "policy_id": assessment.PolicyID, "state": assessment.State.String(), "score": assessment.Result.Score, "grade": assessment.Result.Grade, "findings": findings, "threat_matrix": assessment.Result.ThreatMatrix, "rules_evaluated": assessment.Result.EvaluatedRule, "unknown_evidence_count": assessment.UnknownEvidence, "metadata_exposure": assessment.MetadataExposure, "recommendations": recommendations}
+			view := section["assessment"].(map[string]any)
+			view["coverage_percent"] = assessment.Result.CoveragePercent
+			view["score_available"] = assessment.Result.ScoreAvailable
+			view["controls"] = assessment.Result.Controls
+			view["total_controls"] = len(assessment.Result.Controls)
+			view["score_version"] = "baseline-observed.v2"
 			if risk != nil {
 				if value, scoreErr := risk.Score(r.Context(), assessment.ID); scoreErr == nil {
 					section["risk_score"] = value

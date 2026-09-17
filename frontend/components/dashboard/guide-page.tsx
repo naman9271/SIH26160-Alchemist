@@ -11,8 +11,8 @@ const workflow = [
 const features = [
   {
     title: "Passive Analysis (PCAP)",
-    when: "Use it when you already have a classic .pcap or .cap capture.",
-    input: "A capture file up to 4 GiB. PCAPNG must be converted first.",
+    when: "Use it when you already have a .pcap, .cap or .pcapng capture.",
+    input: "A capture file up to 4 GiB. PCAPNG enhanced packet blocks are supported; timestamp-free simple packet blocks require re-export.",
     action: "The browser uploads the file to Core. The sensor reads packet headers and IPsec metadata; Fusion combines the available evidence; security rules score only facts that can be supported. Optional ML uses flow metadata, never decrypted content.",
     output: "Protocol observations, sessions, flows, evidence coverage, security findings, a risk score, and optional traffic classifications.",
     next: "Open the completed dashboard, check Evidence for missing sources, then review Findings and Risk & Fixes.",

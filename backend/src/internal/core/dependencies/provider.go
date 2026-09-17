@@ -226,7 +226,7 @@ func (p *Provider) SensorProbe(ctx context.Context) (localsensor.Probe, error) {
 	}
 	return localsensor.Probe{
 		PassiveLive: localsensor.Dependency{Available: live, Reason: reason},
-		PassivePCAP: localsensor.Dependency{Available: true, Reason: "classic PCAP decoding is available; PCAPNG is not supported by the Go decoder yet"},
+		PassivePCAP: localsensor.Dependency{Available: true, Reason: "PCAP and timestamped PCAPNG decoding are available"},
 		VICI:        viciDependency,
 		XFRM:        xfrmDependency,
 	}, nil

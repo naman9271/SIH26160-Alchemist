@@ -24,6 +24,12 @@ import (
 type SourceProvider interface {
 	Get(context.Context, string) (coreinput.Source, error)
 }
+
+// SourceDetails returns provenance and capture quality without exposing a path.
+func (s *Service) SourceDetails(ctx context.Context, id string) (coreinput.Source, error) {
+	r,err:=s.Get(ctx,id); if err!=nil { return coreinput.Source{},err }
+	source,err:=s.source.Get(ctx,r.SourceID); source.Path=""; return source,err
+}
 type FusionRuns interface {
 	Create(context.Context, fusionsession.CreateRequest) (model.Run, error)
 	Cancel(context.Context, string) (fusionsession.CancelResponse, error)

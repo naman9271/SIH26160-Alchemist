@@ -1,0 +1,1 @@
+{"id":"transport-v6-gcm128-pfs","mode":"transport","ip_version":6,"cipher":"AES_GCM_16","key_bits":128,"integrity":null,"ike":"aes128-sha256-ecp256","esp":"aes128gcm16-ecp256","dh":"ECP_256","pfs":true,"encap":false}

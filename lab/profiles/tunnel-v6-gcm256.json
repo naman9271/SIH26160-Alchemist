@@ -1,0 +1,1 @@
+{"id":"tunnel-v6-gcm256","mode":"tunnel","ip_version":6,"cipher":"AES_GCM_16","key_bits":256,"integrity":null,"ike":"aes256-sha256-ecp256","esp":"aes256gcm16","dh":"ECP_256","pfs":false,"encap":false}
