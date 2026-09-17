@@ -1,0 +1,30 @@
+name: alchemist-ipsec-lab
+
+services:
+  left:
+    build: { context: ., dockerfile: Dockerfile }
+    platform: linux/amd64
+    cap_add: [NET_ADMIN]
+    volumes:
+      - ./runtime/left:/etc/swanctl/conf.d:ro
+    entrypoint: ["sh", "-ec", "ip link set lo up; /usr/lib/strongswan/charon & sleep 2; swanctl --load-all; wait"]
+    networks: { underlay: { ipv4_address: 172.30.0.10 } }
+  right:
+    build: { context: ., dockerfile: Dockerfile }
+    platform: linux/amd64
+    cap_add: [NET_ADMIN]
+    volumes:
+      - ./runtime/right:/etc/swanctl/conf.d:ro
+    entrypoint: ["sh", "-ec", "ip link set lo up; /usr/lib/strongswan/charon & sleep 2; swanctl --load-all; wait"]
+    networks: { underlay: { ipv4_address: 172.30.0.20 } }
+  traffic-client:
+    image: alpine:3.20.3
+    command: ["sh", "-ec", "apk add --no-cache busybox-extras iperf3 >/dev/null; sleep infinity"]
+    networks: [underlay]
+  traffic-server:
+    image: alpine:3.20.3
+    command: ["sh", "-ec", "apk add --no-cache busybox-extras iperf3 >/dev/null; mkdir -p /www; printf 'alchemist deterministic lab fixture\n' >/www/index.html; httpd -f -p 8080 -h /www & nc -lk -p 2525 >/dev/null & iperf3 -s; sleep infinity"]
+    networks: [underlay]
+networks:
+  underlay:
+    ipam: { config: [{ subnet: 172.30.0.0/24 }] }

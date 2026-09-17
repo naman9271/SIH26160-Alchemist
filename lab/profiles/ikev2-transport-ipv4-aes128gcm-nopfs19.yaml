@@ -1,0 +1,1 @@
+{"id":"ikev2-transport-ipv4-aes128gcm-nopfs19","ike_version":"IKEv2","mode":"transport","address_family":"ipv4","esp":"aes128gcm16","dh_group":"ecp256","pfs":false,"nat_t":false,"traffic":"messaging","duration_seconds":10,"seed":104}

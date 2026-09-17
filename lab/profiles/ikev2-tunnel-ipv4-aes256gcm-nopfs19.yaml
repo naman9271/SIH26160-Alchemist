@@ -1,0 +1,1 @@
+{"id":"ikev2-tunnel-ipv4-aes256gcm-nopfs19","ike_version":"IKEv2","mode":"tunnel","address_family":"ipv4","esp":"aes256gcm16","dh_group":"ecp256","pfs":false,"nat_t":false,"traffic":"video","duration_seconds":10,"seed":102}

@@ -1,0 +1,1 @@
+{"id":"ikev2-transport-ipv6-aes128cbc-nopfs14","ike_version":"IKEv2","mode":"transport","address_family":"ipv6","esp":"aes128-sha256","dh_group":"modp2048","pfs":false,"nat_t":false,"traffic":"email","duration_seconds":10,"seed":106}

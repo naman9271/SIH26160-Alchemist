@@ -1,0 +1,1 @@
+{"id":"ikev2-tunnel-ipv6-aes256gcm-pfs19","ike_version":"IKEv2","mode":"tunnel","address_family":"ipv6","esp":"aes256gcm16","dh_group":"ecp256","pfs":true,"nat_t":false,"traffic":"icmp","duration_seconds":10,"seed":105}

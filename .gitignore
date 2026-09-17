@@ -21,6 +21,10 @@ backend/ml-service/data/processed/*.parquet
 backend/ml-service/models/*.joblib
 backend/ml-service/models/*.json
 
+# Generated, potentially large lab captures and transient gateway config.
+lab/output/
+lab/runtime/
+
 # The small selected production classifier and its metadata are required for
 # reproducible Docker builds. Alternate/training-only models remain local.
 !backend/ml-service/models/random_forest.joblib
