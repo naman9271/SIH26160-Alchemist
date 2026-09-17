@@ -22,16 +22,14 @@ Copy `.env.example` to `.env.local` for local overrides. `CORE_HTTP_URL` and
 
 ## Supported workflow
 
-1. Upload a classic `.pcap`/`.cap` file.
+1. Upload a `.pcap`, `.cap`, or `.pcapng` capture file.
 2. Optionally enable ML classification when the worker reports `READY`.
 3. Inspect passive protocol facts, Fusion/security results, and the ML output.
 4. Generate and download the executive PDF after completion.
 
-The browser workflow deliberately rejects PCAPNG. Convert it first:
-
-```bash
-editcap -F libpcap input.pcapng output.pcap
-```
+PCAPNG support covers Ethernet and raw-IP interface blocks and the common
+enhanced and simple packet blocks. Use a standard PCAP conversion tool for
+unusual link-layer formats that the decoder does not support.
 
 `UNKNOWN` ML output is a low-confidence abstention, not a failed analysis or
 a security finding. A high security score and a low risk level are compatible:

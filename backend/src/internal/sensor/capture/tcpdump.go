@@ -216,7 +216,8 @@ func readPCAP(reader io.Reader, writer io.Writer, h *tcpdumpHandle, config Confi
 
 // ReadOfflinePCAP decodes a finite classic-PCAP stream with the same metadata
 // decoder as live tcpdump capture. It is intentionally limited to classic
-// PCAP; PCAPNG is rejected until a real parser is added.
+// PCAP or supported PCAPNG streams. Packet records are decoded through the
+// same metadata-only packet path in both formats.
 func ReadOfflinePCAP(ctx context.Context, reader io.Reader, sessionID string, observer PacketObserver) (OfflineResult, error) {
 	if ctx == nil {
 		return OfflineResult{}, shared.NewError(shared.InvalidArgument, "", "context is required")
@@ -234,7 +235,7 @@ func ReadOfflinePCAP(ctx context.Context, reader io.Reader, sessionID string, ob
 	format, ok := pcapFormatForMagic(header[:4])
 	if !ok {
 		if bytes.Equal(header[:4], []byte{0x0a, 0x0d, 0x0d, 0x0a}) {
-			return OfflineResult{}, shared.NewError(shared.InvalidArgument, shared.InvalidPCAP, "PCAPNG is not supported by this build")
+			return readOfflinePCAPNG(ctx, io.MultiReader(bytes.NewReader(header), reader), sessionID, observer)
 		}
 		return OfflineResult{}, shared.NewError(shared.InvalidArgument, shared.InvalidPCAP, "unsupported PCAP format")
 	}
@@ -281,8 +282,132 @@ func ReadOfflinePCAP(ctx context.Context, reader io.Reader, sessionID string, ob
 	}
 }
 
+// readOfflinePCAPNG supports the packet-bearing PCAPNG blocks used by
+// tcpdump/Wireshark (SHB, IDB, EPB and SPB). It validates every block length,
+// supports both section byte orders, and intentionally ignores non-packet
+// blocks rather than interpreting their payload as traffic.
+func readOfflinePCAPNG(ctx context.Context, reader io.Reader, sessionID string, observer PacketObserver) (OfflineResult, error) {
+	var result OfflineResult
+	interfaces := map[uint32]uint16{}
+	var order binary.ByteOrder
+	for {
+		if err := ctx.Err(); err != nil {
+			return OfflineResult{}, err
+		}
+		header := make([]byte, 8)
+		if _, err := io.ReadFull(reader, header); err != nil {
+			if errors.Is(err, io.EOF) {
+				return result, nil
+			}
+			return OfflineResult{}, shared.NewError(shared.InvalidArgument, shared.InvalidPCAP, "read PCAPNG block header: "+err.Error())
+		}
+		blockType := binary.LittleEndian.Uint32(header[:4])
+		if blockType == 0x0a0d0d0a { // Section Header has a byte-order magic.
+			byteOrderMagic := make([]byte, 4)
+			if _, err := io.ReadFull(reader, byteOrderMagic); err != nil {
+				return OfflineResult{}, shared.NewError(shared.InvalidArgument, shared.InvalidPCAP, "read PCAPNG byte-order magic: "+err.Error())
+			}
+			if bytes.Equal(byteOrderMagic, []byte{0x4d, 0x3c, 0x2b, 0x1a}) {
+				order = binary.LittleEndian
+			} else if bytes.Equal(byteOrderMagic, []byte{0x1a, 0x2b, 0x3c, 0x4d}) {
+				order = binary.BigEndian
+			} else {
+				return OfflineResult{}, shared.NewError(shared.InvalidArgument, shared.InvalidPCAP, "invalid PCAPNG byte-order magic")
+			}
+			length := order.Uint32(header[4:])
+			if length < 28 || length > 16<<20 || length%4 != 0 {
+				return OfflineResult{}, shared.NewError(shared.InvalidArgument, shared.InvalidPCAP, "invalid PCAPNG section length")
+			}
+			body := append(byteOrderMagic, make([]byte, length-12)...)
+			if _, err := io.ReadFull(reader, body[4:]); err != nil {
+				return OfflineResult{}, shared.NewError(shared.InvalidArgument, shared.InvalidPCAP, "read PCAPNG section: "+err.Error())
+			}
+			if order.Uint32(body[len(body)-4:]) != length {
+				return OfflineResult{}, shared.NewError(shared.InvalidArgument, shared.InvalidPCAP, "PCAPNG section length mismatch")
+			}
+			interfaces = map[uint32]uint16{}
+			continue
+		}
+		if order == nil {
+			return OfflineResult{}, shared.NewError(shared.InvalidArgument, shared.InvalidPCAP, "PCAPNG is missing a section header")
+		}
+		length := order.Uint32(header[4:])
+		if length < 12 || length > 16<<20 || length%4 != 0 {
+			return OfflineResult{}, shared.NewError(shared.InvalidArgument, shared.InvalidPCAP, "invalid PCAPNG block length")
+		}
+		body := make([]byte, length-8)
+		if _, err := io.ReadFull(reader, body); err != nil {
+			return OfflineResult{}, shared.NewError(shared.InvalidArgument, shared.InvalidPCAP, "read PCAPNG block: "+err.Error())
+		}
+		if order.Uint32(body[len(body)-4:]) != length {
+			return OfflineResult{}, shared.NewError(shared.InvalidArgument, shared.InvalidPCAP, "PCAPNG block length mismatch")
+		}
+		content := body[:len(body)-4]
+		switch blockType {
+		case 1: // Interface Description Block
+			if len(content) < 8 {
+				return OfflineResult{}, shared.NewError(shared.InvalidArgument, shared.InvalidPCAP, "truncated PCAPNG interface block")
+			}
+			interfaces[uint32(len(interfaces))] = order.Uint16(content[:2])
+		case 6: // Enhanced Packet Block
+			if len(content) < 20 {
+				return OfflineResult{}, shared.NewError(shared.InvalidArgument, shared.InvalidPCAP, "truncated PCAPNG packet block")
+			}
+			interfaceID, capturedLength := order.Uint32(content[:4]), order.Uint32(content[12:16])
+			if capturedLength > 16<<20 || int(capturedLength) > len(content)-20 {
+				return OfflineResult{}, shared.NewError(shared.InvalidArgument, shared.InvalidPCAP, "invalid PCAPNG captured length")
+			}
+			timestamp := (uint64(order.Uint32(content[4:8])) << 32) | uint64(order.Uint32(content[8:12]))
+			updated, observeErr := observeOfflinePacket(ctx, result, content[20:20+capturedLength], interfaces[interfaceID], time.Unix(0, int64(timestamp)*1000).UTC(), sessionID, observer)
+			if observeErr != nil {
+				return OfflineResult{}, observeErr
+			}
+			result = updated
+		case 3: // Simple Packet Block, no timestamp/interface. Use interface zero.
+			if len(content) < 4 {
+				return OfflineResult{}, shared.NewError(shared.InvalidArgument, shared.InvalidPCAP, "truncated PCAPNG simple packet")
+			}
+			originalLength := order.Uint32(content[:4])
+			data := content[4:]
+			if originalLength < uint32(len(data)) {
+				data = data[:originalLength]
+			}
+			updated, observeErr := observeOfflinePacket(ctx, result, data, interfaces[0], time.Time{}, sessionID, observer)
+			if observeErr != nil {
+				return OfflineResult{}, observeErr
+			}
+			result = updated
+		}
+	}
+}
+
+func observeOfflinePacket(ctx context.Context, result OfflineResult, packet []byte, linkType uint16, seenAt time.Time, sessionID string, observer PacketObserver) (OfflineResult, error) {
+	if result.FirstSeen.IsZero() && !seenAt.IsZero() {
+		result.FirstSeen = seenAt
+	}
+	if !seenAt.IsZero() {
+		result.LastSeen = seenAt
+	}
+	result.Counters.PacketsTotal++
+	result.Counters.BytesTotal += uint64(len(packet))
+	metadata, decoded := decodePacketMetadataLink(packet, uint64(len(packet)), seenAt, linkType)
+	if decoded {
+		classifyMetadata(metadata, &result.Counters)
+		if observer != nil {
+			metadata.SessionID = sessionID
+			if err := observer(ctx, metadata); err != nil {
+				return OfflineResult{}, err
+			}
+		}
+	}
+	return result, nil
+}
+
 func decodePacketMetadata(packet []byte, length uint64, seenAt time.Time) (PacketMetadata, bool) {
-	protocol, payload, source, destination, ok := networkPayload(packet)
+	return decodePacketMetadataLink(packet, length, seenAt, 1)
+}
+func decodePacketMetadataLink(packet []byte, length uint64, seenAt time.Time, linkType uint16) (PacketMetadata, bool) {
+	protocol, payload, source, destination, ok := networkPayloadLink(packet, linkType)
 	if !ok {
 		return PacketMetadata{}, false
 	}
@@ -354,9 +479,8 @@ func parseIKE(metadata *PacketMetadata, payload []byte) {
 	major := payload[17] >> 4
 	firstPayload := payload[16]
 	if major == 2 {
-		if payload[19]&0x20 != 0 { // IKEv2 header: encrypted flag is set only with SK.
-			metadata.IKEPayloadEncrypted = true
-		}
+		// IKEv2 bit 0x20 is the RESPONSE flag, not an encryption flag. The
+		// payload chain below marks encryption only when it reaches SK/SKF.
 		parseIKEv2Payloads(metadata, firstPayload, payload[28:declared])
 		return
 	}
@@ -403,11 +527,12 @@ func parseIKEv2SA(metadata *PacketMetadata, body []byte) {
 		if length < 8 || length > len(body) {
 			return
 		}
-		spiSize := int(body[6])
+		proposalNumber, protocolID, spiSize := body[4], body[5], int(body[6])
 		transforms := int(body[7])
 		if 8+spiSize > length {
 			return
 		}
+		proposal := IKEProposal{Number: proposalNumber, ProtocolID: protocolID, SPI: fmt.Sprintf("%x", body[8:8+spiSize]), Selected: metadata.IKEFlags&0x20 != 0}
 		part := body[8+spiSize : length]
 		for i := 0; i < transforms && len(part) >= 8; i++ {
 			tNext, tLen := part[0], int(binary.BigEndian.Uint16(part[2:4]))
@@ -415,12 +540,18 @@ func parseIKEv2SA(metadata *PacketMetadata, body []byte) {
 				return
 			}
 			transformType, transformID := part[4], binary.BigEndian.Uint16(part[6:8])
-			addTransform(metadata, transformType, transformID)
+			transform := proposalTransform(part[8:tLen], transformType, transformID)
+			proposal.Transforms = append(proposal.Transforms, transform)
+			// Retain legacy packet fields for callers that only need an offer
+			// inventory. Pipeline evidence uses IKEProposals and never promotes
+			// an offer into a negotiated configuration fact.
+			addTransform(metadata, transform)
 			part = part[tLen:]
 			if tNext == 0 && i+1 < transforms {
 				return
 			}
 		}
+		metadata.IKEProposals = append(metadata.IKEProposals, proposal)
 		body = body[length:]
 		if next == 0 {
 			return
@@ -537,9 +668,9 @@ func parseTrafficSelectors(metadata *PacketMetadata, body []byte) {
 	}
 }
 
-func addTransform(metadata *PacketMetadata, transformType uint8, transformID uint16) {
-	value := transformName(transformType, transformID)
-	switch transformType {
+func addTransform(metadata *PacketMetadata, transform IKETransform) {
+	value := transform.Name
+	switch transform.Type {
 	case 1:
 		metadata.IKEEncryptionAlgorithms = appendUnique(metadata.IKEEncryptionAlgorithms, value)
 	case 2:
@@ -560,10 +691,6 @@ func appendUnique(values []string, value string) []string {
 		}
 	}
 	return append(values, value)
-}
-func transformName(kind uint8, id uint16) string {
-	prefixes := map[uint8]string{1: "ENCR", 2: "PRF", 3: "INTEG", 4: "DH", 5: "ESN"}
-	return prefixes[kind] + "_" + strconv.Itoa(int(id))
 }
 func ikeAuthName(value byte) string     { return "AUTH_" + strconv.Itoa(int(value)) }
 func certificateName(value byte) string { return "CERT_" + strconv.Itoa(int(value)) }
@@ -592,6 +719,9 @@ func classify(packet []byte, counters *Counters) {
 	if !ok {
 		return
 	}
+	classifyMetadata(metadata, counters)
+}
+func classifyMetadata(metadata PacketMetadata, counters *Counters) {
 	if metadata.NATT {
 		counters.NATTPackets++
 	}
@@ -610,6 +740,24 @@ func classify(packet []byte, counters *Counters) {
 }
 
 func networkPayload(packet []byte) (uint8, []byte, string, string, bool) {
+	return networkPayloadLink(packet, 1)
+}
+func networkPayloadLink(packet []byte, linkType uint16) (uint8, []byte, string, string, bool) {
+	if linkType == 101 { // DLT_RAW
+		if len(packet) == 0 {
+			return 0, nil, "", "", false
+		}
+		if packet[0]>>4 == 4 {
+			packet = append([]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x08, 0}, packet...)
+		} else if packet[0]>>4 == 6 {
+			packet = append([]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x86, 0xdd}, packet...)
+		} else {
+			return 0, nil, "", "", false
+		}
+	}
+	if linkType != 0 && linkType != 1 && linkType != 101 {
+		return 0, nil, "", "", false
+	}
 	if len(packet) < 14 {
 		return 0, nil, "", "", false
 	}

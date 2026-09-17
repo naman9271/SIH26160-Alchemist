@@ -137,8 +137,8 @@ export default function WorkspacePage() {
       return;
     }
     if (!file) return;
-    if (!/\.(pcap|cap)$/i.test(file.name)) {
-      setError("Use a classic .pcap or .cap file. Convert PCAPNG before upload.");
+    if (!/\.(pcap|pcapng|cap)$/i.test(file.name)) {
+      setError("Use a .pcap, .pcapng, or .cap capture file.");
       return;
     }
     setError(undefined);
@@ -218,7 +218,7 @@ export default function WorkspacePage() {
           <div className="max-w-3xl border-l border-dashed border-white/40 pl-5">
             <p className="text-[10px] font-bold tracking-[.18em] text-white/50">CAPTURE WORKSPACE</p>
             <h1 className="mt-5 text-3xl font-bold leading-tight tracking-[.06em] sm:text-5xl">START WITH THE CAPTURE.</h1>
-            <p className="mt-5 max-w-2xl text-sm leading-7 text-white/65">Upload a classic PCAP to begin passive analysis. Protocol evidence, deterministic assessment, and optional metadata-only ML remain clearly separated.</p>
+            <p className="mt-5 max-w-2xl text-sm leading-7 text-white/65">Upload a PCAP or PCAPNG to begin passive analysis. Protocol evidence, deterministic assessment, and optional metadata-only ML remain clearly separated.</p>
           </div>
 
           <div id="workspace-input" className="mt-14 grid scroll-mt-24 border-l border-t border-white/20 lg:grid-cols-[1.3fr_.7fr]">
@@ -228,9 +228,9 @@ export default function WorkspacePage() {
               {([['pcap', 'PASSIVE PCAP', 'Upload an offline capture.'], ['live', 'PASSIVE LIVE', 'Observe an authorized interface.'], ['deep', 'DEEP ASSESSMENT', 'Verify authorized gateway facts.']] as const).map(([value, label, detail]) => <label key={value} className={`cursor-pointer border p-3 transition ${mode === value ? "border-teal-200 bg-teal-200/10" : "border-white/20 hover:border-white/55"}`}><input className="sr-only" disabled={busy} type="radio" name="mode" value={value} checked={mode === value} onChange={() => { setMode(value); setAnalysis(undefined); setUpload(undefined); setLiveCapture(undefined); setPhase("idle"); setError(undefined); }} /><span className="block text-[10px] font-bold tracking-[.1em]">{label}</span><span className="mt-2 block text-[10px] leading-4 text-white/50">{detail}</span></label>)}
             </div>
             {mode === "pcap" ? <>
-            <p className="mt-7 text-[10px] tracking-[.16em] text-white/45">SOURCE / CLASSIC PCAP OR CAP</p>
+            <p className="mt-7 text-[10px] tracking-[.16em] text-white/45">SOURCE / PCAP, PCAPNG, OR CAP</p>
             <label className={`group relative mt-6 block cursor-pointer overflow-hidden border p-7 transition duration-300 sm:p-9 ${file ? "border-teal-200/70 bg-teal-200/[.055]" : "border-dashed border-white/35 bg-white/[.018] hover:border-teal-200/70 hover:bg-teal-200/[.04]"}`} htmlFor="pcap-upload">
-              <input id="pcap-upload" className="sr-only" type="file" accept=".pcap,.cap,application/vnd.tcpdump.pcap" onChange={selectFile} />
+              <input id="pcap-upload" className="sr-only" type="file" accept=".pcap,.pcapng,.cap,application/vnd.tcpdump.pcap,application/x-pcapng" onChange={selectFile} />
               <span aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100 [background-image:linear-gradient(rgba(94,234,212,.11)_1px,transparent_1px),linear-gradient(90deg,rgba(94,234,212,.11)_1px,transparent_1px)] [background-size:28px_28px]" />
               <span aria-hidden="true" className="absolute right-5 top-5 h-10 w-10 border-r border-t border-teal-200/45" />
               <span aria-hidden="true" className="absolute bottom-5 left-5 h-10 w-10 border-b border-l border-teal-200/25" />
@@ -241,12 +241,12 @@ export default function WorkspacePage() {
                 <span>
                   <span className="block text-lg font-bold tracking-[.08em] text-white sm:text-2xl">{file ? file.name : "SELECT A CAPTURE FILE"}</span>
                   <span className="mt-3 block max-w-xl text-xs leading-6 text-white/55">
-                    {file ? `${(file.size / 1024 / 1024).toFixed(2)} MiB selected · ready for passive evidence analysis` : "Drop in a classic packet capture or click this panel to browse. ESP payload remains sealed; only protocol metadata is analysed."}
+                    {file ? `${(file.size / 1024 / 1024).toFixed(2)} MiB selected · ready for passive evidence analysis` : "Drop in a packet capture or click this panel to browse. ESP payload remains sealed; only protocol metadata is analysed."}
                   </span>
                   <span className="mt-5 flex flex-wrap gap-2 text-[9px] font-bold tracking-[.12em]">
                     <span className="border border-white/15 px-2.5 py-1 text-white/45">.PCAP</span>
                     <span className="border border-white/15 px-2.5 py-1 text-white/45">.CAP</span>
-                    <span className="border border-amber-200/30 px-2.5 py-1 text-amber-100/65">PCAPNG CONVERT FIRST</span>
+                    <span className="border border-teal-200/30 px-2.5 py-1 text-teal-100/70">.PCAPNG</span>
                     <span className="border border-teal-200/30 px-2.5 py-1 text-teal-100/70">MAX 4 GIB</span>
                   </span>
                 </span>

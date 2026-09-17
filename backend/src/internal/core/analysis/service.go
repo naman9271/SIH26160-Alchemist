@@ -38,6 +38,7 @@ type Record struct {
 	State                               analysisv1.AnalysisState
 	Stage                               analysisv1.AnalysisStage
 	Failure                             string
+	EnableVICI, EnableXFRM              bool
 	CreatedAt, UpdatedAt                time.Time
 }
 type Service struct {
@@ -97,7 +98,7 @@ func (s *Service) Start(ctx context.Context, sourceID string, mode workspacev1.A
 	}
 	now := time.Now().UTC()
 	copyOptions := defaultOptions(options)
-	record := &Record{ID: id.String(), SourceID: sourceID, PolicyID: policyID, FusionRunID: run.ID, Mode: expected, Options: copyOptions, State: analysisv1.AnalysisState_ANALYSIS_STATE_RUNNING, Stage: analysisv1.AnalysisStage_INITIALIZING, CreatedAt: now, UpdatedAt: now}
+	record := &Record{ID: id.String(), SourceID: sourceID, PolicyID: policyID, FusionRunID: run.ID, Mode: expected, Options: copyOptions, EnableVICI: source.EnableVICI, EnableXFRM: source.EnableXFRM, State: analysisv1.AnalysisState_ANALYSIS_STATE_RUNNING, Stage: analysisv1.AnalysisStage_INITIALIZING, CreatedAt: now, UpdatedAt: now}
 	s.mu.Lock()
 	s.records[record.ID] = record
 	s.mu.Unlock()

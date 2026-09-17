@@ -73,7 +73,8 @@ func buildReportDocument(record coreanalysis.Record, source *coreinput.Source, c
 			riskLevel = strings.ToLower(riskScore.GetRiskLevel())
 			confidence = formatPercent(riskScore.GetConfidence())
 		}
-		executive.Paragraphs = append(executive.Paragraphs, fmt.Sprintf("The deterministic security assessment scored the supported evidence %d out of 100 (grade %s), with %s risk and %s assessment confidence. %d evidence items remained unknown.", assessment.Score, assessment.Grade, riskLevel, confidence, unknown))
+		executive.Paragraphs = append(executive.Paragraphs, fmt.Sprintf("The deterministic security assessment scored the evaluated evidence %d out of 100 (grade %s), with %s risk and a %s evidence-coverage indicator. %d evidence items remained unknown.", assessment.Score, assessment.Grade, riskLevel, confidence, unknown))
+		executive.Paragraphs = append(executive.Paragraphs, "The posture score applies only to controls that available evidence could evaluate. It must be read together with the evidence coverage and unknown-fact count; it is not a claim that unavailable gateway settings are secure.")
 		if len(assessment.Findings) == 0 {
 			executive.Paragraphs = append(executive.Paragraphs, "No deterministic rule finding was raised from the evidence that could be evaluated. This is not proof that unavailable or unknown evidence is safe.")
 		} else {

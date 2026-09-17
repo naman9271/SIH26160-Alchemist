@@ -120,6 +120,10 @@ func (p *Pipeline) collectVICI(ctx context.Context, record Record) error {
 		_, err := p.Ingest.MarkSourceUnavailable(ctx, ingest.MarkSourceUnavailableRequest{FusionRunID: record.FusionRunID, Source: model.SourceVICI, ReasonCode: "PASSIVE_MODE"})
 		return err
 	}
+	if !record.EnableVICI {
+		_, err := p.Ingest.MarkSourceUnavailable(ctx, ingest.MarkSourceUnavailableRequest{FusionRunID: record.FusionRunID, Source: model.SourceVICI, ReasonCode: "DISABLED_BY_AUTHORIZED_REQUEST"})
+		return err
+	}
 	p.publish(ctx, record.ID, eventv1.CoreEventCategory_VICI_COLLECTION_STARTED)
 	if p.VICI == nil {
 		_, err := p.Ingest.MarkSourceUnavailable(ctx, ingest.MarkSourceUnavailableRequest{FusionRunID: record.FusionRunID, Source: model.SourceVICI, ReasonCode: "VICI_NOT_CONFIGURED"})
@@ -149,6 +153,10 @@ func (p *Pipeline) collectVICI(ctx context.Context, record Record) error {
 func (p *Pipeline) collectXFRM(ctx context.Context, record Record) error {
 	if record.Mode != workspacev1.AnalysisMode_DEEP_ASSESSMENT {
 		_, err := p.Ingest.MarkSourceUnavailable(ctx, ingest.MarkSourceUnavailableRequest{FusionRunID: record.FusionRunID, Source: model.SourceXFRM, ReasonCode: "PASSIVE_MODE"})
+		return err
+	}
+	if !record.EnableXFRM {
+		_, err := p.Ingest.MarkSourceUnavailable(ctx, ingest.MarkSourceUnavailableRequest{FusionRunID: record.FusionRunID, Source: model.SourceXFRM, ReasonCode: "DISABLED_BY_AUTHORIZED_REQUEST"})
 		return err
 	}
 	p.publish(ctx, record.ID, eventv1.CoreEventCategory_XFRM_COLLECTION_STARTED)
@@ -195,6 +203,7 @@ func (p *Pipeline) exportSensor(ctx context.Context, record Record) error {
 		return err
 	}
 	items := make([]ingest.EvidenceInput, 0)
+	saObserved := false
 	for _, packet := range p.Sensor.Observations.List(ctx, source.SessionID) {
 		if packet.IKE {
 			p.publish(ctx, record.ID, eventv1.CoreEventCategory_IKE_DETECTED)
@@ -202,6 +211,10 @@ func (p *Pipeline) exportSensor(ctx context.Context, record Record) error {
 		}
 		if packet.Protocol == 50 || packet.EncapsulatedESP {
 			p.publish(ctx, record.ID, eventv1.CoreEventCategory_ESP_DETECTED)
+			saObserved = true
+		}
+		if packet.Protocol == 51 {
+			saObserved = true
 		}
 		items = append(items, packetEvidence(packet)...)
 	}
@@ -216,7 +229,7 @@ func (p *Pipeline) exportSensor(ctx context.Context, record Record) error {
 		v := flow.ToProto(item)
 		items = append(items, numberEvidence("traffic.packet_count", float64(v.GetPacketCount()), "FLOW", v.GetFlowId(), v.GetLastSeen().AsTime()), numberEvidence("traffic.bytes", float64(v.GetByteCount()), "FLOW", v.GetFlowId(), v.GetLastSeen().AsTime()))
 	}
-	if len(flows) > 0 {
+	if saObserved {
 		p.publish(ctx, record.ID, eventv1.CoreEventCategory_SA_DISCOVERED)
 	}
 	if len(items) == 0 {
@@ -262,25 +275,14 @@ func (p *Pipeline) ingestML(ctx context.Context, record Record, inferenceID stri
 
 func packetEvidence(packet capture.PacketMetadata) []ingest.EvidenceInput {
 	at := packet.SeenAt
-	meta := map[string]string{"sensor_session_id": packet.SessionID}
+	meta := map[string]string{"sensor_session_id": packet.SessionID, "endpoint_tuple": packet.SourceAddress + ">" + packet.DestinationAddress}
 	items := []ingest.EvidenceInput{}
 	ikeID := fmt.Sprintf("%016x-%016x", packet.IKEInitiatorSPI, packet.IKEResponderSPI)
 	if packet.IKE && packet.IKEVersion != "" {
 		items = append(items, stringEvidence("ike.version", packet.IKEVersion, "IKE_SA", ikeID, at, meta), stringEvidence("ike.initiator_spi", fmt.Sprintf("0x%016x", packet.IKEInitiatorSPI), "IKE_SA", ikeID, at, meta), stringEvidence("ike.responder_spi", fmt.Sprintf("0x%016x", packet.IKEResponderSPI), "IKE_SA", ikeID, at, meta))
 	}
 	if packet.IKE {
-		for _, value := range packet.IKEEncryptionAlgorithms {
-			items = append(items, stringEvidence("ike.encryption", value, "IKE_SA", ikeID, at, meta))
-		}
-		for _, value := range packet.IKEIntegrityAlgorithms {
-			items = append(items, stringEvidence("ike.integrity", value, "IKE_SA", ikeID, at, meta))
-		}
-		for _, value := range packet.IKEPRFs {
-			items = append(items, stringEvidence("ike.prf", value, "IKE_SA", ikeID, at, meta))
-		}
-		for _, value := range packet.IKEDHGroups {
-			items = append(items, stringEvidence("ike.dh_group", value, "IKE_SA", ikeID, at, meta))
-		}
+		items = append(items, proposalEvidence(packet, ikeID, at, meta)...)
 		for _, value := range packet.IKEAuthMethods {
 			items = append(items, stringEvidence("ike.authentication_method", value, "IKE_SA", ikeID, at, meta))
 		}
@@ -292,8 +294,12 @@ func packetEvidence(packet capture.PacketMetadata) []ingest.EvidenceInput {
 		}
 	}
 	if packet.Protocol == 50 || packet.EncapsulatedESP {
-		id := fmt.Sprintf("0x%08x", packet.SPI)
-		items = append(items, stringEvidence("child.protocol", "ESP", "ESP_STREAM", id, at, meta), stringEvidence("esp.spi", id, "ESP_STREAM", id, at, meta), stringEvidence("metadata.exposure", "outer endpoints, timing, direction and volume", "ESP_STREAM", id, at, meta))
+		// A SPI is scoped by protocol and destination. Keeping outer endpoints
+		// prevents unrelated gateways that reuse a SPI from being merged.
+		id := fmt.Sprintf("esp:%s>%s:0x%08x", packet.SourceAddress, packet.DestinationAddress, packet.SPI)
+		espMeta := cloneMetadata(meta)
+		espMeta["esp_spi"] = fmt.Sprintf("0x%08x", packet.SPI)
+		items = append(items, stringEvidence("child.protocol", "ESP", "ESP_STREAM", id, at, espMeta), stringEvidence("esp.spi", espMeta["esp_spi"], "ESP_STREAM", id, at, espMeta), stringEvidence("metadata.exposure", "outer endpoints, timing, direction and volume", "ESP_STREAM", id, at, espMeta))
 	}
 	if packet.Protocol == 51 {
 		id := fmt.Sprintf("0x%08x", packet.SPI)
@@ -301,6 +307,50 @@ func packetEvidence(packet capture.PacketMetadata) []ingest.EvidenceInput {
 	}
 	if packet.NATT {
 		items = append(items, stringEvidence("nat_traversal.detected", "true", "NAT_TRAVERSAL", packet.SessionID, at, meta))
+	}
+	return items
+}
+
+func cloneMetadata(input map[string]string) map[string]string {
+	out := make(map[string]string, len(input))
+	for key, value := range input {
+		out[key] = value
+	}
+	return out
+}
+
+func proposalEvidence(packet capture.PacketMetadata, ikeID string, at time.Time, metadata map[string]string) []ingest.EvidenceInput {
+	items := make([]ingest.EvidenceInput, 0)
+	for _, proposal := range packet.IKEProposals {
+		proposalMeta := make(map[string]string, len(metadata)+4)
+		for k, v := range metadata {
+			proposalMeta[k] = v
+		}
+		proposalMeta["proposal_number"] = fmt.Sprint(proposal.Number)
+		proposalMeta["proposal_protocol_id"] = fmt.Sprint(proposal.ProtocolID)
+		proposalMeta["proposal_disposition"] = map[bool]string{true: "selected", false: "offered"}[proposal.Selected]
+		for _, transform := range proposal.Transforms {
+			key := "ike.proposal.transform"
+			if proposal.Selected && proposal.ProtocolID == 1 {
+				switch transform.Type {
+				case 1:
+					key = "ike.encryption"
+				case 2:
+					key = "ike.prf"
+				case 3:
+					key = "ike.integrity"
+				case 4:
+					key = "ike.dh_group"
+				default:
+					continue
+				}
+			} else {
+				// Clear offers are valuable audit evidence, but explicitly not a
+				// negotiated suite. Do not use canonical assessment keys here.
+				key = fmt.Sprintf("ike.proposal.transform.%d", transform.Type)
+			}
+			items = append(items, stringEvidence(key, transform.Name, "IKE_PROPOSAL", fmt.Sprintf("%s:%d", ikeID, proposal.Number), at, proposalMeta))
+		}
 	}
 	return items
 }

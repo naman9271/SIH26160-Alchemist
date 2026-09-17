@@ -60,14 +60,17 @@ type PacketMetadata struct {
 	IKEMessageID                      uint32
 	// The following fields are extracted only from clear-text IKE payloads.
 	// Encrypted IKE payloads are deliberately never inspected.
-	IKEEncryptionAlgorithms    []string
-	IKEIntegrityAlgorithms     []string
-	IKEPRFs                    []string
-	IKEDHGroups                []string
-	IKEAuthMethods             []string
-	IKECertificateTypes        []string
-	IKETrafficSelectors        []string
-	IKEPayloadEncrypted        bool
+	IKEEncryptionAlgorithms []string
+	IKEIntegrityAlgorithms  []string
+	IKEPRFs                 []string
+	IKEDHGroups             []string
+	IKEAuthMethods          []string
+	IKECertificateTypes     []string
+	IKETrafficSelectors     []string
+	IKEPayloadEncrypted     bool
+	// IKEProposals retains clear-text wire proposals and whether this packet is
+	// a responder selection. It is intentionally metadata-only.
+	IKEProposals               []IKEProposal
 	IKE, NATT, EncapsulatedESP bool
 	NATKeepalive               bool
 	Length                     uint64

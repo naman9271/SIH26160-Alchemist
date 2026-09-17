@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 const workflow = [
-  ["01", "Choose an input mode", "Use Passive PCAP for an existing .pcap or .cap file, Passive Live for an authorized interface, or Deep Assessment when you are authorized to read gateway state."],
+  ["01", "Choose an input mode", "Use Passive PCAP for an existing .pcap, .pcapng, or .cap file, Passive Live for an authorized interface, or Deep Assessment when you are authorized to read gateway state."],
   ["02", "Collect evidence", "The sensor records IPsec metadata for IKE, NAT-T, ESP, and AH. It never decrypts ESP payloads."],
   ["03", "Analyse and classify", "Core derives sessions and flows, fuses evidence, runs deterministic security checks, and optionally asks the ML worker to classify encrypted-flow metadata."],
   ["04", "Review results", "Use Progress, Overview, VPN Sessions, Flows, Evidence, Security Findings, and Risk & Fixes to understand what was found and what remains unknown."],
@@ -11,8 +11,8 @@ const workflow = [
 const features = [
   {
     title: "Passive Analysis (PCAP)",
-    when: "Use it when you already have a classic .pcap or .cap capture.",
-    input: "A capture file up to 4 GiB. PCAPNG must be converted first.",
+    when: "Use it when you already have a .pcap, .pcapng, or .cap capture.",
+    input: "A capture file up to 4 GiB. Classic PCAP and packet-bearing PCAPNG are supported.",
     action: "The browser uploads the file to Core. The sensor reads packet headers and IPsec metadata; Fusion combines the available evidence; security rules score only facts that can be supported. Optional ML uses flow metadata, never decrypted content.",
     output: "Protocol observations, sessions, flows, evidence coverage, security findings, a risk score, and optional traffic classifications.",
     next: "Open the completed dashboard, check Evidence for missing sources, then review Findings and Risk & Fixes.",
@@ -54,7 +54,7 @@ const features = [
     when: "Use it first after an analysis completes.",
     input: "A selected analysis.",
     action: "It combines the analysis summary, security posture, risk score, and Fusion coverage into one starting view.",
-    output: "High-level status and record counts. The security score is higher-is-better, while confidence and unknown-evidence counts describe coverage.",
+    output: "High-level status and record counts. The posture score is higher-is-better for evaluated controls; evidence coverage and unknown-evidence counts show what could not be verified.",
     next: "Open the detailed section behind any metric before treating it as a conclusion, especially when evidence is missing.",
   },
   {

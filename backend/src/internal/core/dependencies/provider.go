@@ -138,9 +138,8 @@ func (p *Provider) Capabilities(ctx context.Context) (coresystem.Capabilities, e
 		DeepAssessment:  probe.VICI.Available || probe.XFRM.Available,
 		ExecutiveReport: true, TechnicalReport: true,
 		PassiveLive: passiveLive,
-		// The capture package can decode an uploaded classic-PCAP stream without
-		// relying on tcpdump or local capture privileges. PCAPNG is intentionally
-		// not advertised until its parser is implemented.
+		// The capture package can decode uploaded PCAP and the supported PCAPNG
+		// packet blocks without relying on tcpdump or local capture privileges.
 		PassivePCAP:        true,
 		SecurityAssessment: true,
 		RiskScoring:        true,
@@ -226,7 +225,7 @@ func (p *Provider) SensorProbe(ctx context.Context) (localsensor.Probe, error) {
 	}
 	return localsensor.Probe{
 		PassiveLive: localsensor.Dependency{Available: live, Reason: reason},
-		PassivePCAP: localsensor.Dependency{Available: true, Reason: "classic PCAP decoding is available; PCAPNG is not supported by the Go decoder yet"},
+		PassivePCAP: localsensor.Dependency{Available: true, Reason: "PCAP and supported PCAPNG packet blocks are available"},
 		VICI:        viciDependency,
 		XFRM:        xfrmDependency,
 	}, nil

@@ -32,6 +32,9 @@ type Source struct {
 	Size                                                 uint64
 	CreatedAt, UpdatedAt                                 time.Time
 	Counters                                             capture.Counters
+	// Gateway collectors are immutable capture intent recorded at consent time.
+	// They prevent a later analysis from silently querying an unapproved source.
+	EnableVICI, EnableXFRM bool
 }
 type upload struct {
 	id, filename, sha, path string
@@ -103,7 +106,7 @@ func (s *Service) StartLive(ctx context.Context, r *inputv1.StartLiveInputReques
 		return Source{}, e
 	}
 	now := time.Now().UTC()
-	src := Source{ID: string(id), Mode: r.GetMode(), State: inputv1.InputState_CAPTURING, SessionID: ses.ID, CaptureID: rec.CaptureID(), CreatedAt: now, UpdatedAt: now}
+	src := Source{ID: string(id), Mode: r.GetMode(), State: inputv1.InputState_CAPTURING, SessionID: ses.ID, CaptureID: rec.CaptureID(), CreatedAt: now, UpdatedAt: now, EnableVICI: r.GetEnableVici(), EnableXFRM: r.GetEnableXfrm()}
 	s.mu.Lock()
 	s.sources[src.ID] = &src
 	s.mu.Unlock()

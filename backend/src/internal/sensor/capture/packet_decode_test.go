@@ -101,6 +101,26 @@ func TestIPv6ExtensionHeaderIsTraversedForESP(t *testing.T) {
 	}
 }
 
+func TestIPv6NATTAndSelectedIKEProposal(t *testing.T) {
+	ike := make([]byte, 28)
+	binary.BigEndian.PutUint64(ike[:8], 1)
+	ike[16], ike[17], ike[18], ike[19] = 33, 0x20, 34, 0x20 // responder selection
+	proposal := make([]byte, 16)
+	binary.BigEndian.PutUint16(proposal[2:4], uint16(len(proposal)))
+	proposal[4], proposal[5], proposal[7] = 1, 1, 1
+	binary.BigEndian.PutUint16(proposal[10:12], 8)
+	proposal[12] = 1
+	binary.BigEndian.PutUint16(proposal[14:16], 20) // AES-GCM-16
+	sa := append([]byte{0, 0, 0, 20}, proposal...)
+	binary.BigEndian.PutUint32(ike[24:28], uint32(len(ike)+len(sa)))
+	ike = append(ike, sa...)
+	frame := ipv6UDPFrame(4500, 4500, append([]byte{0, 0, 0, 0}, ike...))
+	metadata, ok := decodePacketMetadata(frame, uint64(len(frame)), time.Now())
+	if !ok || !metadata.NATT || !metadata.IKE || len(metadata.IKEProposals) != 1 || !metadata.IKEProposals[0].Selected || metadata.IKEProposals[0].Transforms[0].Name != "AES-GCM-16" {
+		t.Fatalf("IPv6 NAT-T selected proposal = %+v, ok=%v", metadata, ok)
+	}
+}
+
 func TestReadPCAPPreservesNanosecondTimestamps(t *testing.T) {
 	frame := ipv4UDPFrame(500, 500, make([]byte, 16))
 	var capture bytes.Buffer
@@ -180,21 +200,68 @@ func TestDecodeIKEv2CleartextPayloadsAndEncryptedBoundary(t *testing.T) {
 	ike = append(ike, sa...)
 	ike = append(ike, auth...)
 	metadata, ok := decodePacketMetadata(ipv4UDPFrame(500, 500, ike), uint64(len(ike)), time.Now())
-	if !ok || !metadata.IKE || len(metadata.IKEEncryptionAlgorithms) != 1 || metadata.IKEEncryptionAlgorithms[0] != "ENCR_12" || len(metadata.IKEAuthMethods) != 1 || metadata.IKEPayloadEncrypted {
+	if !ok || !metadata.IKE || len(metadata.IKEEncryptionAlgorithms) != 1 || metadata.IKEEncryptionAlgorithms[0] != "AES-CBC" || len(metadata.IKEProposals) != 1 || metadata.IKEProposals[0].Selected || len(metadata.IKEAuthMethods) != 1 || metadata.IKEPayloadEncrypted {
 		t.Fatalf("clear-text IKE parsing = %+v, ok=%v", metadata, ok)
 	}
-	ike[19] = 0x20 // encrypted IKEv2 body flag
+	ike[16] = 46 // SK payload is the only trustworthy encrypted boundary.
 	metadata, ok = decodePacketMetadata(ipv4UDPFrame(500, 500, ike), uint64(len(ike)), time.Now())
 	if !ok || !metadata.IKEPayloadEncrypted {
 		t.Fatalf("encrypted IKE payload was not marked: %+v", metadata)
 	}
 }
 
-func TestReadOfflinePCAPExplainsPCAPNGUnsupported(t *testing.T) {
+func TestReadOfflinePCAPNGUsesSamePacketDecoder(t *testing.T) {
+	frame := ipv4UDPFrame(4500, 4500, []byte{0x12, 0x34, 0x56, 0x78, 1, 2, 3, 4})
+	input := pcapNG(frame)
+	var observed PacketMetadata
+	result, err := ReadOfflinePCAP(context.Background(), bytes.NewReader(input), "ng-session", func(_ context.Context, metadata PacketMetadata) error { observed = metadata; return nil })
+	if err != nil {
+		t.Fatalf("ReadOfflinePCAP(PCAPNG) = %v", err)
+	}
+	if result.Counters.PacketsTotal != 1 || result.Counters.ESPPackets != 1 || observed.SessionID != "ng-session" || !observed.EncapsulatedESP {
+		t.Fatalf("PCAPNG result=%+v observed=%+v", result, observed)
+	}
+}
+
+func TestReadOfflinePCAPNGRejectsMalformedBlock(t *testing.T) {
 	_, err := ReadOfflinePCAP(context.Background(), bytes.NewReader(append([]byte{0x0a, 0x0d, 0x0d, 0x0a}, make([]byte, 20)...)), "session", nil)
-	if err == nil || !strings.Contains(err.Error(), "PCAPNG is not supported") {
+	if err == nil || !strings.Contains(err.Error(), "PCAPNG") {
 		t.Fatalf("PCAPNG error = %v", err)
 	}
+}
+
+func pcapNG(frame []byte) []byte {
+	var out bytes.Buffer
+	block := func(kind uint32, content []byte) {
+		length := uint32(len(content) + 12)
+		header := make([]byte, 8)
+		binary.LittleEndian.PutUint32(header, kind)
+		binary.LittleEndian.PutUint32(header[4:], length)
+		out.Write(header)
+		out.Write(content)
+		tail := make([]byte, 4)
+		binary.LittleEndian.PutUint32(tail, length)
+		out.Write(tail)
+	}
+	// SHB: byte-order magic, version 1.0, unspecified section length.
+	shb := make([]byte, 16)
+	copy(shb, []byte{0x4d, 0x3c, 0x2b, 0x1a})
+	binary.LittleEndian.PutUint16(shb[4:6], 1)
+	for i := 8; i < 16; i++ {
+		shb[i] = 0xff
+	}
+	block(0x0a0d0d0a, shb)
+	idb := make([]byte, 8)
+	binary.LittleEndian.PutUint16(idb[:2], 1)
+	binary.LittleEndian.PutUint32(idb[4:], 65535)
+	block(1, idb)
+	pad := (4 - len(frame)%4) % 4
+	epb := make([]byte, 20+len(frame)+pad)
+	binary.LittleEndian.PutUint32(epb[12:16], uint32(len(frame)))
+	binary.LittleEndian.PutUint32(epb[16:20], uint32(len(frame)))
+	copy(epb[20:], frame)
+	block(6, epb)
+	return out.Bytes()
 }
 
 func ipv4UDPFrame(sourcePort, destinationPort uint16, data []byte) []byte {
@@ -207,6 +274,22 @@ func ipv4UDPFrame(sourcePort, destinationPort uint16, data []byte) []byte {
 	copy(ip[12:16], []byte{192, 0, 2, 1})
 	copy(ip[16:20], []byte{198, 51, 100, 2})
 	udp := ip[20:]
+	binary.BigEndian.PutUint16(udp[:2], sourcePort)
+	binary.BigEndian.PutUint16(udp[2:4], destinationPort)
+	binary.BigEndian.PutUint16(udp[4:6], uint16(8+len(data)))
+	copy(udp[8:], data)
+	return frame
+}
+
+func ipv6UDPFrame(sourcePort, destinationPort uint16, data []byte) []byte {
+	frame := make([]byte, 14+40+8+len(data))
+	binary.BigEndian.PutUint16(frame[12:14], 0x86dd)
+	ip := frame[14:]
+	ip[0], ip[6] = 0x60, 17
+	binary.BigEndian.PutUint16(ip[4:6], uint16(8+len(data)))
+	copy(ip[8:24], []byte{0x20, 1, 0xdb, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1})
+	copy(ip[24:40], []byte{0x20, 1, 0xdb, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2})
+	udp := ip[40:]
 	binary.BigEndian.PutUint16(udp[:2], sourcePort)
 	binary.BigEndian.PutUint16(udp[2:4], destinationPort)
 	binary.BigEndian.PutUint16(udp[4:6], uint16(8+len(data)))
