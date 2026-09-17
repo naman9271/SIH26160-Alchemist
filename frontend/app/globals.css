@@ -83,6 +83,9 @@ html, body { background: var(--deep); }.brand-mark { color: var(--ink); }.brand-
 @media (prefers-reduced-motion: reduce) { .hero-evidence-ring { animation: none; } }
 
 html { overflow-x: clip; scroll-behavior: smooth; }
+.lab-input { width: 100%; border: 1px solid rgba(255,255,255,.18); background: rgba(3,7,18,.72); padding: .65rem .75rem; color: #e9edf5; font: inherit; font-size: .75rem; letter-spacing: .04em; outline: none; }
+.lab-input:focus { border-color: rgba(94,234,212,.85); box-shadow: 0 0 0 2px rgba(94,234,212,.12); }
+.lab-input:disabled { cursor: not-allowed; opacity: .48; }
 body { overflow-x: clip; }
 .site-container { width: 100%; max-width: 1440px; margin-inline: auto; padding-inline: 1rem; }
 @media (min-width: 768px) { .site-container { padding-inline: 2rem; } }

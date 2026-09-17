@@ -28,6 +28,11 @@ services:
       CORE_HTTP_ADDRESS: 0.0.0.0:8080
       CORE_GRPC_ADDRESS: 0.0.0.0:50052
       REPORT_TEMP_DIRECTORY: /var/lib/alchemist/reports
+      LAB_DATABASE_PATH: /var/lib/alchemist/labs/app.db
+      # This is fixed by deployment configuration, never supplied by a browser.
+      LAB_RUNNER_SCRIPT: /opt/alchemist/lab/scripts/managed.sh
+      HOME: /tmp
+      DOCKER_CONFIG: /tmp/.docker
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
       CORS_ALLOWED_METHODS: ${CORS_ALLOWED_METHODS:-GET,POST,OPTIONS}
       CORS_ALLOWED_HEADERS: ${CORS_ALLOWED_HEADERS:-Authorization,Content-Type,X-Requested-With}
@@ -40,6 +45,11 @@ services:
       - "${CORE_BIND_HOST:-0.0.0.0}:${CORE_HTTP_PORT:-8080}:8080"
     volumes:
       - report-data:/var/lib/alchemist/reports
+      - lab-data:/var/lib/alchemist/labs
+      - /var/run/docker.sock:/var/run/docker.sock
+    # Set DOCKER_GID=$(stat -c '%g' /var/run/docker.sock) in .env on Linux.
+    group_add:
+      - "${DOCKER_GID:-988}"
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/health"]
       interval: 10s
@@ -50,3 +60,4 @@ services:
 
 volumes:
   report-data:
+  lab-data:

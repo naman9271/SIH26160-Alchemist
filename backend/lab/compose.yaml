@@ -1,0 +1,28 @@
+name: alchemist-managed-lab
+services:
+  managed-ipsec-left:
+    build: { context: ., dockerfile: Dockerfile }
+    container_name: managed-ipsec-left
+    hostname: left
+    privileged: true
+    environment: [LAB_SIDE=left]
+    networks:
+      managed_ipsec_outer: { ipv4_address: 172.31.0.2, ipv6_address: fd00:31::2 }
+  managed-ipsec-right:
+    build: { context: ., dockerfile: Dockerfile }
+    container_name: managed-ipsec-right
+    hostname: right
+    privileged: true
+    environment: [LAB_SIDE=right]
+    networks:
+      managed_ipsec_outer: { ipv4_address: 172.31.0.3, ipv6_address: fd00:31::3 }
+    volumes: ["managed-traffic-data:/srv/data"]
+networks:
+  managed_ipsec_outer:
+    name: managed_ipsec_outer
+    driver: bridge
+    enable_ipv6: true
+    ipam:
+      config: [{ subnet: 172.31.0.0/24 }, { subnet: fd00:31::/64 }]
+volumes:
+  managed-traffic-data:

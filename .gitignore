@@ -4,7 +4,7 @@ __pycache__/
 .pytest_cache/
 .venv/
 backend/ml-service/.venv/
-
+ipsec-pcap-lab/
 # Local deployment configuration and secrets. Commit only templates.
 .env
 .env.*
@@ -22,8 +22,8 @@ backend/ml-service/models/*.joblib
 backend/ml-service/models/*.json
 
 # Generated, potentially large lab captures and transient gateway config.
-lab/output/
-lab/runtime/
+backend/lab/output/
+backend/lab/runtime/
 
 # The small selected production classifier and its metadata are required for
 # reproducible Docker builds. Alternate/training-only models remain local.

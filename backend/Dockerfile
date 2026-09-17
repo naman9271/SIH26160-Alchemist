@@ -14,17 +14,18 @@ FROM alpine:3.20
 # Retry the network operation so a transient CDN/DNS error is not misleading.
 RUN addgroup -S -g 10001 app && adduser -S -D -H -u 10001 -G app app \
     && for attempt in 1 2 3; do \
-        apk add --no-cache ca-certificates tcpdump && break; \
+        apk add --no-cache ca-certificates tcpdump bash python3 docker-cli docker-cli-compose && break; \
         if [ "$attempt" = 3 ]; then exit 1; fi; \
         sleep "$attempt"; \
     done \
-    && mkdir -p /var/lib/alchemist/reports \
+    && mkdir -p /var/lib/alchemist/reports /var/lib/alchemist/labs \
     && chown -R app:app /var/lib/alchemist
 COPY --from=build /out/ipsec-core /usr/local/bin/ipsec-core
+COPY lab /opt/alchemist/lab
 
 USER app
 EXPOSE 8080 50052
 
-VOLUME ["/var/lib/alchemist/reports"]
+VOLUME ["/var/lib/alchemist/reports", "/var/lib/alchemist/labs"]
 
 ENTRYPOINT ["/usr/local/bin/ipsec-core"]

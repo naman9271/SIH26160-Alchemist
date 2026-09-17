@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"path/filepath"
+	"time"
 
 	analysisv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/analysis"
 	fusionv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/fusion"
@@ -28,6 +29,7 @@ import (
 	shared "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/domain/sensor"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/fusion/model"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/fusion/query"
+	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/lab"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/sensor/capture"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/sensor/flow"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/sensor/network"
@@ -38,7 +40,7 @@ import (
 
 const maxHTTPPCAPBytes = 4 << 30
 
-func registerWorkflowAPI(mux *http.ServeMux, input *coreinput.Service, analysis *coreanalysis.Service, reports *corereport.Service, workspace *coreworkspace.Service, protocol *coreprotocol.Service, fusion *corefusion.Service, security *coresecurity.Service, risk *corerisk.Service, ml *coreml.Service, flows *flow.Service, system coresystem.Service, localSensor *localsensor.Service, sessions *session.Service, interfaces *network.Service, captures *capture.Service, viciService *vici.Service, xfrmService *xfrm.Service) {
+func registerWorkflowAPI(mux *http.ServeMux, input *coreinput.Service, analysis *coreanalysis.Service, reports *corereport.Service, workspace *coreworkspace.Service, protocol *coreprotocol.Service, fusion *corefusion.Service, security *coresecurity.Service, risk *corerisk.Service, ml *coreml.Service, flows *flow.Service, system coresystem.Service, localSensor *localsensor.Service, sessions *session.Service, interfaces *network.Service, captures *capture.Service, viciService *vici.Service, xfrmService *xfrm.Service, labs *lab.Service) {
 	mux.HandleFunc("GET /api/v1/system/overview", func(w http.ResponseWriter, r *http.Request) { getSystemOverview(w, r, system, localSensor) })
 	mux.HandleFunc("GET /api/v1/live-capture/interfaces", func(w http.ResponseWriter, r *http.Request) { listCaptureInterfaces(w, r, interfaces) })
 	mux.HandleFunc("POST /api/v1/live-captures", func(w http.ResponseWriter, r *http.Request) {
@@ -57,6 +59,88 @@ func registerWorkflowAPI(mux *http.ServeMux, input *coreinput.Service, analysis 
 	mux.HandleFunc("POST /api/v1/analyses/{analysisID}/report", func(w http.ResponseWriter, r *http.Request) { generateReport(w, r, reports) })
 	mux.HandleFunc("GET /api/v1/reports/{reportID}", func(w http.ResponseWriter, r *http.Request) { getReport(w, r, reports) })
 	mux.HandleFunc("GET /api/v1/reports/{reportID}/download", func(w http.ResponseWriter, r *http.Request) { downloadReport(w, r, reports) })
+	mux.HandleFunc("GET /api/v1/labs/status", func(w http.ResponseWriter, r *http.Request) { labStatus(w, r, labs) })
+	mux.HandleFunc("POST /api/v1/labs/activate", func(w http.ResponseWriter, r *http.Request) { activateLabs(w, r, labs) })
+	mux.HandleFunc("GET /api/v1/labs/runs", func(w http.ResponseWriter, r *http.Request) { labRuns(w, r, labs) })
+	mux.HandleFunc("POST /api/v1/labs/runs", func(w http.ResponseWriter, r *http.Request) { startLabRun(w, r, labs) })
+	mux.HandleFunc("GET /api/v1/labs/runs/{runID}/download", func(w http.ResponseWriter, r *http.Request) { downloadLabRun(w, r, labs) })
+	mux.HandleFunc("GET /api/v1/labs/datasets", func(w http.ResponseWriter, r *http.Request) { labDatasets(w, r, labs) })
+	mux.HandleFunc("GET /api/v1/labs/runs/{runID}/artifact", func(w http.ResponseWriter, r *http.Request) {
+		path := r.URL.Query().Get("path")
+		data, err := labs.Artifact(r.Context(), r.PathValue("runID"), path)
+		if err != nil {
+			writeJSON(w, http.StatusNotFound, map[string]string{"error": "artifact not found"})
+			return
+		}
+		w.Header().Set("Content-Disposition", "attachment; filename="+filepath.Base(path))
+		if filepath.Ext(path) == ".csv" {
+			w.Header().Set("Content-Type", "text/csv")
+		} else if filepath.Ext(path) == ".json" {
+			w.Header().Set("Content-Type", "application/json")
+		} else {
+			w.Header().Set("Content-Type", "application/octet-stream")
+		}
+		_, _ = w.Write(data)
+	})
+}
+func downloadLabRun(w http.ResponseWriter, r *http.Request, labs *lab.Service) {
+	id := r.PathValue("runID")
+	err := labs.ArchiveReady(r.Context(), id)
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "dataset archive is unavailable"})
+		return
+	}
+	w.Header().Set("Content-Type", "application/zip")
+	w.Header().Set("Content-Disposition", `attachment; filename="ipsec-dataset-`+id+`.zip"`)
+	_ = http.NewResponseController(w).SetWriteDeadline(time.Time{})
+	w.WriteHeader(http.StatusOK)
+	_ = labs.WriteArchive(r.Context(), id, w)
+}
+
+func labStatus(w http.ResponseWriter, r *http.Request, labs *lab.Service) {
+	value, err := labs.Status(r.Context())
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "could not read lab status"})
+		return
+	}
+	writeJSON(w, http.StatusOK, value)
+}
+func activateLabs(w http.ResponseWriter, r *http.Request, labs *lab.Service) {
+	value, err := labs.Activate(r.Context())
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "could not activate labs"})
+		return
+	}
+	writeJSON(w, http.StatusAccepted, value)
+}
+func labRuns(w http.ResponseWriter, r *http.Request, labs *lab.Service) {
+	value, err := labs.Runs(r.Context())
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "could not load lab history"})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"runs": value})
+}
+func labDatasets(w http.ResponseWriter, r *http.Request, labs *lab.Service) {
+	value, err := labs.Datasets(r.Context())
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "could not load datasets"})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"datasets": value})
+}
+func startLabRun(w http.ResponseWriter, r *http.Request, labs *lab.Service) {
+	var settings lab.Settings
+	if err := json.NewDecoder(r.Body).Decode(&settings); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid lab settings"})
+		return
+	}
+	value, err := labs.Start(r.Context(), settings)
+	if err != nil {
+		writeJSON(w, http.StatusConflict, map[string]string{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusAccepted, value)
 }
 
 // The browser bridge deliberately exposes only a small, passive capture

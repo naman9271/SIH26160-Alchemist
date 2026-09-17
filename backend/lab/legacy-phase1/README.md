@@ -1,5 +1,16 @@
 # Reproducible IPsec lab
 
+The frontend uses the managed PCAP engine described in
+[MANAGED_LAB.md](MANAGED_LAB.md). It imports the five-profile, seven-class
+`ipsec-pcap-lab` generators, runs actual traffic capture, emits complete
+`metadata.csv`, and supports OOD, anomaly and IKE validation selections.
+Activate from the frontend or run `make lab-up`; capture a selected matrix with
+`make lab-run PROFILES=1,2 LABELS=icmp,web REPETITIONS=1`.
+
+The sections below document the retained historical Phase-1 scripts, which can
+be invoked explicitly from the backend directory; they are not the frontend
+runner. The current Make targets select the managed engine.
+
 This lab generates authorised, labelled IPsec captures. It is isolated from
 production analysis: protected-side captures are ground truth only and must
 not be uploaded to the passive analyser.
@@ -9,11 +20,13 @@ Prerequisites: Docker Compose v2, a Linux Docker host, internet access to pull
 Docker Hub login is required. Run `make lab-up`, then use a profile path:
 
 ```bash
-make lab-run PROFILE=lab/profiles/ikev2-tunnel-ipv4-aes128cbc-pfs14.yaml
-make lab-verify PROFILE=lab/profiles/ikev2-tunnel-ipv4-aes128cbc-pfs14.yaml
+cd backend
+./lab/scripts/up.sh
+./lab/scripts/run.sh lab/profiles/ikev2-tunnel-ipv4-aes128cbc-pfs14.yaml
+./lab/scripts/verify.sh lab/profiles/ikev2-tunnel-ipv4-aes128cbc-pfs14.yaml
 ```
 
-Each run writes `lab/output/<run-id>/` containing `outer.pcap`, optional
+Each run writes `backend/lab/output/<run-id>/` containing `outer.pcap`, optional
 protected-side ground truth, `gateway-state.txt`, and an immutable manifest.
 The manifest includes configuration/capture SHA-256 values, packet counts,
 timestamps, seed, suite, mode, and traffic label. Failed negotiation is never
@@ -39,7 +52,7 @@ or claims to identify WhatsApp.
 
 ## Generated artifacts
 
-Each successful run creates `lab/output/<profile>-<UTC timestamp>/`:
+Each successful run creates `backend/lab/output/<profile>-<UTC timestamp>/`:
 
 | File | Purpose |
 | --- | --- |
@@ -61,7 +74,7 @@ only as lab ground truth.
   that local image name.
 - **Alpine `temporary error`**: this is a registry/CDN/DNS issue. The gateway
   build retries three times; retry `make lab-up` after connectivity recovers.
-- **SA not established**: inspect `docker compose -f lab/compose.yaml logs
+- **SA not established**: inspect `docker compose -f backend/lab/compose.yaml logs
   left right`. `lab-run` intentionally refuses to produce a labelled capture.
 - **`/usr/lib/ipsec/charon: not found`**: update this repository revision. The
   verified Alpine StrongSwan daemon location is `/usr/lib/strongswan/charon`.

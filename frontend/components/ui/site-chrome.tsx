@@ -33,7 +33,7 @@ export function LandingNavigation({ overlay = false }: { overlay?: boolean }) {
       <div className="mx-auto flex h-12 max-w-6xl items-center justify-between gap-4 border border-teal-200/25 bg-black/90 px-4 shadow-[0_10px_28px_rgba(0,0,0,.4)] backdrop-blur-sm sm:px-6 lg:px-8">
         <Link href="/" aria-label="IPSEC PRISM home" className="shrink-0 border border-transparent px-1.5 py-1 text-white/80 transition-all duration-300 hover:border-teal-200/40 hover:bg-teal-200/[.06] hover:text-teal-100"><span className="text-base font-bold italic tracking-widest [transform:skewX(-12deg)] sm:text-lg">IPSEC PRISM</span></Link>
         <nav className="hidden items-center gap-2 xl:flex" aria-label="Primary navigation">
-          <Link className={navLinkClass} href="/#features">CAPABILITIES</Link>
+          <Link className={navLinkClass} href="/labs">LABS</Link>
           <Link className={navLinkClass} href="/dashboard">DASHBOARD</Link>
           <Link className={navLinkClass} href="/dashboard/evidence">EVIDENCE</Link>
           <Link className={navLinkClass} href="/dashboard/findings">FINDINGS</Link>
@@ -45,14 +45,14 @@ export function LandingNavigation({ overlay = false }: { overlay?: boolean }) {
           <button type="button" onClick={() => setIsOpen((open) => !open)} aria-expanded={isOpen} aria-controls="mobile-navigation" className="grid h-8 w-8 place-items-center border border-teal-200/25 text-teal-100/75 transition-colors hover:bg-teal-200/[.07] hover:text-teal-50 xl:hidden"><span className="sr-only">Toggle navigation</span><span aria-hidden="true" className="text-base leading-none">{isOpen ? "×" : "☰"}</span></button>
         </div>
       </div>
-      {isOpen && <nav id="mobile-navigation" className="mx-auto max-w-6xl border border-t-0 border-teal-200/20 bg-black/95 px-4 py-3 shadow-xl backdrop-blur-sm xl:hidden" aria-label="Mobile navigation"><div className="mx-auto grid max-w-7xl gap-1"><Link onClick={() => setIsOpen(false)} className={mobileNavLinkClass} href="/#features">CAPABILITIES</Link><Link onClick={() => setIsOpen(false)} className={mobileNavLinkClass} href="/dashboard">DASHBOARD</Link><Link onClick={() => setIsOpen(false)} className={mobileNavLinkClass} href="/dashboard/evidence">EVIDENCE</Link><Link onClick={() => setIsOpen(false)} className={mobileNavLinkClass} href="/dashboard/findings">FINDINGS</Link><Link onClick={() => setIsOpen(false)} className={mobileNavLinkClass} href="/dashboard/reports">REPORTS</Link><Link onClick={() => setIsOpen(false)} className={mobileNavLinkClass} href="/guide">GUIDE</Link></div></nav>}
+      {isOpen && <nav id="mobile-navigation" className="mx-auto max-w-6xl border border-t-0 border-teal-200/20 bg-black/95 px-4 py-3 shadow-xl backdrop-blur-sm xl:hidden" aria-label="Mobile navigation"><div className="mx-auto grid max-w-7xl gap-1"><Link onClick={() => setIsOpen(false)} className={mobileNavLinkClass} href="/labs">LABS</Link><Link onClick={() => setIsOpen(false)} className={mobileNavLinkClass} href="/dashboard">DASHBOARD</Link><Link onClick={() => setIsOpen(false)} className={mobileNavLinkClass} href="/dashboard/evidence">EVIDENCE</Link><Link onClick={() => setIsOpen(false)} className={mobileNavLinkClass} href="/dashboard/findings">FINDINGS</Link><Link onClick={() => setIsOpen(false)} className={mobileNavLinkClass} href="/dashboard/reports">REPORTS</Link><Link onClick={() => setIsOpen(false)} className={mobileNavLinkClass} href="/guide">GUIDE</Link></div></nav>}
     </header>
   );
 }
 
 export function LandingFooter() {
   const footerButtons = [
-    ["CAPABILITIES", "/#features"],
+    ["LABS", "/labs"],
     ["APPROACH", "/#approach"],
     ["DASHBOARD", "/dashboard"],
     ["EVIDENCE", "/dashboard/evidence"],

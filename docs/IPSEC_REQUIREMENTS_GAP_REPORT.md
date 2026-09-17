@@ -79,8 +79,8 @@ traffic-client -- protected LAN -- ipsec-left ==== underlay ==== ipsec-right -- 
 
 Add these components:
 
-- `lab/compose.yaml` or `lab/scripts/up.sh`: starts left/right StrongSwan gateways, client/server namespaces, and a controller; uses pinned image versions.
-- `lab/profiles/`: one declarative YAML file per test case. Required axes: IKEv1/IKEv2 where supported; tunnel/transport; IPv4/IPv6; AES-128-CBC+HMAC-SHA2; AES-256-CBC+HMAC-SHA2; AES-128/256-GCM; DH groups; PFS on/off; NAT-T on/off; AH optional.
+- `backend/lab/compose.yaml` or `backend/lab/scripts/up.sh`: starts left/right StrongSwan gateways, client/server namespaces, and a controller; uses pinned image versions.
+- `backend/lab/profiles/`: one declarative YAML file per test case. Required axes: IKEv1/IKEv2 where supported; tunnel/transport; IPv4/IPv6; AES-128-CBC+HMAC-SHA2; AES-256-CBC+HMAC-SHA2; AES-128/256-GCM; DH groups; PFS on/off; NAT-T on/off; AH optional.
 - `lab/traffic/`: deterministic, legal traffic generators: `ping`, HTTP download/browse replay, SMTP test sink, SIP/RTP synthetic VoIP, messaging-like request/response, and video-like `iperf`/HLS fixture. Do not automate WhatsApp itself; name the label `messaging`.
 - `lab/capture/`: captures outer IPsec and labelled protected-side ground truth separately. Use `tcpdump -w` with loss counters; record capture points, interface, BPF, clock, hashes and packet counts.
 - `lab/manifest/`: immutable row per run containing profile ID, exact StrongSwan version/config hash, traffic class, duration, seed, IPv4/IPv6, suite, DH group, PFS, NAT-T, expected mode, capture SHA-256, and ground-truth source.

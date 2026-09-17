@@ -37,3 +37,8 @@ config.local.yaml
 # OS files
 .DS_Store
 Thumbs.db
+lab/output/
+lab/runtime/
+lab/legacy-phase1/
+lab/legacy-reference-tools/
+**/__pycache__/

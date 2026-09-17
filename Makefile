@@ -17,21 +17,20 @@ check-backend:
 	cd backend/ml-service && python3 -m pytest
 
 lab-up:
-	./lab/scripts/up.sh
+	cd backend && bash ./lab/scripts/managed.sh activate
 
 lab-down:
-	docker compose -f lab/compose.yaml down --remove-orphans
+	docker compose -f backend/lab/compose.yaml down --remove-orphans
 
 lab-run:
-	@test -n "$(PROFILE)" || (echo "Use PROFILE=lab/profiles/<profile>.yaml" >&2; exit 2)
-	./lab/scripts/run.sh "$(PROFILE)"
+	cd backend && bash ./lab/scripts/managed.sh generate "lab/output/$$(date -u +%Y%m%dT%H%M%SZ)" "$(or $(PROFILES),1)" "$(or $(LABELS),icmp)" "$(or $(REPETITIONS),1)"
 
 lab-verify:
-	@test -n "$(PROFILE)" || (echo "Use PROFILE=lab/profiles/<profile>.yaml" >&2; exit 2)
-	./lab/scripts/verify.sh "$(PROFILE)"
+	docker compose -f backend/lab/compose.yaml ps
+	docker exec managed-ipsec-left ipsec statusall
 
 lab-profile-check:
-	@for profile in lab/profiles/*.yaml; do python3 lab/scripts/profile.py "$$profile" >/dev/null; done
+	python3 -m unittest discover -s backend/lab/tests -p 'test_*.py'
 
 lab-test: lab-profile-check
-	python3 -m unittest lab/tests/test_profiles.py
+	@for script in backend/lab/scripts/*.sh backend/lab/docker/*.sh; do bash -n "$$script"; done

@@ -16,4 +16,17 @@ docker compose -f lab/compose.yaml cp left:/tmp/outer.pcap "$out/outer.pcap"
 docker compose -f lab/compose.yaml exec -T left swanctl --list-sas > "$out/gateway-state.txt"
 sha256sum "$profile" "$out/outer.pcap" "$out/gateway-state.txt" > "$out/SHA256SUMS"
 python3 lab/scripts/manifest.py "$profile" "$out" "$run_id"
+python3 - "$out" "$run_id" "$profile" "$traffic" "$duration" <<'PY'
+import csv, json, pathlib, sys
+out, run_id, profile, traffic, duration = sys.argv[1:]
+manifest = json.loads((pathlib.Path(out) / "manifest.json").read_text())
+capture = manifest["capture"]
+fields = ["run_id", "profile", "traffic", "duration_seconds", "capture_file", "capture_sha256", "packet_count", "ground_truth_source"]
+row = {"run_id": run_id, "profile": profile, "traffic": traffic, "duration_seconds": duration,
+       "capture_file": capture["file"], "capture_sha256": capture["sha256"],
+       "packet_count": "", "ground_truth_source": manifest["ground_truth_source"]}
+with (pathlib.Path(out) / "generated-artifacts.csv").open("w", newline="") as file:
+    writer = csv.DictWriter(file, fieldnames=fields)
+    writer.writeheader(); writer.writerow(row)
+PY
 echo "$out"

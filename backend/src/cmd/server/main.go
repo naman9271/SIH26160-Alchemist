@@ -32,6 +32,7 @@ import (
 	coresystem "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/system"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/workspace"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/fusion"
+	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/lab"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/sensor/acquisition"
 	sensorsystem "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/sensor/system"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/sensor/vici"
@@ -44,6 +45,12 @@ import (
 
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	labs, err := lab.New(envOrDefault("LAB_DATABASE_PATH", "/var/lib/alchemist/labs/app.db"), lab.ScriptRunner(envOrDefault("LAB_RUNNER_SCRIPT", "lab/scripts/managed.sh")))
+	if err != nil {
+		logger.Error("lab database initialization failed", "error", err)
+		os.Exit(1)
+	}
+	defer labs.Close()
 	sensorServices := acquisition.New(nil, nil, nil)
 	var viciBackend vici.Backend = vici.NewRealBackend(3 * time.Second)
 	if path := os.Getenv("VICI_FIXTURE_PATH"); path != "" {
@@ -191,7 +198,7 @@ func main() {
 			},
 		})
 	})
-	registerWorkflowAPI(mux, inputService, analysisService, reportService, workspaceService, protocolService, fusionService, securityService, riskService, mlService, sensorServices.Flows, systemService, localSensorService, sensorServices.Sessions, sensorServices.Interfaces, sensorServices.Captures, viciService, xfrmService)
+	registerWorkflowAPI(mux, inputService, analysisService, reportService, workspaceService, protocolService, fusionService, securityService, riskService, mlService, sensorServices.Flows, systemService, localSensorService, sensorServices.Sessions, sensorServices.Interfaces, sensorServices.Captures, viciService, xfrmService, labs)
 	httpAddress := envOrDefault("CORE_HTTP_ADDRESS", "127.0.0.1:8080")
 	httpServer := &http.Server{
 		Addr: httpAddress, Handler: withCORS(mux, corsConfigFromEnv()),
