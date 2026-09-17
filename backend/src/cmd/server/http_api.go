@@ -26,6 +26,7 @@ import (
 	coresystem "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/system"
 	coreworkspace "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/workspace"
 	shared "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/domain/sensor"
+	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/fusion/model"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/fusion/query"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/sensor/capture"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/sensor/flow"
@@ -322,7 +323,13 @@ func getAnalysisInsights(w http.ResponseWriter, r *http.Request, input *coreinpu
 		if assessment, sectionErr := security.LatestForAnalysis(r.Context(), analysisID); sectionErr == nil {
 			findings, _ := security.Findings(r.Context(), assessment.ID, "")
 			recommendations, _ := security.Recommendations(r.Context(), assessment.ID)
-			section["assessment"] = map[string]any{"assessment_id": assessment.ID, "policy_id": assessment.PolicyID, "state": assessment.State.String(), "score": assessment.Result.Score, "grade": assessment.Result.Grade, "findings": findings, "threat_matrix": assessment.Result.ThreatMatrix, "rules_evaluated": assessment.Result.EvaluatedRule, "unknown_evidence_count": assessment.UnknownEvidence, "metadata_exposure": assessment.MetadataExposure, "recommendations": recommendations}
+			configurationFacts := len(model.SecurityConfigurationProperties)
+			evaluated := configurationFacts - int(assessment.UnknownEvidence)
+			if evaluated < 0 {
+				evaluated = 0
+			}
+			coverage := evaluated * 100 / configurationFacts
+			section["assessment"] = map[string]any{"assessment_id": assessment.ID, "policy_id": assessment.PolicyID, "state": assessment.State.String(), "score": assessment.Result.Score, "grade": assessment.Result.Grade, "findings": findings, "threat_matrix": assessment.Result.ThreatMatrix, "rules_evaluated": assessment.Result.EvaluatedRule, "unknown_evidence_count": assessment.UnknownEvidence, "configuration_facts": configurationFacts, "configuration_facts_evaluated": evaluated, "coverage_percent": coverage, "metadata_exposure": assessment.MetadataExposure, "recommendations": recommendations}
 			if risk != nil {
 				if value, scoreErr := risk.Score(r.Context(), assessment.ID); scoreErr == nil {
 					section["risk_score"] = value

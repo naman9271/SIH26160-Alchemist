@@ -177,6 +177,7 @@ The sidebar currently contains: Overview, New capture, Progress flow, VPN sessio
 2. Build SA correlation/rekey tracking and add mode handling with honest provenance.
 3. Add PCAPNG support, capture quality metrics, IPv4/IPv6 and NAT-T tests.
 4. Make deep evidence optional but easy to configure and visibly verified.
+5. **Live capture or deep assessment check**
 
 ### Phase 3 — assessment and ML evidence
 

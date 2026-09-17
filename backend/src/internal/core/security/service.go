@@ -229,27 +229,20 @@ func facts(items []model.FusedConclusion) (rules.Facts, uint64, bool) {
 		}
 		return nil
 	}
-	facts := rules.Facts{IKEVersion: get("ike.version"), EncryptionAlgorithm: get("child.encryption_algorithm", "ike.encryption"), IntegrityAlgorithm: get("child.integrity_algorithm", "ike.integrity"), DHGroup: get("ike.dh_group"), PFS: parseBool("child.pfs"), ReplayProtection: parseBool("replay.enabled"), MetadataExposure: get("metadata.exposure") != ""}
+	facts := rules.Facts{IKEVersion: get(model.PropertyIKEVersion), EncryptionAlgorithm: get(model.PropertyChildEncryption, model.PropertyIKEEncryption), IntegrityAlgorithm: get(model.PropertyChildIntegrity, model.PropertyIKEIntegrity), DHGroup: get(model.PropertyIKEDHGroup), PFS: parseBool(model.PropertyChildPFS), ReplayProtection: parseBool(model.PropertyReplayEnabled), MetadataExposure: get(model.PropertyMetadataExposure) != ""}
 	// AEAD transforms authenticate as well as encrypt, so a separate integrity
 	// transform is neither negotiated nor required. Preserve that fact for the
 	// rule engine and evidence-coverage calculation.
 	if facts.IntegrityAlgorithm == "" && isAEAD(facts.EncryptionAlgorithm) {
 		facts.IntegrityAlgorithm = "AEAD"
 	}
-	if value := get("child.lifetime_seconds"); value != "" {
+	if value := get(model.PropertyChildLifetimeSeconds); value != "" {
 		var life uint64
 		_, _ = fmt.Sscan(value, &life)
 		facts.SALifetimeSeconds = life
 	}
 	unknown := uint64(0)
-	for _, available := range []bool{
-		facts.IKEVersion != "",
-		facts.EncryptionAlgorithm != "",
-		facts.IntegrityAlgorithm != "",
-		facts.DHGroup != "",
-		facts.PFS != nil,
-		facts.ReplayProtection != nil,
-	} {
+	for _, available := range []bool{facts.IKEVersion != "", facts.EncryptionAlgorithm != "", facts.IntegrityAlgorithm != "", facts.DHGroup != "", facts.PFS != nil, facts.ReplayProtection != nil} {
 		if !available {
 			unknown++
 		}

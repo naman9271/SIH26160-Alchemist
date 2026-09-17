@@ -21,3 +21,10 @@ test("missing coverage metadata never presents a definitive score", () => {
   assert.equal(result.isProvisional, true);
   assert.equal(result.coveragePercent, undefined);
 });
+
+test("backend coverage is used when supplied", () => {
+  assert.deepEqual(
+    securityScorePresentation({ score: 100, unknown_evidence_count: 6, coverage_percent: 0 }),
+    { assessedScore: 100, coveragePercent: 0, isProvisional: true, unknownEvidence: 6 },
+  );
+});

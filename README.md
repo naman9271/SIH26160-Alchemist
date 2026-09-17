@@ -19,8 +19,8 @@ The application accepts a classic PCAP capture and runs a passive analysis workf
 ## Key Features
 
 - Upload and analyse classic `.pcap` and `.cap` files
-- Passive IKE, ESP, NAT-T, SA, cipher-suite, DH-group, PFS, and metadata assessment
-- Evidence-backed security posture and risk findings
+- Passive observation of IKE, ESP, AH, NAT-T, SPI, and metadata; it does not prove encrypted Child-SA settings
+- Evidence-backed posture findings with a separate configuration-evidence coverage score
 - Optional ML classification of observable flow metadata with confidence and `UNKNOWN` abstention
 - Fusion of protocol, security, and ML conclusions
 - Interactive dashboard, analysis history, and downloadable PDF reports
@@ -161,9 +161,12 @@ editcap -F libpcap input.pcapng output.pcap
 ## Limitations and Responsible Use
 
 - The system analyses metadata and observable protocol facts only; it does not decrypt ESP payloads.
+- A passive capture generally cannot verify tunnel/transport mode, installed Child-SA cipher/integrity, PFS, lifetime, or replay settings. Those remain **Not evaluated** unless authorised VICI/XFRM gateway evidence is collected.
+- IKE proposals observed in a capture are offers, not proof of a negotiated Child-SA suite.
 - `UNKNOWN` is a low-confidence ML abstention, not an error or security finding.
 - ML traffic labels describe candidate traffic classes from flow metadata and are not proof of a user's activity.
 - Live capture and VICI/XFRM assessment require an authorised Linux/StrongSwan lab and appropriate host permissions.
+- See [the evidence schema](docs/EVIDENCE_SCHEMA_V1.md) for the source-status taxonomy and score interpretation.
 
 ## Future Scope
 

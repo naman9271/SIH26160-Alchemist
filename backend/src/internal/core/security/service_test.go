@@ -69,3 +69,21 @@ func TestIKEAEADFallbackCountsEncryptionAndIntegrityEvidence(t *testing.T) {
 		t.Fatalf("risk score = %+v, want two unknown facts and 0.9 confidence", score)
 	}
 }
+
+func TestUnavailableConfigurationNeverBecomesAPass(t *testing.T) {
+	service := coresecurity.New(conclusionFixture{{ID: "ike", PropertyKey: model.PropertyIKEVersion, Value: structpb.NewStringValue("IKEv2"), Status: commonv1.EvidenceStatus_OBSERVED, Confidence: 1}})
+	record, err := service.Run(context.Background(), "analysis-unknown", "policy")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if record.UnknownEvidence != 5 || record.Result.Score != 100 {
+		t.Fatalf("record=%+v", record)
+	}
+	score, err := corerisk.New(service).Score(context.Background(), record.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if score.UnknownEvidenceCount != 5 || score.Confidence >= 1 {
+		t.Fatalf("unknown evidence was represented as a pass: %+v", score)
+	}
+}

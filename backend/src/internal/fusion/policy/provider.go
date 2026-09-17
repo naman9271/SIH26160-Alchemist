@@ -102,9 +102,9 @@ func NewDefault() *Memory {
 		SchemaVersion:   SchemaVersion,
 		RequiredSources: []model.Source{model.SourcePacketParser, model.SourceFlowAnalyzer},
 		RequiredProperties: []string{
-			"ike.version", "ike.encryption", "ike.integrity", "ike.prf", "ike.dh_group",
-			"child.mode", "child.esp_encryption", "child.integrity", "child.pfs",
-			"replay.enabled", "traffic.class", "metadata.exposure",
+			model.PropertyIKEVersion, model.PropertyIKEEncryption, model.PropertyIKEIntegrity, model.PropertyIKEPRF, model.PropertyIKEDHGroup,
+			model.PropertyChildMode, model.PropertyChildEncryption, model.PropertyChildIntegrity, model.PropertyChildPFS,
+			model.PropertyReplayEnabled, "traffic.class", model.PropertyMetadataExposure,
 		},
 		SourceTrust: map[model.Source]float64{
 			model.SourcePacketParser: .95, model.SourceFlowAnalyzer: .90,
