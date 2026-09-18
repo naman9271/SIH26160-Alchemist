@@ -57,8 +57,8 @@ func TestIKECipherIsNotSubstitutedForMissingChildCipher(t *testing.T) {
 	if record.UnknownEvidence != 4 {
 		t.Fatalf("unknown evidence = %d, want CHILD-SA cipher/integrity/PFS/replay to remain unknown", record.UnknownEvidence)
 	}
-	if record.Result.Score >= 50 || len(record.Result.Findings) != 0 {
-		t.Fatalf("assessment = %+v, missing CHILD-SA cipher was treated as a pass", record.Result)
+	if !record.Result.ScoreAvailable || !record.Result.Provisional || record.Result.Coverage >= 50 || record.Result.SecurityLowerBound >= 50 || len(record.Result.Findings) != 0 {
+		t.Fatalf("assessment = %+v, missing CHILD-SA cipher was not presented as provisional incomplete evidence", record.Result)
 	}
 
 	risk := corerisk.New(service)
@@ -66,7 +66,7 @@ func TestIKECipherIsNotSubstitutedForMissingChildCipher(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if score.UnknownEvidenceCount != 4 || score.Confidence >= .5 {
+	if score.UnknownEvidenceCount != 4 || score.EvidenceCoverage >= 50 {
 		t.Fatalf("risk score = %+v, missing evidence retained too much coverage", score)
 	}
 }
@@ -77,21 +77,21 @@ func TestUnavailableConfigurationNeverBecomesAPass(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if record.UnknownEvidence != 5 || record.Result.Score >= 50 {
+	if record.UnknownEvidence != 5 || !record.Result.ScoreAvailable || !record.Result.Provisional || record.Result.Coverage >= 50 || record.Result.SecurityLowerBound >= 50 {
 		t.Fatalf("record=%+v", record)
 	}
 	score, err := corerisk.New(service).Score(context.Background(), record.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if score.UnknownEvidenceCount != 5 || score.Confidence >= 1 {
+	if score.UnknownEvidenceCount != 5 || score.EvidenceCoverage >= 100 {
 		t.Fatalf("unknown evidence was represented as a pass: %+v", score)
 	}
 	breakdown, err := corerisk.New(service).Breakdown(context.Background(), record.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if breakdown.Cryptography.Score != 0 || breakdown.Authentication.Score != 0 || breakdown.KeyExchange.Score != 8 {
+	if breakdown.Cryptography.Score != 0 || breakdown.Authentication.Score != 0 || breakdown.KeyExchange.Score != 7.5 || breakdown.KeyExchange.Maximum != 15 {
 		t.Fatalf("unknown category controls received credit: %+v", breakdown)
 	}
 }
@@ -112,9 +112,11 @@ func TestAssessmentKeepsSecurityAssociationsSeparate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	total := breakdown.Cryptography.Maximum + breakdown.Authentication.Maximum + breakdown.KeyExchange.Maximum + breakdown.Pfs.Maximum + breakdown.Replay.Maximum + breakdown.Lifecycle.Maximum + breakdown.Metadata.Maximum
-	if total != 100 {
-		t.Fatalf("risk category maxima total %d, want 100", total)
+	if len(record.PerSAAssessments) != 2 || record.Result.ResourceID != "weak" || !record.Result.ScoreAvailable {
+		t.Fatalf("deployment must headline the worst observed SA and retain separate SA scores: %+v", record)
+	}
+	if breakdown.Cryptography.Maximum <= 0 || breakdown.SaConfiguration == nil {
+		t.Fatalf("risk breakdown omitted applicable D2 categories: %+v", breakdown)
 	}
 }
 

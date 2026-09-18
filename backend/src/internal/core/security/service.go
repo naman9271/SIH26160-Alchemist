@@ -26,6 +26,8 @@ type Record struct {
 	ID, AnalysisID, PolicyID string
 	State                    securityv1.AssessmentState
 	Result                   rules.Assessment
+	PerSAAssessments         []rules.Assessment
+	IncompleteSAResourceIDs  []string
 	UnknownEvidence          uint64
 	MetadataExposure         bool
 	CreatedAt, UpdatedAt     time.Time
@@ -135,6 +137,7 @@ func (s *Service) evaluate(ctx context.Context, id string) (Record, error) {
 	results := make([]rules.Assessment, 0, len(scopes))
 	for _, scope := range scopes {
 		result := rules.Assess(scope.Facts)
+		result.ResourceType, result.ResourceID = scope.ResourceType, scope.ResourceID
 		for index := range result.Findings {
 			result.Findings[index].ResourceType = scope.ResourceType
 			result.Findings[index].ResourceID = scope.ResourceID
@@ -145,10 +148,10 @@ func (s *Service) evaluate(ctx context.Context, id string) (Record, error) {
 		}
 		results = append(results, result)
 	}
-	result := mergeAssessments(results)
+	result, incomplete := deploymentAssessment(results)
 	s.mu.Lock()
 	stored := s.records[id]
-	stored.State, stored.Result, stored.UnknownEvidence, stored.MetadataExposure = securityv1.AssessmentState_ASSESSMENT_COMPLETED, result, unknown, metadata
+	stored.State, stored.Result, stored.PerSAAssessments, stored.IncompleteSAResourceIDs, stored.UnknownEvidence, stored.MetadataExposure = securityv1.AssessmentState_ASSESSMENT_COMPLETED, result, results, incomplete, unknown, metadata
 	stored.Failure, stored.UpdatedAt = "", time.Now().UTC()
 	out := *stored
 	s.mu.Unlock()
@@ -233,7 +236,8 @@ func facts(items []model.FusedConclusion) ([]scopedFacts, uint64, bool) {
 	winners := map[resource]map[string]model.FusedConclusion{}
 	knownConfiguration := map[string]bool{}
 	metadataKnown, metadataExposure := false, false
-	var metadataEvidence rules.EvidenceReference
+	var metadataProtectionRequired *bool
+	var metadataEvidence, metadataPolicyEvidence rules.EvidenceReference
 	for _, item := range items {
 		if item.Status == commonv1.EvidenceStatus_UNKNOWN {
 			continue
@@ -246,6 +250,16 @@ func facts(items []model.FusedConclusion) ([]scopedFacts, uint64, bool) {
 				sources = append(sources, string(source))
 			}
 			metadataEvidence = rules.EvidenceReference{PropertyKey: item.PropertyKey, Value: scalar(item), EvidenceIDs: append([]string(nil), item.EvidenceIDs...), Sources: sources}
+			continue
+		}
+		if item.PropertyKey == model.PropertyMetadataProtectionRequired {
+			value := strings.EqualFold(scalar(item), "true") || scalar(item) == "1"
+			metadataProtectionRequired = &value
+			sources := make([]string, 0, len(item.WinningSources))
+			for _, source := range item.WinningSources {
+				sources = append(sources, string(source))
+			}
+			metadataPolicyEvidence = rules.EvidenceReference{PropertyKey: item.PropertyKey, Value: scalar(item), EvidenceIDs: append([]string(nil), item.EvidenceIDs...), Sources: sources}
 			continue
 		}
 		if !securityProperty(item.PropertyKey) {
@@ -310,6 +324,9 @@ func facts(items []model.FusedConclusion) ([]scopedFacts, uint64, bool) {
 		if scope.typ == "ANALYSIS" && metadataKnown {
 			evidence[model.PropertyMetadataExposure] = metadataEvidence
 		}
+		if scope.typ == "ANALYSIS" && metadataProtectionRequired != nil {
+			evidence[model.PropertyMetadataProtectionRequired] = metadataPolicyEvidence
+		}
 		ikeKey, ikeKeyKnown := parseNumber(model.PropertyIKEEncryptionKeyBits)
 		ikeTag, ikeTagKnown := parseNumber(model.PropertyIKEAEADTagBits)
 		childKey, childKeyKnown := parseNumber(model.PropertyChildEncryptionKeyBits)
@@ -320,7 +337,7 @@ func facts(items []model.FusedConclusion) ([]scopedFacts, uint64, bool) {
 		remaining, remainingKnown := parseNumber(model.PropertyChildRemainingLifetimeSeconds)
 		replayWindow, replayWindowKnown := parseNumber(model.PropertyReplayWindow)
 		selectorsKnown := get(model.PropertyChildLocalSelectors) != "" && get(model.PropertyChildRemoteSelectors) != ""
-		f := rules.Facts{ResourceType: scope.typ, IKEVersion: get(model.PropertyIKEVersion), IKEEncryption: get(model.PropertyIKEEncryption), IKEIntegrity: get(model.PropertyIKEIntegrity), IKEAuthentication: get(model.PropertyIKEAuthentication), DHGroup: get(model.PropertyIKEDHGroup), IKEEncryptionKeyBits: ikeKey, IKEEncryptionKeyKnown: ikeKeyKnown, IKEAEADTagBits: ikeTag, IKEAEADTagKnown: ikeTagKnown, IKELifetimeSeconds: ikeLifetime, IKELifetimeKnown: ikeLifetimeKnown, EncryptionAlgorithm: get(model.PropertyChildEncryption), IntegrityAlgorithm: get(model.PropertyChildIntegrity), EncryptionKeyBits: childKey, EncryptionKeyKnown: childKeyKnown, AEADTagBits: childTag, AEADTagKnown: childTagKnown, Mode: get(model.PropertyChildMode), Protocol: get(model.PropertyChildProtocol), State: get(model.PropertyChildState), Direction: get(model.PropertyChildDirection), SelectorsKnown: selectorsKnown, PFS: parseBool(model.PropertyChildPFS), FreshExchangeObserved: parseBool(model.PropertyChildFreshExchange), ReplayProtection: parseBool(model.PropertyReplayEnabled), ReplayESN: parseBool(model.PropertyReplayESN), ReplayWindow: replayWindow, ReplayWindowKnown: replayWindowKnown, SALifetimeSeconds: childLifetime, SALifetimeKnown: childLifetimeKnown, InstallAgeSeconds: installAge, InstallAgeKnown: installAgeKnown, RemainingExpirySeconds: remaining, RemainingExpiryKnown: remainingKnown, MetadataExposure: metadataExposure, MetadataKnown: metadataKnown && scope.typ == "ANALYSIS", Evidence: evidence}
+		f := rules.Facts{ResourceType: scope.typ, IKEVersion: get(model.PropertyIKEVersion), IKEEncryption: get(model.PropertyIKEEncryption), IKEIntegrity: get(model.PropertyIKEIntegrity), IKEAuthentication: get(model.PropertyIKEAuthentication), DHGroup: get(model.PropertyIKEDHGroup), IKEEncryptionKeyBits: ikeKey, IKEEncryptionKeyKnown: ikeKeyKnown, IKEAEADTagBits: ikeTag, IKEAEADTagKnown: ikeTagKnown, IKELifetimeSeconds: ikeLifetime, IKELifetimeKnown: ikeLifetimeKnown, EncryptionAlgorithm: get(model.PropertyChildEncryption), IntegrityAlgorithm: get(model.PropertyChildIntegrity), EncryptionKeyBits: childKey, EncryptionKeyKnown: childKeyKnown, AEADTagBits: childTag, AEADTagKnown: childTagKnown, Mode: get(model.PropertyChildMode), Protocol: get(model.PropertyChildProtocol), State: get(model.PropertyChildState), Direction: get(model.PropertyChildDirection), SelectorsKnown: selectorsKnown, PFS: parseBool(model.PropertyChildPFS), FreshExchangeObserved: parseBool(model.PropertyChildFreshExchange), ReplayProtection: parseBool(model.PropertyReplayEnabled), ReplayESN: parseBool(model.PropertyReplayESN), ReplayWindow: replayWindow, ReplayWindowKnown: replayWindowKnown, SALifetimeSeconds: childLifetime, SALifetimeKnown: childLifetimeKnown, InstallAgeSeconds: installAge, InstallAgeKnown: installAgeKnown, RemainingExpirySeconds: remaining, RemainingExpiryKnown: remainingKnown, MetadataExposure: metadataExposure, MetadataKnown: metadataKnown && scope.typ == "ANALYSIS", MetadataProtectionRequired: metadataProtectionRequired, Evidence: evidence}
 		f.ConfiguredIKEProposals = get(model.PropertyConfiguredIKEProposals)
 		f.ConfiguredChildProposals = get(model.PropertyConfiguredChildProposals)
 		if consistency := parseBool(model.PropertySAConfigurationRuntimeConsistent); consistency != nil {
@@ -335,7 +352,11 @@ func facts(items []model.FusedConclusion) ([]scopedFacts, uint64, bool) {
 		scopes = append(scopes, scopedFacts{ResourceType: scope.typ, ResourceID: scope.id, Facts: f})
 	}
 	if metadataKnown && !hasAnalysisScope {
-		scopes = append(scopes, scopedFacts{ResourceType: "METADATA", ResourceID: "analysis", Facts: rules.Facts{ResourceType: "METADATA", MetadataExposure: metadataExposure, MetadataKnown: true, Evidence: map[string]rules.EvidenceReference{model.PropertyMetadataExposure: metadataEvidence}}})
+		evidence := map[string]rules.EvidenceReference{model.PropertyMetadataExposure: metadataEvidence}
+		if metadataProtectionRequired != nil {
+			evidence[model.PropertyMetadataProtectionRequired] = metadataPolicyEvidence
+		}
+		scopes = append(scopes, scopedFacts{ResourceType: "METADATA", ResourceID: "analysis", Facts: rules.Facts{ResourceType: "METADATA", MetadataExposure: metadataExposure, MetadataKnown: true, MetadataProtectionRequired: metadataProtectionRequired, Evidence: evidence}})
 	}
 	if childAEAD {
 		knownConfiguration[model.PropertyChildIntegrity] = true
@@ -368,81 +389,63 @@ func securityProperty(key string) bool {
 	}
 }
 
-func mergeAssessments(items []rules.Assessment) rules.Assessment {
+// deploymentAssessment deliberately does not merge unrelated SAs. Its
+// headline is the lowest observed SA score, while every per-SA result and
+// incomplete SA remains available to callers.
+func deploymentAssessment(items []rules.Assessment) (rules.Assessment, []string) {
 	if len(items) == 0 {
-		return rules.Assess(rules.Facts{})
+		return rules.Assess(rules.Facts{}), nil
 	}
-	out := rules.Assessment{PolicyID: rules.SIHBaselinePolicyID, PolicyLabel: rules.SIHBaselinePolicyLabel, PolicyReference: rules.SIHBaselineReference, ThreatMatrix: map[rules.Severity]int{}, RuleResults: map[string]rules.RuleResult{}}
+	candidates := make([]rules.Assessment, 0, len(items))
+	incomplete := make([]string, 0)
 	for _, item := range items {
-		for id, result := range item.RuleResults {
-			combined, exists := out.RuleResults[id]
-			if !exists || controlRank(result.Status) > controlRank(combined.Status) {
-				combined.Status = result.Status
-			}
-			combined.Weight, combined.Known, combined.Failed = result.Weight, combined.Known || result.Known, combined.Failed || result.Failed
-			out.RuleResults[id] = combined
+		if item.Provisional || !item.ScoreAvailable {
+			incomplete = append(incomplete, item.ResourceType+"/"+item.ResourceID)
 		}
+		if isSAResource(item.ResourceType) && item.ScoreAvailable {
+			candidates = append(candidates, item)
+		}
+	}
+	if len(candidates) == 0 {
+		for _, item := range items {
+			if item.ScoreAvailable {
+				candidates = append(candidates, item)
+			}
+		}
+	}
+	if len(candidates) == 0 {
+		out := rules.Assess(rules.Facts{})
+		out.Controls = nil
+		for _, item := range items {
+			out.Controls = append(out.Controls, item.Controls...)
+			out.Findings = append(out.Findings, item.Findings...)
+		}
+		return out, incomplete
+	}
+	sort.Slice(candidates, func(i, j int) bool { return candidates[i].Score < candidates[j].Score })
+	out := candidates[0]
+	out.Findings = nil
+	out.Controls = nil
+	out.ThreatMatrix = map[rules.Severity]int{}
+	for _, item := range items {
 		out.Controls = append(out.Controls, item.Controls...)
 		out.Findings = append(out.Findings, item.Findings...)
 		for severity, count := range item.ThreatMatrix {
 			out.ThreatMatrix[severity] += count
 		}
 	}
-	for _, result := range out.RuleResults {
-		if result.Status == rules.ControlNotApplicable {
-			out.NotApplicableRule++
-			continue
-		}
-		if !result.Known {
-			out.UnknownRule++
-			continue
-		}
-		out.EvaluatedRule++
-		if !result.Failed {
-			out.Score += result.Weight
-		}
-	}
-	if total := out.EvaluatedRule + out.UnknownRule; total > 0 {
-		out.Coverage = out.EvaluatedRule * 100 / total
-	}
-	out.Grade = assessmentGrade(out.Score)
 	sort.Slice(out.Findings, func(i, j int) bool {
 		if out.Findings[i].Severity != out.Findings[j].Severity {
 			return severityRank(out.Findings[i].Severity) > severityRank(out.Findings[j].Severity)
 		}
 		return out.Findings[i].ResourceType+out.Findings[i].ResourceID+out.Findings[i].RuleID < out.Findings[j].ResourceType+out.Findings[j].ResourceID+out.Findings[j].RuleID
 	})
-	return out
+	return out, incomplete
 }
 
-func controlRank(status rules.ControlStatus) int {
-	switch status {
-	case rules.ControlFail:
-		return 4
-	case rules.ControlPass:
-		return 3
-	case rules.ControlUnknown:
-		return 2
-	case rules.ControlNotApplicable:
-		return 1
-	default:
-		return 0
-	}
-}
-
-func assessmentGrade(score int) string {
-	switch {
-	case score >= 90:
-		return "A"
-	case score >= 80:
-		return "B"
-	case score >= 70:
-		return "C"
-	case score >= 60:
-		return "D"
-	default:
-		return "F"
-	}
+func isSAResource(value string) bool {
+	upper := strings.ToUpper(value)
+	return strings.Contains(upper, "_SA") || strings.Contains(upper, "XFRM")
 }
 
 func severityRank(value rules.Severity) int {

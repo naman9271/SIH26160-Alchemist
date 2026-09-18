@@ -23,10 +23,21 @@ func (s *Service) Score(ctx context.Context, assessmentID string) (*riskv1.Secur
 	if err != nil {
 		return nil, err
 	}
-	// This field is an evidence-coverage indicator, not statistical model
-	// confidence. Missing evidence therefore reduces it all the way to zero.
-	confidence := float64(record.Result.Coverage) / 100
-	return &riskv1.SecurityScore{AssessmentId: record.ID, Score: uint32(record.Result.Score), RiskLevel: level(record.Result.Score), Confidence: confidence, UnknownEvidenceCount: record.UnknownEvidence}, nil
+	result := record.Result
+	out := &riskv1.SecurityScore{AssessmentId: record.ID, ScoreAvailable: result.ScoreAvailable, CoverageAvailable: result.CoverageAvailable, EvidenceCoverage: result.Coverage, Provisional: result.Provisional, CriticalScoreCapApplied: result.ScoreCapped, UnknownEvidenceCount: record.UnknownEvidence}
+	if result.BoundsAvailable {
+		out.SecurityLowerBound, out.SecurityUpperBound = result.SecurityLowerBound, result.SecurityUpperBound
+		out.RiskLowerBound, out.RiskUpperBound = 100-result.SecurityUpperBound, 100-result.SecurityLowerBound
+	}
+	if result.ScoreAvailable {
+		out.ObservedSecurityScore = result.Score
+		out.Score = uint32(result.Score + .5) // legacy clients; score_available is authoritative.
+		out.RiskScore = 100 - result.Score
+		out.RiskLevel = level(out.RiskScore)
+	} else {
+		out.RiskLevel = "UNAVAILABLE"
+	}
+	return out, nil
 }
 func (s *Service) Breakdown(ctx context.Context, assessmentID string) (*riskv1.RiskBreakdown, error) {
 	record, err := s.record(ctx, assessmentID)
@@ -40,24 +51,24 @@ func (s *Service) Breakdown(ctx context.Context, assessmentID string) (*riskv1.R
 			if !ok {
 				continue
 			}
-			category.Maximum += uint32(result.Weight)
+			category.Maximum += result.Weight
 			if result.Known && !result.Failed {
-				category.Score += uint32(result.Weight)
+				category.Score += result.Weight
 			}
 		}
 		return category
 	}
-	penaltyValue := 1 - float64(record.Result.Coverage)/100
 	return &riskv1.RiskBreakdown{
-		Cryptography:         makeCategory("SIH_IKE_SUITE_001", "SIH_CHILD_SUITE_001", "SIH_IKE_POLICY_001", "SIH_CHILD_POLICY_001", "SIH_SA_PARAMETERS_001"),
+		Cryptography:         makeCategory("SIH_IKE_SUITE_001", "SIH_CHILD_SUITE_001", "SIH_IKE_POLICY_001", "SIH_CHILD_POLICY_001"),
 		Authentication:       makeCategory("SIH_AUTH_001"),
 		KeyExchange:          makeCategory("SIH_IKE_VERSION_001", "SIH_DH_001"),
 		Pfs:                  makeCategory("SIH_PFS_CONFIG_001", "SIH_PFS_EXCHANGE_001"),
 		Replay:               makeCategory("SIH_REPLAY_001"),
 		Lifecycle:            makeCategory("SIH_IKE_LIFETIME_001", "SIH_CHILD_LIFETIME_001"),
 		Metadata:             makeCategory("SIH_METADATA_001"),
+		SaConfiguration:      makeCategory("SIH_SA_PARAMETERS_001"),
 		UnknownEvidenceCount: record.UnknownEvidence,
-		ConfidencePenalty:    penaltyValue,
+		EvidenceCoverage:     record.Result.Coverage,
 	}, nil
 }
 func (s *Service) Overrides(ctx context.Context, assessmentID string) (*riskv1.CriticalOverridesResponse, error) {
@@ -82,13 +93,13 @@ func (s *Service) record(ctx context.Context, id string) (coresecurity.Record, e
 	}
 	return s.assessments.Get(ctx, id)
 }
-func level(score int) string {
+func level(score float64) string {
 	switch {
-	case score >= 90:
+	case score <= 10:
 		return "LOW"
-	case score >= 70:
+	case score <= 30:
 		return "MODERATE"
-	case score >= 50:
+	case score <= 50:
 		return "HIGH"
 	default:
 		return "CRITICAL"

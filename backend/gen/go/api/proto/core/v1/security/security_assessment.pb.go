@@ -278,21 +278,32 @@ func (x *GetSecurityAssessmentRequest) GetAssessmentId() string {
 }
 
 type SecurityAssessment struct {
-	state           protoimpl.MessageState   `protogen:"open.v1"`
-	AssessmentId    string                   `protobuf:"bytes,1,opt,name=assessment_id,json=assessmentId,proto3" json:"assessment_id,omitempty"`
-	AnalysisId      string                   `protobuf:"bytes,2,opt,name=analysis_id,json=analysisId,proto3" json:"analysis_id,omitempty"`
-	PolicyId        string                   `protobuf:"bytes,3,opt,name=policy_id,json=policyId,proto3" json:"policy_id,omitempty"`
-	State           AssessmentState          `protobuf:"varint,4,opt,name=state,proto3,enum=core.security.v1.AssessmentState" json:"state,omitempty"`
-	Score           uint32                   `protobuf:"varint,5,opt,name=score,proto3" json:"score,omitempty"`
-	Grade           string                   `protobuf:"bytes,6,opt,name=grade,proto3" json:"grade,omitempty"`
-	Findings        []*SecurityFinding       `protobuf:"bytes,7,rep,name=findings,proto3" json:"findings,omitempty"`
-	EvaluatedAt     *timestamppb.Timestamp   `protobuf:"bytes,8,opt,name=evaluated_at,json=evaluatedAt,proto3" json:"evaluated_at,omitempty"`
-	FailureReason   string                   `protobuf:"bytes,9,opt,name=failure_reason,json=failureReason,proto3" json:"failure_reason,omitempty"`
-	PolicyLabel     string                   `protobuf:"bytes,10,opt,name=policy_label,json=policyLabel,proto3" json:"policy_label,omitempty"`
-	PolicyReference string                   `protobuf:"bytes,11,opt,name=policy_reference,json=policyReference,proto3" json:"policy_reference,omitempty"`
-	Controls        []*SecurityControlResult `protobuf:"bytes,12,rep,name=controls,proto3" json:"controls,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	AssessmentId string                 `protobuf:"bytes,1,opt,name=assessment_id,json=assessmentId,proto3" json:"assessment_id,omitempty"`
+	AnalysisId   string                 `protobuf:"bytes,2,opt,name=analysis_id,json=analysisId,proto3" json:"analysis_id,omitempty"`
+	PolicyId     string                 `protobuf:"bytes,3,opt,name=policy_id,json=policyId,proto3" json:"policy_id,omitempty"`
+	State        AssessmentState        `protobuf:"varint,4,opt,name=state,proto3,enum=core.security.v1.AssessmentState" json:"state,omitempty"`
+	// Deprecated: Marked as deprecated in api/proto/core/v1/security/security_assessment.proto.
+	Score                   uint32                   `protobuf:"varint,5,opt,name=score,proto3" json:"score,omitempty"`
+	Grade                   string                   `protobuf:"bytes,6,opt,name=grade,proto3" json:"grade,omitempty"`
+	Findings                []*SecurityFinding       `protobuf:"bytes,7,rep,name=findings,proto3" json:"findings,omitempty"`
+	EvaluatedAt             *timestamppb.Timestamp   `protobuf:"bytes,8,opt,name=evaluated_at,json=evaluatedAt,proto3" json:"evaluated_at,omitempty"`
+	FailureReason           string                   `protobuf:"bytes,9,opt,name=failure_reason,json=failureReason,proto3" json:"failure_reason,omitempty"`
+	PolicyLabel             string                   `protobuf:"bytes,10,opt,name=policy_label,json=policyLabel,proto3" json:"policy_label,omitempty"`
+	PolicyReference         string                   `protobuf:"bytes,11,opt,name=policy_reference,json=policyReference,proto3" json:"policy_reference,omitempty"`
+	Controls                []*SecurityControlResult `protobuf:"bytes,12,rep,name=controls,proto3" json:"controls,omitempty"`
+	ObservedSecurityScore   float64                  `protobuf:"fixed64,13,opt,name=observed_security_score,json=observedSecurityScore,proto3" json:"observed_security_score,omitempty"`
+	ScoreAvailable          bool                     `protobuf:"varint,14,opt,name=score_available,json=scoreAvailable,proto3" json:"score_available,omitempty"`
+	EvidenceCoverage        float64                  `protobuf:"fixed64,15,opt,name=evidence_coverage,json=evidenceCoverage,proto3" json:"evidence_coverage,omitempty"`
+	CoverageAvailable       bool                     `protobuf:"varint,16,opt,name=coverage_available,json=coverageAvailable,proto3" json:"coverage_available,omitempty"`
+	SecurityLowerBound      float64                  `protobuf:"fixed64,17,opt,name=security_lower_bound,json=securityLowerBound,proto3" json:"security_lower_bound,omitempty"`
+	SecurityUpperBound      float64                  `protobuf:"fixed64,18,opt,name=security_upper_bound,json=securityUpperBound,proto3" json:"security_upper_bound,omitempty"`
+	Provisional             bool                     `protobuf:"varint,19,opt,name=provisional,proto3" json:"provisional,omitempty"`
+	CriticalScoreCapApplied bool                     `protobuf:"varint,20,opt,name=critical_score_cap_applied,json=criticalScoreCapApplied,proto3" json:"critical_score_cap_applied,omitempty"`
+	PerSaScores             []*SASecurityScore       `protobuf:"bytes,21,rep,name=per_sa_scores,json=perSaScores,proto3" json:"per_sa_scores,omitempty"`
+	IncompleteSaResourceIds []string                 `protobuf:"bytes,22,rep,name=incomplete_sa_resource_ids,json=incompleteSaResourceIds,proto3" json:"incomplete_sa_resource_ids,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
 }
 
 func (x *SecurityAssessment) Reset() {
@@ -353,6 +364,7 @@ func (x *SecurityAssessment) GetState() AssessmentState {
 	return AssessmentState_ASSESSMENT_STATE_UNSPECIFIED
 }
 
+// Deprecated: Marked as deprecated in api/proto/core/v1/security/security_assessment.proto.
 func (x *SecurityAssessment) GetScore() uint32 {
 	if x != nil {
 		return x.Score
@@ -409,6 +421,200 @@ func (x *SecurityAssessment) GetControls() []*SecurityControlResult {
 	return nil
 }
 
+func (x *SecurityAssessment) GetObservedSecurityScore() float64 {
+	if x != nil {
+		return x.ObservedSecurityScore
+	}
+	return 0
+}
+
+func (x *SecurityAssessment) GetScoreAvailable() bool {
+	if x != nil {
+		return x.ScoreAvailable
+	}
+	return false
+}
+
+func (x *SecurityAssessment) GetEvidenceCoverage() float64 {
+	if x != nil {
+		return x.EvidenceCoverage
+	}
+	return 0
+}
+
+func (x *SecurityAssessment) GetCoverageAvailable() bool {
+	if x != nil {
+		return x.CoverageAvailable
+	}
+	return false
+}
+
+func (x *SecurityAssessment) GetSecurityLowerBound() float64 {
+	if x != nil {
+		return x.SecurityLowerBound
+	}
+	return 0
+}
+
+func (x *SecurityAssessment) GetSecurityUpperBound() float64 {
+	if x != nil {
+		return x.SecurityUpperBound
+	}
+	return 0
+}
+
+func (x *SecurityAssessment) GetProvisional() bool {
+	if x != nil {
+		return x.Provisional
+	}
+	return false
+}
+
+func (x *SecurityAssessment) GetCriticalScoreCapApplied() bool {
+	if x != nil {
+		return x.CriticalScoreCapApplied
+	}
+	return false
+}
+
+func (x *SecurityAssessment) GetPerSaScores() []*SASecurityScore {
+	if x != nil {
+		return x.PerSaScores
+	}
+	return nil
+}
+
+func (x *SecurityAssessment) GetIncompleteSaResourceIds() []string {
+	if x != nil {
+		return x.IncompleteSaResourceIds
+	}
+	return nil
+}
+
+type SASecurityScore struct {
+	state                   protoimpl.MessageState `protogen:"open.v1"`
+	ResourceType            string                 `protobuf:"bytes,1,opt,name=resource_type,json=resourceType,proto3" json:"resource_type,omitempty"`
+	ResourceId              string                 `protobuf:"bytes,2,opt,name=resource_id,json=resourceId,proto3" json:"resource_id,omitempty"`
+	ObservedSecurityScore   float64                `protobuf:"fixed64,3,opt,name=observed_security_score,json=observedSecurityScore,proto3" json:"observed_security_score,omitempty"`
+	ScoreAvailable          bool                   `protobuf:"varint,4,opt,name=score_available,json=scoreAvailable,proto3" json:"score_available,omitempty"`
+	EvidenceCoverage        float64                `protobuf:"fixed64,5,opt,name=evidence_coverage,json=evidenceCoverage,proto3" json:"evidence_coverage,omitempty"`
+	CoverageAvailable       bool                   `protobuf:"varint,6,opt,name=coverage_available,json=coverageAvailable,proto3" json:"coverage_available,omitempty"`
+	SecurityLowerBound      float64                `protobuf:"fixed64,7,opt,name=security_lower_bound,json=securityLowerBound,proto3" json:"security_lower_bound,omitempty"`
+	SecurityUpperBound      float64                `protobuf:"fixed64,8,opt,name=security_upper_bound,json=securityUpperBound,proto3" json:"security_upper_bound,omitempty"`
+	Provisional             bool                   `protobuf:"varint,9,opt,name=provisional,proto3" json:"provisional,omitempty"`
+	CriticalScoreCapApplied bool                   `protobuf:"varint,10,opt,name=critical_score_cap_applied,json=criticalScoreCapApplied,proto3" json:"critical_score_cap_applied,omitempty"`
+	Grade                   string                 `protobuf:"bytes,11,opt,name=grade,proto3" json:"grade,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
+}
+
+func (x *SASecurityScore) Reset() {
+	*x = SASecurityScore{}
+	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SASecurityScore) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SASecurityScore) ProtoMessage() {}
+
+func (x *SASecurityScore) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SASecurityScore.ProtoReflect.Descriptor instead.
+func (*SASecurityScore) Descriptor() ([]byte, []int) {
+	return file_api_proto_core_v1_security_security_assessment_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *SASecurityScore) GetResourceType() string {
+	if x != nil {
+		return x.ResourceType
+	}
+	return ""
+}
+
+func (x *SASecurityScore) GetResourceId() string {
+	if x != nil {
+		return x.ResourceId
+	}
+	return ""
+}
+
+func (x *SASecurityScore) GetObservedSecurityScore() float64 {
+	if x != nil {
+		return x.ObservedSecurityScore
+	}
+	return 0
+}
+
+func (x *SASecurityScore) GetScoreAvailable() bool {
+	if x != nil {
+		return x.ScoreAvailable
+	}
+	return false
+}
+
+func (x *SASecurityScore) GetEvidenceCoverage() float64 {
+	if x != nil {
+		return x.EvidenceCoverage
+	}
+	return 0
+}
+
+func (x *SASecurityScore) GetCoverageAvailable() bool {
+	if x != nil {
+		return x.CoverageAvailable
+	}
+	return false
+}
+
+func (x *SASecurityScore) GetSecurityLowerBound() float64 {
+	if x != nil {
+		return x.SecurityLowerBound
+	}
+	return 0
+}
+
+func (x *SASecurityScore) GetSecurityUpperBound() float64 {
+	if x != nil {
+		return x.SecurityUpperBound
+	}
+	return 0
+}
+
+func (x *SASecurityScore) GetProvisional() bool {
+	if x != nil {
+		return x.Provisional
+	}
+	return false
+}
+
+func (x *SASecurityScore) GetCriticalScoreCapApplied() bool {
+	if x != nil {
+		return x.CriticalScoreCapApplied
+	}
+	return false
+}
+
+func (x *SASecurityScore) GetGrade() string {
+	if x != nil {
+		return x.Grade
+	}
+	return ""
+}
+
 type ListFindingsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	AssessmentId  string                 `protobuf:"bytes,1,opt,name=assessment_id,json=assessmentId,proto3" json:"assessment_id,omitempty"`
@@ -421,7 +627,7 @@ type ListFindingsRequest struct {
 
 func (x *ListFindingsRequest) Reset() {
 	*x = ListFindingsRequest{}
-	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[4]
+	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -433,7 +639,7 @@ func (x *ListFindingsRequest) String() string {
 func (*ListFindingsRequest) ProtoMessage() {}
 
 func (x *ListFindingsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[4]
+	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -446,7 +652,7 @@ func (x *ListFindingsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListFindingsRequest.ProtoReflect.Descriptor instead.
 func (*ListFindingsRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_core_v1_security_security_assessment_proto_rawDescGZIP(), []int{4}
+	return file_api_proto_core_v1_security_security_assessment_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *ListFindingsRequest) GetAssessmentId() string {
@@ -487,7 +693,7 @@ type ListFindingsResponse struct {
 
 func (x *ListFindingsResponse) Reset() {
 	*x = ListFindingsResponse{}
-	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[5]
+	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -499,7 +705,7 @@ func (x *ListFindingsResponse) String() string {
 func (*ListFindingsResponse) ProtoMessage() {}
 
 func (x *ListFindingsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[5]
+	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -512,7 +718,7 @@ func (x *ListFindingsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListFindingsResponse.ProtoReflect.Descriptor instead.
 func (*ListFindingsResponse) Descriptor() ([]byte, []int) {
-	return file_api_proto_core_v1_security_security_assessment_proto_rawDescGZIP(), []int{5}
+	return file_api_proto_core_v1_security_security_assessment_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *ListFindingsResponse) GetFindings() []*SecurityFinding {
@@ -539,7 +745,7 @@ type GetFindingRequest struct {
 
 func (x *GetFindingRequest) Reset() {
 	*x = GetFindingRequest{}
-	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[6]
+	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -551,7 +757,7 @@ func (x *GetFindingRequest) String() string {
 func (*GetFindingRequest) ProtoMessage() {}
 
 func (x *GetFindingRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[6]
+	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -564,7 +770,7 @@ func (x *GetFindingRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetFindingRequest.ProtoReflect.Descriptor instead.
 func (*GetFindingRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_core_v1_security_security_assessment_proto_rawDescGZIP(), []int{6}
+	return file_api_proto_core_v1_security_security_assessment_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *GetFindingRequest) GetAssessmentId() string {
@@ -593,7 +799,7 @@ type SupportingEvidence struct {
 
 func (x *SupportingEvidence) Reset() {
 	*x = SupportingEvidence{}
-	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[7]
+	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -605,7 +811,7 @@ func (x *SupportingEvidence) String() string {
 func (*SupportingEvidence) ProtoMessage() {}
 
 func (x *SupportingEvidence) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[7]
+	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -618,7 +824,7 @@ func (x *SupportingEvidence) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SupportingEvidence.ProtoReflect.Descriptor instead.
 func (*SupportingEvidence) Descriptor() ([]byte, []int) {
-	return file_api_proto_core_v1_security_security_assessment_proto_rawDescGZIP(), []int{7}
+	return file_api_proto_core_v1_security_security_assessment_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *SupportingEvidence) GetPropertyKey() string {
@@ -663,14 +869,15 @@ type SecurityControlResult struct {
 	Evidence             []*SupportingEvidence  `protobuf:"bytes,10,rep,name=evidence,proto3" json:"evidence,omitempty"`
 	PolicyId             string                 `protobuf:"bytes,11,opt,name=policy_id,json=policyId,proto3" json:"policy_id,omitempty"`
 	PolicyReference      string                 `protobuf:"bytes,12,opt,name=policy_reference,json=policyReference,proto3" json:"policy_reference,omitempty"`
-	Weight               uint32                 `protobuf:"varint,13,opt,name=weight,proto3" json:"weight,omitempty"`
+	Weight               float64                `protobuf:"fixed64,13,opt,name=weight,proto3" json:"weight,omitempty"`
+	Category             string                 `protobuf:"bytes,14,opt,name=category,proto3" json:"category,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
 
 func (x *SecurityControlResult) Reset() {
 	*x = SecurityControlResult{}
-	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[8]
+	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -682,7 +889,7 @@ func (x *SecurityControlResult) String() string {
 func (*SecurityControlResult) ProtoMessage() {}
 
 func (x *SecurityControlResult) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[8]
+	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -695,7 +902,7 @@ func (x *SecurityControlResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SecurityControlResult.ProtoReflect.Descriptor instead.
 func (*SecurityControlResult) Descriptor() ([]byte, []int) {
-	return file_api_proto_core_v1_security_security_assessment_proto_rawDescGZIP(), []int{8}
+	return file_api_proto_core_v1_security_security_assessment_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *SecurityControlResult) GetControlId() string {
@@ -782,11 +989,18 @@ func (x *SecurityControlResult) GetPolicyReference() string {
 	return ""
 }
 
-func (x *SecurityControlResult) GetWeight() uint32 {
+func (x *SecurityControlResult) GetWeight() float64 {
 	if x != nil {
 		return x.Weight
 	}
 	return 0
+}
+
+func (x *SecurityControlResult) GetCategory() string {
+	if x != nil {
+		return x.Category
+	}
+	return ""
 }
 
 type SecurityFinding struct {
@@ -810,7 +1024,7 @@ type SecurityFinding struct {
 
 func (x *SecurityFinding) Reset() {
 	*x = SecurityFinding{}
-	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[9]
+	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -822,7 +1036,7 @@ func (x *SecurityFinding) String() string {
 func (*SecurityFinding) ProtoMessage() {}
 
 func (x *SecurityFinding) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[9]
+	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -835,7 +1049,7 @@ func (x *SecurityFinding) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SecurityFinding.ProtoReflect.Descriptor instead.
 func (*SecurityFinding) Descriptor() ([]byte, []int) {
-	return file_api_proto_core_v1_security_security_assessment_proto_rawDescGZIP(), []int{9}
+	return file_api_proto_core_v1_security_security_assessment_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *SecurityFinding) GetFindingId() string {
@@ -938,7 +1152,7 @@ type GetThreatMatrixRequest struct {
 
 func (x *GetThreatMatrixRequest) Reset() {
 	*x = GetThreatMatrixRequest{}
-	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[10]
+	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -950,7 +1164,7 @@ func (x *GetThreatMatrixRequest) String() string {
 func (*GetThreatMatrixRequest) ProtoMessage() {}
 
 func (x *GetThreatMatrixRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[10]
+	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -963,7 +1177,7 @@ func (x *GetThreatMatrixRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetThreatMatrixRequest.ProtoReflect.Descriptor instead.
 func (*GetThreatMatrixRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_core_v1_security_security_assessment_proto_rawDescGZIP(), []int{10}
+	return file_api_proto_core_v1_security_security_assessment_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *GetThreatMatrixRequest) GetAssessmentId() string {
@@ -983,7 +1197,7 @@ type ThreatMatrix struct {
 
 func (x *ThreatMatrix) Reset() {
 	*x = ThreatMatrix{}
-	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[11]
+	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -995,7 +1209,7 @@ func (x *ThreatMatrix) String() string {
 func (*ThreatMatrix) ProtoMessage() {}
 
 func (x *ThreatMatrix) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[11]
+	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1008,7 +1222,7 @@ func (x *ThreatMatrix) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ThreatMatrix.ProtoReflect.Descriptor instead.
 func (*ThreatMatrix) Descriptor() ([]byte, []int) {
-	return file_api_proto_core_v1_security_security_assessment_proto_rawDescGZIP(), []int{11}
+	return file_api_proto_core_v1_security_security_assessment_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ThreatMatrix) GetSeverityCounts() map[string]uint64 {
@@ -1034,7 +1248,7 @@ type ListRecommendationsRequest struct {
 
 func (x *ListRecommendationsRequest) Reset() {
 	*x = ListRecommendationsRequest{}
-	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[12]
+	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1046,7 +1260,7 @@ func (x *ListRecommendationsRequest) String() string {
 func (*ListRecommendationsRequest) ProtoMessage() {}
 
 func (x *ListRecommendationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[12]
+	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1059,7 +1273,7 @@ func (x *ListRecommendationsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRecommendationsRequest.ProtoReflect.Descriptor instead.
 func (*ListRecommendationsRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_core_v1_security_security_assessment_proto_rawDescGZIP(), []int{12}
+	return file_api_proto_core_v1_security_security_assessment_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ListRecommendationsRequest) GetAssessmentId() string {
@@ -1080,7 +1294,7 @@ type Recommendation struct {
 
 func (x *Recommendation) Reset() {
 	*x = Recommendation{}
-	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[13]
+	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1092,7 +1306,7 @@ func (x *Recommendation) String() string {
 func (*Recommendation) ProtoMessage() {}
 
 func (x *Recommendation) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[13]
+	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1105,7 +1319,7 @@ func (x *Recommendation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Recommendation.ProtoReflect.Descriptor instead.
 func (*Recommendation) Descriptor() ([]byte, []int) {
-	return file_api_proto_core_v1_security_security_assessment_proto_rawDescGZIP(), []int{13}
+	return file_api_proto_core_v1_security_security_assessment_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *Recommendation) GetPriority() string {
@@ -1138,7 +1352,7 @@ type ListRecommendationsResponse struct {
 
 func (x *ListRecommendationsResponse) Reset() {
 	*x = ListRecommendationsResponse{}
-	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[14]
+	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1150,7 +1364,7 @@ func (x *ListRecommendationsResponse) String() string {
 func (*ListRecommendationsResponse) ProtoMessage() {}
 
 func (x *ListRecommendationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[14]
+	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1163,7 +1377,7 @@ func (x *ListRecommendationsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRecommendationsResponse.ProtoReflect.Descriptor instead.
 func (*ListRecommendationsResponse) Descriptor() ([]byte, []int) {
-	return file_api_proto_core_v1_security_security_assessment_proto_rawDescGZIP(), []int{14}
+	return file_api_proto_core_v1_security_security_assessment_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ListRecommendationsResponse) GetRecommendations() []*Recommendation {
@@ -1182,7 +1396,7 @@ type GetComplianceRequest struct {
 
 func (x *GetComplianceRequest) Reset() {
 	*x = GetComplianceRequest{}
-	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[15]
+	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1194,7 +1408,7 @@ func (x *GetComplianceRequest) String() string {
 func (*GetComplianceRequest) ProtoMessage() {}
 
 func (x *GetComplianceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[15]
+	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1207,7 +1421,7 @@ func (x *GetComplianceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetComplianceRequest.ProtoReflect.Descriptor instead.
 func (*GetComplianceRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_core_v1_security_security_assessment_proto_rawDescGZIP(), []int{15}
+	return file_api_proto_core_v1_security_security_assessment_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *GetComplianceRequest) GetAssessmentId() string {
@@ -1232,7 +1446,7 @@ type ComplianceSummary struct {
 
 func (x *ComplianceSummary) Reset() {
 	*x = ComplianceSummary{}
-	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[16]
+	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1244,7 +1458,7 @@ func (x *ComplianceSummary) String() string {
 func (*ComplianceSummary) ProtoMessage() {}
 
 func (x *ComplianceSummary) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[16]
+	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1257,7 +1471,7 @@ func (x *ComplianceSummary) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ComplianceSummary.ProtoReflect.Descriptor instead.
 func (*ComplianceSummary) Descriptor() ([]byte, []int) {
-	return file_api_proto_core_v1_security_security_assessment_proto_rawDescGZIP(), []int{16}
+	return file_api_proto_core_v1_security_security_assessment_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *ComplianceSummary) GetPolicyId() string {
@@ -1318,7 +1532,7 @@ type GetMetadataExposureRequest struct {
 
 func (x *GetMetadataExposureRequest) Reset() {
 	*x = GetMetadataExposureRequest{}
-	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[17]
+	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1330,7 +1544,7 @@ func (x *GetMetadataExposureRequest) String() string {
 func (*GetMetadataExposureRequest) ProtoMessage() {}
 
 func (x *GetMetadataExposureRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[17]
+	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1343,7 +1557,7 @@ func (x *GetMetadataExposureRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMetadataExposureRequest.ProtoReflect.Descriptor instead.
 func (*GetMetadataExposureRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_core_v1_security_security_assessment_proto_rawDescGZIP(), []int{17}
+	return file_api_proto_core_v1_security_security_assessment_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *GetMetadataExposureRequest) GetAssessmentId() string {
@@ -1364,7 +1578,7 @@ type MetadataExposureAssessment struct {
 
 func (x *MetadataExposureAssessment) Reset() {
 	*x = MetadataExposureAssessment{}
-	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[18]
+	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1376,7 +1590,7 @@ func (x *MetadataExposureAssessment) String() string {
 func (*MetadataExposureAssessment) ProtoMessage() {}
 
 func (x *MetadataExposureAssessment) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[18]
+	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1389,7 +1603,7 @@ func (x *MetadataExposureAssessment) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MetadataExposureAssessment.ProtoReflect.Descriptor instead.
 func (*MetadataExposureAssessment) Descriptor() ([]byte, []int) {
-	return file_api_proto_core_v1_security_security_assessment_proto_rawDescGZIP(), []int{18}
+	return file_api_proto_core_v1_security_security_assessment_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *MetadataExposureAssessment) GetObservable() bool {
@@ -1423,7 +1637,7 @@ type ReevaluateSecurityRequest struct {
 
 func (x *ReevaluateSecurityRequest) Reset() {
 	*x = ReevaluateSecurityRequest{}
-	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[19]
+	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1435,7 +1649,7 @@ func (x *ReevaluateSecurityRequest) String() string {
 func (*ReevaluateSecurityRequest) ProtoMessage() {}
 
 func (x *ReevaluateSecurityRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[19]
+	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1448,7 +1662,7 @@ func (x *ReevaluateSecurityRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReevaluateSecurityRequest.ProtoReflect.Descriptor instead.
 func (*ReevaluateSecurityRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_core_v1_security_security_assessment_proto_rawDescGZIP(), []int{19}
+	return file_api_proto_core_v1_security_security_assessment_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *ReevaluateSecurityRequest) GetAssessmentId() string {
@@ -1475,7 +1689,7 @@ type ReevaluateSecurityResponse struct {
 
 func (x *ReevaluateSecurityResponse) Reset() {
 	*x = ReevaluateSecurityResponse{}
-	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[20]
+	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1487,7 +1701,7 @@ func (x *ReevaluateSecurityResponse) String() string {
 func (*ReevaluateSecurityResponse) ProtoMessage() {}
 
 func (x *ReevaluateSecurityResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[20]
+	mi := &file_api_proto_core_v1_security_security_assessment_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1500,7 +1714,7 @@ func (x *ReevaluateSecurityResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReevaluateSecurityResponse.ProtoReflect.Descriptor instead.
 func (*ReevaluateSecurityResponse) Descriptor() ([]byte, []int) {
-	return file_api_proto_core_v1_security_security_assessment_proto_rawDescGZIP(), []int{20}
+	return file_api_proto_core_v1_security_security_assessment_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *ReevaluateSecurityResponse) GetAssessmentId() string {
@@ -1530,14 +1744,14 @@ const file_api_proto_core_v1_security_security_assessment_proto_rawDesc = "" +
 	"\rassessment_id\x18\x01 \x01(\tR\fassessmentId\x127\n" +
 	"\x05state\x18\x02 \x01(\x0e2!.core.security.v1.AssessmentStateR\x05state\"C\n" +
 	"\x1cGetSecurityAssessmentRequest\x12#\n" +
-	"\rassessment_id\x18\x01 \x01(\tR\fassessmentId\"\x94\x04\n" +
+	"\rassessment_id\x18\x01 \x01(\tR\fassessmentId\"\x9c\b\n" +
 	"\x12SecurityAssessment\x12#\n" +
 	"\rassessment_id\x18\x01 \x01(\tR\fassessmentId\x12\x1f\n" +
 	"\vanalysis_id\x18\x02 \x01(\tR\n" +
 	"analysisId\x12\x1b\n" +
 	"\tpolicy_id\x18\x03 \x01(\tR\bpolicyId\x127\n" +
-	"\x05state\x18\x04 \x01(\x0e2!.core.security.v1.AssessmentStateR\x05state\x12\x14\n" +
-	"\x05score\x18\x05 \x01(\rR\x05score\x12\x14\n" +
+	"\x05state\x18\x04 \x01(\x0e2!.core.security.v1.AssessmentStateR\x05state\x12\x18\n" +
+	"\x05score\x18\x05 \x01(\rB\x02\x18\x01R\x05score\x12\x14\n" +
 	"\x05grade\x18\x06 \x01(\tR\x05grade\x12=\n" +
 	"\bfindings\x18\a \x03(\v2!.core.security.v1.SecurityFindingR\bfindings\x12=\n" +
 	"\fevaluated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\vevaluatedAt\x12%\n" +
@@ -1545,7 +1759,31 @@ const file_api_proto_core_v1_security_security_assessment_proto_rawDesc = "" +
 	"\fpolicy_label\x18\n" +
 	" \x01(\tR\vpolicyLabel\x12)\n" +
 	"\x10policy_reference\x18\v \x01(\tR\x0fpolicyReference\x12C\n" +
-	"\bcontrols\x18\f \x03(\v2'.core.security.v1.SecurityControlResultR\bcontrols\"\x92\x01\n" +
+	"\bcontrols\x18\f \x03(\v2'.core.security.v1.SecurityControlResultR\bcontrols\x126\n" +
+	"\x17observed_security_score\x18\r \x01(\x01R\x15observedSecurityScore\x12'\n" +
+	"\x0fscore_available\x18\x0e \x01(\bR\x0escoreAvailable\x12+\n" +
+	"\x11evidence_coverage\x18\x0f \x01(\x01R\x10evidenceCoverage\x12-\n" +
+	"\x12coverage_available\x18\x10 \x01(\bR\x11coverageAvailable\x120\n" +
+	"\x14security_lower_bound\x18\x11 \x01(\x01R\x12securityLowerBound\x120\n" +
+	"\x14security_upper_bound\x18\x12 \x01(\x01R\x12securityUpperBound\x12 \n" +
+	"\vprovisional\x18\x13 \x01(\bR\vprovisional\x12;\n" +
+	"\x1acritical_score_cap_applied\x18\x14 \x01(\bR\x17criticalScoreCapApplied\x12E\n" +
+	"\rper_sa_scores\x18\x15 \x03(\v2!.core.security.v1.SASecurityScoreR\vperSaScores\x12;\n" +
+	"\x1aincomplete_sa_resource_ids\x18\x16 \x03(\tR\x17incompleteSaResourceIds\"\xed\x03\n" +
+	"\x0fSASecurityScore\x12#\n" +
+	"\rresource_type\x18\x01 \x01(\tR\fresourceType\x12\x1f\n" +
+	"\vresource_id\x18\x02 \x01(\tR\n" +
+	"resourceId\x126\n" +
+	"\x17observed_security_score\x18\x03 \x01(\x01R\x15observedSecurityScore\x12'\n" +
+	"\x0fscore_available\x18\x04 \x01(\bR\x0escoreAvailable\x12+\n" +
+	"\x11evidence_coverage\x18\x05 \x01(\x01R\x10evidenceCoverage\x12-\n" +
+	"\x12coverage_available\x18\x06 \x01(\bR\x11coverageAvailable\x120\n" +
+	"\x14security_lower_bound\x18\a \x01(\x01R\x12securityLowerBound\x120\n" +
+	"\x14security_upper_bound\x18\b \x01(\x01R\x12securityUpperBound\x12 \n" +
+	"\vprovisional\x18\t \x01(\bR\vprovisional\x12;\n" +
+	"\x1acritical_score_cap_applied\x18\n" +
+	" \x01(\bR\x17criticalScoreCapApplied\x12\x14\n" +
+	"\x05grade\x18\v \x01(\tR\x05grade\"\x92\x01\n" +
 	"\x13ListFindingsRequest\x12#\n" +
 	"\rassessment_id\x18\x01 \x01(\tR\fassessmentId\x12\x1a\n" +
 	"\bseverity\x18\x02 \x01(\tR\bseverity\x12\x1b\n" +
@@ -1563,7 +1801,7 @@ const file_api_proto_core_v1_security_security_assessment_proto_rawDesc = "" +
 	"\fproperty_key\x18\x01 \x01(\tR\vpropertyKey\x12)\n" +
 	"\x10normalized_value\x18\x02 \x01(\tR\x0fnormalizedValue\x12!\n" +
 	"\fevidence_ids\x18\x03 \x03(\tR\vevidenceIds\x12\x18\n" +
-	"\asources\x18\x04 \x03(\tR\asources\"\x83\x04\n" +
+	"\asources\x18\x04 \x03(\tR\asources\"\x9f\x04\n" +
 	"\x15SecurityControlResult\x12\x1d\n" +
 	"\n" +
 	"control_id\x18\x01 \x01(\tR\tcontrolId\x12\x12\n" +
@@ -1579,7 +1817,8 @@ const file_api_proto_core_v1_security_security_assessment_proto_rawDesc = "" +
 	" \x03(\v2$.core.security.v1.SupportingEvidenceR\bevidence\x12\x1b\n" +
 	"\tpolicy_id\x18\v \x01(\tR\bpolicyId\x12)\n" +
 	"\x10policy_reference\x18\f \x01(\tR\x0fpolicyReference\x12\x16\n" +
-	"\x06weight\x18\r \x01(\rR\x06weight\"\x84\x04\n" +
+	"\x06weight\x18\r \x01(\x01R\x06weight\x12\x1a\n" +
+	"\bcategory\x18\x0e \x01(\tR\bcategory\"\x84\x04\n" +
 	"\x0fSecurityFinding\x12\x1d\n" +
 	"\n" +
 	"finding_id\x18\x01 \x01(\tR\tfindingId\x12\x17\n" +
@@ -1673,7 +1912,7 @@ func file_api_proto_core_v1_security_security_assessment_proto_rawDescGZIP() []b
 }
 
 var file_api_proto_core_v1_security_security_assessment_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_api_proto_core_v1_security_security_assessment_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
+var file_api_proto_core_v1_security_security_assessment_proto_msgTypes = make([]protoimpl.MessageInfo, 23)
 var file_api_proto_core_v1_security_security_assessment_proto_goTypes = []any{
 	(AssessmentState)(0),                  // 0: core.security.v1.AssessmentState
 	(ControlStatus)(0),                    // 1: core.security.v1.ControlStatus
@@ -1681,63 +1920,65 @@ var file_api_proto_core_v1_security_security_assessment_proto_goTypes = []any{
 	(*RunSecurityAssessmentResponse)(nil), // 3: core.security.v1.RunSecurityAssessmentResponse
 	(*GetSecurityAssessmentRequest)(nil),  // 4: core.security.v1.GetSecurityAssessmentRequest
 	(*SecurityAssessment)(nil),            // 5: core.security.v1.SecurityAssessment
-	(*ListFindingsRequest)(nil),           // 6: core.security.v1.ListFindingsRequest
-	(*ListFindingsResponse)(nil),          // 7: core.security.v1.ListFindingsResponse
-	(*GetFindingRequest)(nil),             // 8: core.security.v1.GetFindingRequest
-	(*SupportingEvidence)(nil),            // 9: core.security.v1.SupportingEvidence
-	(*SecurityControlResult)(nil),         // 10: core.security.v1.SecurityControlResult
-	(*SecurityFinding)(nil),               // 11: core.security.v1.SecurityFinding
-	(*GetThreatMatrixRequest)(nil),        // 12: core.security.v1.GetThreatMatrixRequest
-	(*ThreatMatrix)(nil),                  // 13: core.security.v1.ThreatMatrix
-	(*ListRecommendationsRequest)(nil),    // 14: core.security.v1.ListRecommendationsRequest
-	(*Recommendation)(nil),                // 15: core.security.v1.Recommendation
-	(*ListRecommendationsResponse)(nil),   // 16: core.security.v1.ListRecommendationsResponse
-	(*GetComplianceRequest)(nil),          // 17: core.security.v1.GetComplianceRequest
-	(*ComplianceSummary)(nil),             // 18: core.security.v1.ComplianceSummary
-	(*GetMetadataExposureRequest)(nil),    // 19: core.security.v1.GetMetadataExposureRequest
-	(*MetadataExposureAssessment)(nil),    // 20: core.security.v1.MetadataExposureAssessment
-	(*ReevaluateSecurityRequest)(nil),     // 21: core.security.v1.ReevaluateSecurityRequest
-	(*ReevaluateSecurityResponse)(nil),    // 22: core.security.v1.ReevaluateSecurityResponse
-	nil,                                   // 23: core.security.v1.ThreatMatrix.SeverityCountsEntry
-	(*timestamppb.Timestamp)(nil),         // 24: google.protobuf.Timestamp
+	(*SASecurityScore)(nil),               // 6: core.security.v1.SASecurityScore
+	(*ListFindingsRequest)(nil),           // 7: core.security.v1.ListFindingsRequest
+	(*ListFindingsResponse)(nil),          // 8: core.security.v1.ListFindingsResponse
+	(*GetFindingRequest)(nil),             // 9: core.security.v1.GetFindingRequest
+	(*SupportingEvidence)(nil),            // 10: core.security.v1.SupportingEvidence
+	(*SecurityControlResult)(nil),         // 11: core.security.v1.SecurityControlResult
+	(*SecurityFinding)(nil),               // 12: core.security.v1.SecurityFinding
+	(*GetThreatMatrixRequest)(nil),        // 13: core.security.v1.GetThreatMatrixRequest
+	(*ThreatMatrix)(nil),                  // 14: core.security.v1.ThreatMatrix
+	(*ListRecommendationsRequest)(nil),    // 15: core.security.v1.ListRecommendationsRequest
+	(*Recommendation)(nil),                // 16: core.security.v1.Recommendation
+	(*ListRecommendationsResponse)(nil),   // 17: core.security.v1.ListRecommendationsResponse
+	(*GetComplianceRequest)(nil),          // 18: core.security.v1.GetComplianceRequest
+	(*ComplianceSummary)(nil),             // 19: core.security.v1.ComplianceSummary
+	(*GetMetadataExposureRequest)(nil),    // 20: core.security.v1.GetMetadataExposureRequest
+	(*MetadataExposureAssessment)(nil),    // 21: core.security.v1.MetadataExposureAssessment
+	(*ReevaluateSecurityRequest)(nil),     // 22: core.security.v1.ReevaluateSecurityRequest
+	(*ReevaluateSecurityResponse)(nil),    // 23: core.security.v1.ReevaluateSecurityResponse
+	nil,                                   // 24: core.security.v1.ThreatMatrix.SeverityCountsEntry
+	(*timestamppb.Timestamp)(nil),         // 25: google.protobuf.Timestamp
 }
 var file_api_proto_core_v1_security_security_assessment_proto_depIdxs = []int32{
 	0,  // 0: core.security.v1.RunSecurityAssessmentResponse.state:type_name -> core.security.v1.AssessmentState
 	0,  // 1: core.security.v1.SecurityAssessment.state:type_name -> core.security.v1.AssessmentState
-	11, // 2: core.security.v1.SecurityAssessment.findings:type_name -> core.security.v1.SecurityFinding
-	24, // 3: core.security.v1.SecurityAssessment.evaluated_at:type_name -> google.protobuf.Timestamp
-	10, // 4: core.security.v1.SecurityAssessment.controls:type_name -> core.security.v1.SecurityControlResult
-	11, // 5: core.security.v1.ListFindingsResponse.findings:type_name -> core.security.v1.SecurityFinding
-	1,  // 6: core.security.v1.SecurityControlResult.status:type_name -> core.security.v1.ControlStatus
-	9,  // 7: core.security.v1.SecurityControlResult.evidence:type_name -> core.security.v1.SupportingEvidence
-	9,  // 8: core.security.v1.SecurityFinding.evidence:type_name -> core.security.v1.SupportingEvidence
-	23, // 9: core.security.v1.ThreatMatrix.severity_counts:type_name -> core.security.v1.ThreatMatrix.SeverityCountsEntry
-	11, // 10: core.security.v1.ThreatMatrix.findings:type_name -> core.security.v1.SecurityFinding
-	15, // 11: core.security.v1.ListRecommendationsResponse.recommendations:type_name -> core.security.v1.Recommendation
-	0,  // 12: core.security.v1.ReevaluateSecurityResponse.state:type_name -> core.security.v1.AssessmentState
-	2,  // 13: core.security.v1.SecurityAssessmentService.Run:input_type -> core.security.v1.RunSecurityAssessmentRequest
-	4,  // 14: core.security.v1.SecurityAssessmentService.Get:input_type -> core.security.v1.GetSecurityAssessmentRequest
-	6,  // 15: core.security.v1.SecurityAssessmentService.ListFindings:input_type -> core.security.v1.ListFindingsRequest
-	8,  // 16: core.security.v1.SecurityAssessmentService.GetFinding:input_type -> core.security.v1.GetFindingRequest
-	12, // 17: core.security.v1.SecurityAssessmentService.GetThreatMatrix:input_type -> core.security.v1.GetThreatMatrixRequest
-	14, // 18: core.security.v1.SecurityAssessmentService.ListRecommendations:input_type -> core.security.v1.ListRecommendationsRequest
-	17, // 19: core.security.v1.SecurityAssessmentService.GetCompliance:input_type -> core.security.v1.GetComplianceRequest
-	19, // 20: core.security.v1.SecurityAssessmentService.GetMetadataExposure:input_type -> core.security.v1.GetMetadataExposureRequest
-	21, // 21: core.security.v1.SecurityAssessmentService.Reevaluate:input_type -> core.security.v1.ReevaluateSecurityRequest
-	3,  // 22: core.security.v1.SecurityAssessmentService.Run:output_type -> core.security.v1.RunSecurityAssessmentResponse
-	5,  // 23: core.security.v1.SecurityAssessmentService.Get:output_type -> core.security.v1.SecurityAssessment
-	7,  // 24: core.security.v1.SecurityAssessmentService.ListFindings:output_type -> core.security.v1.ListFindingsResponse
-	11, // 25: core.security.v1.SecurityAssessmentService.GetFinding:output_type -> core.security.v1.SecurityFinding
-	13, // 26: core.security.v1.SecurityAssessmentService.GetThreatMatrix:output_type -> core.security.v1.ThreatMatrix
-	16, // 27: core.security.v1.SecurityAssessmentService.ListRecommendations:output_type -> core.security.v1.ListRecommendationsResponse
-	18, // 28: core.security.v1.SecurityAssessmentService.GetCompliance:output_type -> core.security.v1.ComplianceSummary
-	20, // 29: core.security.v1.SecurityAssessmentService.GetMetadataExposure:output_type -> core.security.v1.MetadataExposureAssessment
-	22, // 30: core.security.v1.SecurityAssessmentService.Reevaluate:output_type -> core.security.v1.ReevaluateSecurityResponse
-	22, // [22:31] is the sub-list for method output_type
-	13, // [13:22] is the sub-list for method input_type
-	13, // [13:13] is the sub-list for extension type_name
-	13, // [13:13] is the sub-list for extension extendee
-	0,  // [0:13] is the sub-list for field type_name
+	12, // 2: core.security.v1.SecurityAssessment.findings:type_name -> core.security.v1.SecurityFinding
+	25, // 3: core.security.v1.SecurityAssessment.evaluated_at:type_name -> google.protobuf.Timestamp
+	11, // 4: core.security.v1.SecurityAssessment.controls:type_name -> core.security.v1.SecurityControlResult
+	6,  // 5: core.security.v1.SecurityAssessment.per_sa_scores:type_name -> core.security.v1.SASecurityScore
+	12, // 6: core.security.v1.ListFindingsResponse.findings:type_name -> core.security.v1.SecurityFinding
+	1,  // 7: core.security.v1.SecurityControlResult.status:type_name -> core.security.v1.ControlStatus
+	10, // 8: core.security.v1.SecurityControlResult.evidence:type_name -> core.security.v1.SupportingEvidence
+	10, // 9: core.security.v1.SecurityFinding.evidence:type_name -> core.security.v1.SupportingEvidence
+	24, // 10: core.security.v1.ThreatMatrix.severity_counts:type_name -> core.security.v1.ThreatMatrix.SeverityCountsEntry
+	12, // 11: core.security.v1.ThreatMatrix.findings:type_name -> core.security.v1.SecurityFinding
+	16, // 12: core.security.v1.ListRecommendationsResponse.recommendations:type_name -> core.security.v1.Recommendation
+	0,  // 13: core.security.v1.ReevaluateSecurityResponse.state:type_name -> core.security.v1.AssessmentState
+	2,  // 14: core.security.v1.SecurityAssessmentService.Run:input_type -> core.security.v1.RunSecurityAssessmentRequest
+	4,  // 15: core.security.v1.SecurityAssessmentService.Get:input_type -> core.security.v1.GetSecurityAssessmentRequest
+	7,  // 16: core.security.v1.SecurityAssessmentService.ListFindings:input_type -> core.security.v1.ListFindingsRequest
+	9,  // 17: core.security.v1.SecurityAssessmentService.GetFinding:input_type -> core.security.v1.GetFindingRequest
+	13, // 18: core.security.v1.SecurityAssessmentService.GetThreatMatrix:input_type -> core.security.v1.GetThreatMatrixRequest
+	15, // 19: core.security.v1.SecurityAssessmentService.ListRecommendations:input_type -> core.security.v1.ListRecommendationsRequest
+	18, // 20: core.security.v1.SecurityAssessmentService.GetCompliance:input_type -> core.security.v1.GetComplianceRequest
+	20, // 21: core.security.v1.SecurityAssessmentService.GetMetadataExposure:input_type -> core.security.v1.GetMetadataExposureRequest
+	22, // 22: core.security.v1.SecurityAssessmentService.Reevaluate:input_type -> core.security.v1.ReevaluateSecurityRequest
+	3,  // 23: core.security.v1.SecurityAssessmentService.Run:output_type -> core.security.v1.RunSecurityAssessmentResponse
+	5,  // 24: core.security.v1.SecurityAssessmentService.Get:output_type -> core.security.v1.SecurityAssessment
+	8,  // 25: core.security.v1.SecurityAssessmentService.ListFindings:output_type -> core.security.v1.ListFindingsResponse
+	12, // 26: core.security.v1.SecurityAssessmentService.GetFinding:output_type -> core.security.v1.SecurityFinding
+	14, // 27: core.security.v1.SecurityAssessmentService.GetThreatMatrix:output_type -> core.security.v1.ThreatMatrix
+	17, // 28: core.security.v1.SecurityAssessmentService.ListRecommendations:output_type -> core.security.v1.ListRecommendationsResponse
+	19, // 29: core.security.v1.SecurityAssessmentService.GetCompliance:output_type -> core.security.v1.ComplianceSummary
+	21, // 30: core.security.v1.SecurityAssessmentService.GetMetadataExposure:output_type -> core.security.v1.MetadataExposureAssessment
+	23, // 31: core.security.v1.SecurityAssessmentService.Reevaluate:output_type -> core.security.v1.ReevaluateSecurityResponse
+	23, // [23:32] is the sub-list for method output_type
+	14, // [14:23] is the sub-list for method input_type
+	14, // [14:14] is the sub-list for extension type_name
+	14, // [14:14] is the sub-list for extension extendee
+	0,  // [0:14] is the sub-list for field type_name
 }
 
 func init() { file_api_proto_core_v1_security_security_assessment_proto_init() }
@@ -1751,7 +1992,7 @@ func file_api_proto_core_v1_security_security_assessment_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_proto_core_v1_security_security_assessment_proto_rawDesc), len(file_api_proto_core_v1_security_security_assessment_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   22,
+			NumMessages:   23,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

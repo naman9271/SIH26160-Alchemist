@@ -37,7 +37,14 @@ func Generate(input Input) Output {
 	fmt.Fprintf(&executive, "# IPsec VPN Executive Assessment\n\n")
 	fmt.Fprintf(&executive, "- Analysis: `%s`\n", markdown(input.AnalysisID))
 	fmt.Fprintf(&executive, "- Generated: `%s`\n", generatedAt.Format(time.RFC3339))
-	fmt.Fprintf(&executive, "- Security score: **%d/100 (%s)**\n", input.Assessment.Score, input.Assessment.Grade)
+	if input.Assessment.ScoreAvailable {
+		fmt.Fprintf(&executive, "- Observed security score: **%.1f/100 (%s)**\n", input.Assessment.Score, input.Assessment.Grade)
+	} else {
+		executive.WriteString("- Observed security score: **unavailable** (no controls were evaluated)\n")
+	}
+	if input.Assessment.CoverageAvailable {
+		fmt.Fprintf(&executive, "- Evidence coverage: **%.1f%%**%s\n", input.Assessment.Coverage, provisionalLabel(input.Assessment.Provisional))
+	}
 	if input.Assessment.PolicyID != "" {
 		fmt.Fprintf(&executive, "- Assessment policy: **%s** (%s)\n", markdown(input.Assessment.PolicyLabel), markdown(input.Assessment.PolicyID))
 	}
@@ -87,4 +94,11 @@ func Generate(input Input) Output {
 func markdown(value string) string {
 	replacer := strings.NewReplacer("|", "\\|", "`", "'", "\n", " ", "\r", " ")
 	return replacer.Replace(strings.TrimSpace(value))
+}
+
+func provisionalLabel(value bool) string {
+	if value {
+		return " — provisional"
+	}
+	return ""
 }

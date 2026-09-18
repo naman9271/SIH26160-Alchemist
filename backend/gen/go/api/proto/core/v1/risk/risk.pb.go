@@ -162,14 +162,27 @@ func (x *GetRiskScoreRequest) GetAssessmentId() string {
 }
 
 type SecurityScore struct {
-	state                protoimpl.MessageState `protogen:"open.v1"`
-	AssessmentId         string                 `protobuf:"bytes,1,opt,name=assessment_id,json=assessmentId,proto3" json:"assessment_id,omitempty"`
-	Score                uint32                 `protobuf:"varint,2,opt,name=score,proto3" json:"score,omitempty"`
-	RiskLevel            string                 `protobuf:"bytes,3,opt,name=risk_level,json=riskLevel,proto3" json:"risk_level,omitempty"`
-	Confidence           float64                `protobuf:"fixed64,4,opt,name=confidence,proto3" json:"confidence,omitempty"`
-	UnknownEvidenceCount uint64                 `protobuf:"varint,5,opt,name=unknown_evidence_count,json=unknownEvidenceCount,proto3" json:"unknown_evidence_count,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	AssessmentId string                 `protobuf:"bytes,1,opt,name=assessment_id,json=assessmentId,proto3" json:"assessment_id,omitempty"`
+	// Deprecated: score availability is explicit in observed_security_score.
+	//
+	// Deprecated: Marked as deprecated in api/proto/core/v1/risk/risk.proto.
+	Score                   uint32  `protobuf:"varint,2,opt,name=score,proto3" json:"score,omitempty"`
+	RiskLevel               string  `protobuf:"bytes,3,opt,name=risk_level,json=riskLevel,proto3" json:"risk_level,omitempty"`
+	UnknownEvidenceCount    uint64  `protobuf:"varint,5,opt,name=unknown_evidence_count,json=unknownEvidenceCount,proto3" json:"unknown_evidence_count,omitempty"`
+	ObservedSecurityScore   float64 `protobuf:"fixed64,6,opt,name=observed_security_score,json=observedSecurityScore,proto3" json:"observed_security_score,omitempty"`
+	ScoreAvailable          bool    `protobuf:"varint,7,opt,name=score_available,json=scoreAvailable,proto3" json:"score_available,omitempty"`
+	EvidenceCoverage        float64 `protobuf:"fixed64,8,opt,name=evidence_coverage,json=evidenceCoverage,proto3" json:"evidence_coverage,omitempty"`
+	CoverageAvailable       bool    `protobuf:"varint,9,opt,name=coverage_available,json=coverageAvailable,proto3" json:"coverage_available,omitempty"`
+	SecurityLowerBound      float64 `protobuf:"fixed64,10,opt,name=security_lower_bound,json=securityLowerBound,proto3" json:"security_lower_bound,omitempty"`
+	SecurityUpperBound      float64 `protobuf:"fixed64,11,opt,name=security_upper_bound,json=securityUpperBound,proto3" json:"security_upper_bound,omitempty"`
+	RiskScore               float64 `protobuf:"fixed64,12,opt,name=risk_score,json=riskScore,proto3" json:"risk_score,omitempty"`
+	RiskLowerBound          float64 `protobuf:"fixed64,13,opt,name=risk_lower_bound,json=riskLowerBound,proto3" json:"risk_lower_bound,omitempty"`
+	RiskUpperBound          float64 `protobuf:"fixed64,14,opt,name=risk_upper_bound,json=riskUpperBound,proto3" json:"risk_upper_bound,omitempty"`
+	Provisional             bool    `protobuf:"varint,15,opt,name=provisional,proto3" json:"provisional,omitempty"`
+	CriticalScoreCapApplied bool    `protobuf:"varint,16,opt,name=critical_score_cap_applied,json=criticalScoreCapApplied,proto3" json:"critical_score_cap_applied,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
 }
 
 func (x *SecurityScore) Reset() {
@@ -209,6 +222,7 @@ func (x *SecurityScore) GetAssessmentId() string {
 	return ""
 }
 
+// Deprecated: Marked as deprecated in api/proto/core/v1/risk/risk.proto.
 func (x *SecurityScore) GetScore() uint32 {
 	if x != nil {
 		return x.Score
@@ -223,18 +237,88 @@ func (x *SecurityScore) GetRiskLevel() string {
 	return ""
 }
 
-func (x *SecurityScore) GetConfidence() float64 {
-	if x != nil {
-		return x.Confidence
-	}
-	return 0
-}
-
 func (x *SecurityScore) GetUnknownEvidenceCount() uint64 {
 	if x != nil {
 		return x.UnknownEvidenceCount
 	}
 	return 0
+}
+
+func (x *SecurityScore) GetObservedSecurityScore() float64 {
+	if x != nil {
+		return x.ObservedSecurityScore
+	}
+	return 0
+}
+
+func (x *SecurityScore) GetScoreAvailable() bool {
+	if x != nil {
+		return x.ScoreAvailable
+	}
+	return false
+}
+
+func (x *SecurityScore) GetEvidenceCoverage() float64 {
+	if x != nil {
+		return x.EvidenceCoverage
+	}
+	return 0
+}
+
+func (x *SecurityScore) GetCoverageAvailable() bool {
+	if x != nil {
+		return x.CoverageAvailable
+	}
+	return false
+}
+
+func (x *SecurityScore) GetSecurityLowerBound() float64 {
+	if x != nil {
+		return x.SecurityLowerBound
+	}
+	return 0
+}
+
+func (x *SecurityScore) GetSecurityUpperBound() float64 {
+	if x != nil {
+		return x.SecurityUpperBound
+	}
+	return 0
+}
+
+func (x *SecurityScore) GetRiskScore() float64 {
+	if x != nil {
+		return x.RiskScore
+	}
+	return 0
+}
+
+func (x *SecurityScore) GetRiskLowerBound() float64 {
+	if x != nil {
+		return x.RiskLowerBound
+	}
+	return 0
+}
+
+func (x *SecurityScore) GetRiskUpperBound() float64 {
+	if x != nil {
+		return x.RiskUpperBound
+	}
+	return 0
+}
+
+func (x *SecurityScore) GetProvisional() bool {
+	if x != nil {
+		return x.Provisional
+	}
+	return false
+}
+
+func (x *SecurityScore) GetCriticalScoreCapApplied() bool {
+	if x != nil {
+		return x.CriticalScoreCapApplied
+	}
+	return false
 }
 
 type GetRiskBreakdownRequest struct {
@@ -283,8 +367,8 @@ func (x *GetRiskBreakdownRequest) GetAssessmentId() string {
 
 type RiskCategory struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Score         uint32                 `protobuf:"varint,1,opt,name=score,proto3" json:"score,omitempty"`
-	Maximum       uint32                 `protobuf:"varint,2,opt,name=maximum,proto3" json:"maximum,omitempty"`
+	Score         float64                `protobuf:"fixed64,1,opt,name=score,proto3" json:"score,omitempty"`
+	Maximum       float64                `protobuf:"fixed64,2,opt,name=maximum,proto3" json:"maximum,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -319,14 +403,14 @@ func (*RiskCategory) Descriptor() ([]byte, []int) {
 	return file_api_proto_core_v1_risk_risk_proto_rawDescGZIP(), []int{5}
 }
 
-func (x *RiskCategory) GetScore() uint32 {
+func (x *RiskCategory) GetScore() float64 {
 	if x != nil {
 		return x.Score
 	}
 	return 0
 }
 
-func (x *RiskCategory) GetMaximum() uint32 {
+func (x *RiskCategory) GetMaximum() float64 {
 	if x != nil {
 		return x.Maximum
 	}
@@ -343,7 +427,8 @@ type RiskBreakdown struct {
 	Lifecycle            *RiskCategory          `protobuf:"bytes,6,opt,name=lifecycle,proto3" json:"lifecycle,omitempty"`
 	Metadata             *RiskCategory          `protobuf:"bytes,7,opt,name=metadata,proto3" json:"metadata,omitempty"`
 	UnknownEvidenceCount uint64                 `protobuf:"varint,8,opt,name=unknown_evidence_count,json=unknownEvidenceCount,proto3" json:"unknown_evidence_count,omitempty"`
-	ConfidencePenalty    float64                `protobuf:"fixed64,9,opt,name=confidence_penalty,json=confidencePenalty,proto3" json:"confidence_penalty,omitempty"`
+	EvidenceCoverage     float64                `protobuf:"fixed64,9,opt,name=evidence_coverage,json=evidenceCoverage,proto3" json:"evidence_coverage,omitempty"`
+	SaConfiguration      *RiskCategory          `protobuf:"bytes,10,opt,name=sa_configuration,json=saConfiguration,proto3" json:"sa_configuration,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -434,11 +519,18 @@ func (x *RiskBreakdown) GetUnknownEvidenceCount() uint64 {
 	return 0
 }
 
-func (x *RiskBreakdown) GetConfidencePenalty() float64 {
+func (x *RiskBreakdown) GetEvidenceCoverage() float64 {
 	if x != nil {
-		return x.ConfidencePenalty
+		return x.EvidenceCoverage
 	}
 	return 0
+}
+
+func (x *RiskBreakdown) GetSaConfiguration() *RiskCategory {
+	if x != nil {
+		return x.SaConfiguration
+	}
+	return nil
 }
 
 type GetCriticalOverridesRequest struct {
@@ -600,21 +692,31 @@ const file_api_proto_core_v1_risk_risk_proto_rawDesc = "" +
 	"\x15CalculateRiskResponse\x121\n" +
 	"\x05score\x18\x01 \x01(\v2\x1b.core.risk.v1.SecurityScoreR\x05score\":\n" +
 	"\x13GetRiskScoreRequest\x12#\n" +
-	"\rassessment_id\x18\x01 \x01(\tR\fassessmentId\"\xbf\x01\n" +
+	"\rassessment_id\x18\x01 \x01(\tR\fassessmentId\"\x96\x05\n" +
 	"\rSecurityScore\x12#\n" +
-	"\rassessment_id\x18\x01 \x01(\tR\fassessmentId\x12\x14\n" +
-	"\x05score\x18\x02 \x01(\rR\x05score\x12\x1d\n" +
+	"\rassessment_id\x18\x01 \x01(\tR\fassessmentId\x12\x18\n" +
+	"\x05score\x18\x02 \x01(\rB\x02\x18\x01R\x05score\x12\x1d\n" +
 	"\n" +
-	"risk_level\x18\x03 \x01(\tR\triskLevel\x12\x1e\n" +
+	"risk_level\x18\x03 \x01(\tR\triskLevel\x124\n" +
+	"\x16unknown_evidence_count\x18\x05 \x01(\x04R\x14unknownEvidenceCount\x126\n" +
+	"\x17observed_security_score\x18\x06 \x01(\x01R\x15observedSecurityScore\x12'\n" +
+	"\x0fscore_available\x18\a \x01(\bR\x0escoreAvailable\x12+\n" +
+	"\x11evidence_coverage\x18\b \x01(\x01R\x10evidenceCoverage\x12-\n" +
+	"\x12coverage_available\x18\t \x01(\bR\x11coverageAvailable\x120\n" +
+	"\x14security_lower_bound\x18\n" +
+	" \x01(\x01R\x12securityLowerBound\x120\n" +
+	"\x14security_upper_bound\x18\v \x01(\x01R\x12securityUpperBound\x12\x1d\n" +
 	"\n" +
-	"confidence\x18\x04 \x01(\x01R\n" +
-	"confidence\x124\n" +
-	"\x16unknown_evidence_count\x18\x05 \x01(\x04R\x14unknownEvidenceCount\">\n" +
+	"risk_score\x18\f \x01(\x01R\triskScore\x12(\n" +
+	"\x10risk_lower_bound\x18\r \x01(\x01R\x0eriskLowerBound\x12(\n" +
+	"\x10risk_upper_bound\x18\x0e \x01(\x01R\x0eriskUpperBound\x12 \n" +
+	"\vprovisional\x18\x0f \x01(\bR\vprovisional\x12;\n" +
+	"\x1acritical_score_cap_applied\x18\x10 \x01(\bR\x17criticalScoreCapApplied\">\n" +
 	"\x17GetRiskBreakdownRequest\x12#\n" +
 	"\rassessment_id\x18\x01 \x01(\tR\fassessmentId\">\n" +
 	"\fRiskCategory\x12\x14\n" +
-	"\x05score\x18\x01 \x01(\rR\x05score\x12\x18\n" +
-	"\amaximum\x18\x02 \x01(\rR\amaximum\"\x8b\x04\n" +
+	"\x05score\x18\x01 \x01(\x01R\x05score\x12\x18\n" +
+	"\amaximum\x18\x02 \x01(\x01R\amaximum\"\xd0\x04\n" +
 	"\rRiskBreakdown\x12>\n" +
 	"\fcryptography\x18\x01 \x01(\v2\x1a.core.risk.v1.RiskCategoryR\fcryptography\x12B\n" +
 	"\x0eauthentication\x18\x02 \x01(\v2\x1a.core.risk.v1.RiskCategoryR\x0eauthentication\x12=\n" +
@@ -623,8 +725,10 @@ const file_api_proto_core_v1_risk_risk_proto_rawDesc = "" +
 	"\x06replay\x18\x05 \x01(\v2\x1a.core.risk.v1.RiskCategoryR\x06replay\x128\n" +
 	"\tlifecycle\x18\x06 \x01(\v2\x1a.core.risk.v1.RiskCategoryR\tlifecycle\x126\n" +
 	"\bmetadata\x18\a \x01(\v2\x1a.core.risk.v1.RiskCategoryR\bmetadata\x124\n" +
-	"\x16unknown_evidence_count\x18\b \x01(\x04R\x14unknownEvidenceCount\x12-\n" +
-	"\x12confidence_penalty\x18\t \x01(\x01R\x11confidencePenalty\"B\n" +
+	"\x16unknown_evidence_count\x18\b \x01(\x04R\x14unknownEvidenceCount\x12+\n" +
+	"\x11evidence_coverage\x18\t \x01(\x01R\x10evidenceCoverage\x12E\n" +
+	"\x10sa_configuration\x18\n" +
+	" \x01(\v2\x1a.core.risk.v1.RiskCategoryR\x0fsaConfiguration\"B\n" +
 	"\x1bGetCriticalOverridesRequest\x12#\n" +
 	"\rassessment_id\x18\x01 \x01(\tR\fassessmentId\"`\n" +
 	"\x10CriticalOverride\x12\x17\n" +
@@ -673,20 +777,21 @@ var file_api_proto_core_v1_risk_risk_proto_depIdxs = []int32{
 	5,  // 5: core.risk.v1.RiskBreakdown.replay:type_name -> core.risk.v1.RiskCategory
 	5,  // 6: core.risk.v1.RiskBreakdown.lifecycle:type_name -> core.risk.v1.RiskCategory
 	5,  // 7: core.risk.v1.RiskBreakdown.metadata:type_name -> core.risk.v1.RiskCategory
-	8,  // 8: core.risk.v1.CriticalOverridesResponse.overrides:type_name -> core.risk.v1.CriticalOverride
-	0,  // 9: core.risk.v1.RiskService.Calculate:input_type -> core.risk.v1.CalculateRiskRequest
-	2,  // 10: core.risk.v1.RiskService.GetScore:input_type -> core.risk.v1.GetRiskScoreRequest
-	4,  // 11: core.risk.v1.RiskService.GetBreakdown:input_type -> core.risk.v1.GetRiskBreakdownRequest
-	7,  // 12: core.risk.v1.RiskService.GetCriticalOverrides:input_type -> core.risk.v1.GetCriticalOverridesRequest
-	1,  // 13: core.risk.v1.RiskService.Calculate:output_type -> core.risk.v1.CalculateRiskResponse
-	3,  // 14: core.risk.v1.RiskService.GetScore:output_type -> core.risk.v1.SecurityScore
-	6,  // 15: core.risk.v1.RiskService.GetBreakdown:output_type -> core.risk.v1.RiskBreakdown
-	9,  // 16: core.risk.v1.RiskService.GetCriticalOverrides:output_type -> core.risk.v1.CriticalOverridesResponse
-	13, // [13:17] is the sub-list for method output_type
-	9,  // [9:13] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	5,  // 8: core.risk.v1.RiskBreakdown.sa_configuration:type_name -> core.risk.v1.RiskCategory
+	8,  // 9: core.risk.v1.CriticalOverridesResponse.overrides:type_name -> core.risk.v1.CriticalOverride
+	0,  // 10: core.risk.v1.RiskService.Calculate:input_type -> core.risk.v1.CalculateRiskRequest
+	2,  // 11: core.risk.v1.RiskService.GetScore:input_type -> core.risk.v1.GetRiskScoreRequest
+	4,  // 12: core.risk.v1.RiskService.GetBreakdown:input_type -> core.risk.v1.GetRiskBreakdownRequest
+	7,  // 13: core.risk.v1.RiskService.GetCriticalOverrides:input_type -> core.risk.v1.GetCriticalOverridesRequest
+	1,  // 14: core.risk.v1.RiskService.Calculate:output_type -> core.risk.v1.CalculateRiskResponse
+	3,  // 15: core.risk.v1.RiskService.GetScore:output_type -> core.risk.v1.SecurityScore
+	6,  // 16: core.risk.v1.RiskService.GetBreakdown:output_type -> core.risk.v1.RiskBreakdown
+	9,  // 17: core.risk.v1.RiskService.GetCriticalOverrides:output_type -> core.risk.v1.CriticalOverridesResponse
+	14, // [14:18] is the sub-list for method output_type
+	10, // [10:14] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_api_proto_core_v1_risk_risk_proto_init() }

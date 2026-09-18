@@ -67,14 +67,20 @@ func buildReportDocument(record coreanalysis.Record, source *coreinput.Source, c
 	executive.Paragraphs = append(executive.Paragraphs, fmt.Sprintf("The %s analysis completed with %d fused conclusions from the evidence available to the system.", strings.ToLower(mode), len(conclusions)))
 	if hasAssessment {
 		riskLevel := "not calculated"
-		confidence := "not calculated"
+		coverage := "not calculated"
 		unknown := payloadUint64(payload, "unknown_evidence_count")
 		if riskScore != nil {
 			riskLevel = strings.ToLower(riskScore.GetRiskLevel())
-			confidence = formatPercent(riskScore.GetConfidence())
+			if riskScore.GetCoverageAvailable() {
+				coverage = formatPercent(riskScore.GetEvidenceCoverage() / 100)
+			}
 		}
-		executive.Paragraphs = append(executive.Paragraphs, fmt.Sprintf("The deterministic security assessment scored the evaluated evidence %d out of 100 (grade %s), with %s risk and a %s evidence-coverage indicator. %d evidence items remained unknown.", assessment.Score, assessment.Grade, riskLevel, confidence, unknown))
-		executive.Paragraphs = append(executive.Paragraphs, "The posture score applies only to controls that available evidence could evaluate. It must be read together with the evidence coverage and unknown-fact count; it is not a claim that unavailable gateway settings are secure.")
+		if assessment.ScoreAvailable {
+			executive.Paragraphs = append(executive.Paragraphs, fmt.Sprintf("The worst observed SA security score is %.1f out of 100 (grade %s), with %s risk and %s evidence coverage. %d evidence items remained unknown.", assessment.Score, assessment.Grade, riskLevel, coverage, unknown))
+		} else {
+			executive.Paragraphs = append(executive.Paragraphs, fmt.Sprintf("No security score was assigned because no controls were evaluated. Evidence coverage is %s and %d evidence items remained unknown.", coverage, unknown))
+		}
+		executive.Paragraphs = append(executive.Paragraphs, "The observed score, evidence coverage, and ML confidence are separate concepts. A provisional assessment contains unresolved controls and is not a claim that unavailable gateway settings are secure.")
 		if len(assessment.Findings) == 0 {
 			executive.Paragraphs = append(executive.Paragraphs, "No deterministic rule finding was raised from the evidence that could be evaluated. This is not proof that unavailable or unknown evidence is safe.")
 		} else {
@@ -195,7 +201,11 @@ func buildReportDocument(record coreanalysis.Record, source *coreinput.Source, c
 
 	conclusion := reportSection{Title: "Conclusion"}
 	if hasAssessment {
-		conclusion.Paragraphs = []string{fmt.Sprintf("This analysis completed with a security score of %d/100 and %d supported finding(s). Use the recommendations as the next actions, while treating all unknown or unavailable evidence as unresolved rather than safe.", assessment.Score, len(assessment.Findings))}
+		if assessment.ScoreAvailable {
+			conclusion.Paragraphs = []string{fmt.Sprintf("This analysis completed with a worst observed SA security score of %.1f/100 and %d supported finding(s). Use the recommendations as the next actions, while treating all unknown or unavailable evidence as unresolved rather than safe.", assessment.Score, len(assessment.Findings))}
+		} else {
+			conclusion.Paragraphs = []string{"This analysis completed without a numeric security score because no controls were evaluated. Treat unknown or unavailable evidence as unresolved rather than safe."}
+		}
 	} else {
 		conclusion.Paragraphs = []string{"The analysis completed, but no security assessment was available. Review collection coverage and repeat the analysis before making a security decision."}
 	}
@@ -310,17 +320,25 @@ func evidenceSection(payload map[string]interface{}) reportSection {
 func riskAndFixesSection(payload map[string]interface{}, assessment rules.Assessment, hasAssessment bool) reportSection {
 	section := reportSection{Title: "Risk & Fixes"}
 	if score, ok := payload["risk_score"].(*riskv1.SecurityScore); ok && score != nil {
-		section.Tables = append(section.Tables, reportTable{Headers: []string{"Risk metric", "Value"}, Rows: [][]string{{"Evidence-backed score", fmt.Sprintf("%d/100", score.GetScore())}, {"Risk level", humanValue(score.GetRiskLevel())}, {"Evidence coverage", formatPercent(score.GetConfidence())}, {"Unknown critical facts", formatUint(score.GetUnknownEvidenceCount())}}, Widths: []int{40, 54}})
+		observed := "unavailable"
+		if score.GetScoreAvailable() {
+			observed = fmt.Sprintf("%.1f/100", score.GetObservedSecurityScore())
+		}
+		coverage := "unavailable"
+		if score.GetCoverageAvailable() {
+			coverage = formatPercent(score.GetEvidenceCoverage() / 100)
+		}
+		section.Tables = append(section.Tables, reportTable{Headers: []string{"Risk metric", "Value"}, Rows: [][]string{{"Observed security score", observed}, {"Risk score", valueOrUnavailable(score.GetScoreAvailable(), fmt.Sprintf("%.1f/100", score.GetRiskScore()))}, {"Risk level", humanValue(score.GetRiskLevel())}, {"Evidence coverage", coverage}, {"Security bounds", bounds(score.GetSecurityLowerBound(), score.GetSecurityUpperBound(), score.GetCoverageAvailable())}, {"Assessment state", valueOrUnavailable(score.GetProvisional(), "provisional")}, {"Unknown critical facts", formatUint(score.GetUnknownEvidenceCount())}}, Widths: []int{40, 54}})
 	}
 	if breakdown, ok := payload["risk_breakdown"].(*riskv1.RiskBreakdown); ok && breakdown != nil {
 		categories := []struct {
 			name string
 			item *riskv1.RiskCategory
-		}{{"Cryptography", breakdown.GetCryptography()}, {"Authentication", breakdown.GetAuthentication()}, {"Key exchange", breakdown.GetKeyExchange()}, {"PFS", breakdown.GetPfs()}, {"Replay protection", breakdown.GetReplay()}, {"Lifecycle", breakdown.GetLifecycle()}, {"Metadata", breakdown.GetMetadata()}}
+		}{{"Cryptography", breakdown.GetCryptography()}, {"Authentication", breakdown.GetAuthentication()}, {"Key exchange", breakdown.GetKeyExchange()}, {"PFS", breakdown.GetPfs()}, {"Replay protection", breakdown.GetReplay()}, {"Lifecycle", breakdown.GetLifecycle()}, {"SA configuration", breakdown.GetSaConfiguration()}, {"Metadata", breakdown.GetMetadata()}}
 		rows := make([][]string, 0, len(categories))
 		for _, category := range categories {
 			if category.item != nil {
-				rows = append(rows, []string{category.name, fmt.Sprintf("%d/%d", category.item.GetScore(), category.item.GetMaximum())})
+				rows = append(rows, []string{category.name, fmt.Sprintf("%.1f/%.1f", category.item.GetScore(), category.item.GetMaximum())})
 			}
 		}
 		section.Tables = append(section.Tables, reportTable{Headers: []string{"Risk category", "Supported-evidence score"}, Rows: rows, Widths: []int{48, 46}})
@@ -332,6 +350,19 @@ func riskAndFixesSection(payload map[string]interface{}, assessment rules.Assess
 		section.Paragraphs = append(section.Paragraphs, "Risk scoring and remediation data were unavailable for this analysis.")
 	}
 	return section
+}
+
+func valueOrUnavailable(ok bool, value string) string {
+	if ok {
+		return value
+	}
+	return "unavailable"
+}
+func bounds(lower, upper float64, available bool) string {
+	if !available {
+		return "unavailable"
+	}
+	return fmt.Sprintf("%.1f–%.1f/100", lower, upper)
 }
 
 func systemHealthSection(payload map[string]interface{}) reportSection {

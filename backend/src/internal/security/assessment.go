@@ -58,6 +58,7 @@ type Facts struct {
 	InstallAgeSeconds, RemainingExpirySeconds                                 uint64
 	InstallAgeKnown, RemainingExpiryKnown                                     bool
 	MetadataExposure, MetadataKnown                                           bool
+	MetadataProtectionRequired                                                *bool
 	Evidence                                                                  map[string]EvidenceReference
 }
 
@@ -69,76 +70,117 @@ type Finding struct {
 	ResourceType, ResourceID, PolicyID, PolicyReference string
 }
 type ControlResult struct {
-	ControlID, Area, Title    string
-	Status                    ControlStatus
-	Severity                  Severity
-	Explanation, Remediation  string
-	ResourceType, ResourceID  string
-	EvidenceProperties        []string
-	Evidence                  []EvidenceReference
-	PolicyID, PolicyReference string
-	Weight                    int
+	ControlID, Category, Area, Title string
+	Status                           ControlStatus
+	Severity                         Severity
+	Explanation, Remediation         string
+	ResourceType, ResourceID         string
+	EvidenceProperties               []string
+	Evidence                         []EvidenceReference
+	PolicyID, PolicyReference        string
+	Weight                           float64
 }
 type RuleResult struct {
-	Weight        int
+	Weight        float64
 	Known, Failed bool
 	Status        ControlStatus
 }
 type Assessment struct {
-	PolicyID, PolicyLabel, PolicyReference                  string
-	Score                                                   int
-	Grade                                                   string
-	Findings                                                []Finding
-	Controls                                                []ControlResult
-	ThreatMatrix                                            map[Severity]int
-	EvaluatedRule, UnknownRule, NotApplicableRule, Coverage int
-	RuleResults                                             map[string]RuleResult
+	PolicyID, PolicyLabel, PolicyReference string
+	ResourceType, ResourceID               string
+	// Score is populated only when at least one control was evaluated. Its
+	// validity is carried by ScoreAvailable so zero never means "secure".
+	Score                                                  float64
+	ScoreAvailable                                         bool
+	Grade                                                  string
+	Findings                                               []Finding
+	Controls                                               []ControlResult
+	ThreatMatrix                                           map[Severity]int
+	EvaluatedRule, UnknownRule, NotApplicableRule          int
+	Coverage                                               float64
+	CoverageAvailable, Provisional                         bool
+	SecurityLowerBound, SecurityUpperBound                 float64
+	BoundsAvailable, CriticalFailure, ScoreCapped          bool
+	PassedWeight, FailedWeight, UnknownWeight, TotalWeight float64
+	RuleResults                                            map[string]RuleResult
 }
 type controlDefinition struct {
-	id, area, title, explanation, remediation string
-	severity                                  Severity
-	weight                                    int
-	properties                                []string
-	evaluate                                  func(Facts) ControlStatus
+	id, category, area, title, explanation, remediation string
+	severity                                            Severity
+	properties                                          []string
+	evaluate                                            func(Facts) ControlStatus
 }
 
+const (
+	categoryCryptography    = "Cryptography and suite strength"
+	categoryAuthentication  = "Peer authentication"
+	categoryKeyExchange     = "IKE version and key exchange"
+	categoryPFS             = "Forward secrecy"
+	categoryReplay          = "Replay protection"
+	categoryLifecycle       = "Lifecycle"
+	categorySAConfiguration = "SA configuration"
+	categoryMetadata        = "Metadata exposure"
+)
+
+var categoryWeights = map[string]float64{categoryCryptography: 25, categoryAuthentication: 15, categoryKeyExchange: 15, categoryPFS: 10, categoryReplay: 10, categoryLifecycle: 10, categorySAConfiguration: 10, categoryMetadata: 5}
+
 var baselineControls = []controlDefinition{
-	{"SIH_IKE_VERSION_001", "Configuration compliance", "IKEv2 required", "The project baseline requires IKEv2; IKEv1 remains available for legacy analysis.", "Migrate the peer configuration to IKEv2.", SeverityMedium, 8, []string{"ike.version"}, assessIKEVersion},
-	{"SIH_IKE_SUITE_001", "Cipher-suite strength", "IKE cryptographic suite", "The complete IKE suite does not meet the baseline.", "Use AES-128/256-GCM, or AES-128/256-CBC with HMAC-SHA-256/384/512.", SeverityHigh, 10, []string{"ike.encryption", "ike.encryption_key_length_bits", "ike.integrity", "ike.aead_tag_length_bits"}, assessIKESuite},
-	{"SIH_CHILD_SUITE_001", "Cipher-suite strength", "CHILD SA cryptographic suite", "The complete ESP/AH suite does not meet the baseline.", "Use AES-128/256-GCM, or AES-128/256-CBC with HMAC-SHA-256/384/512.", SeverityHigh, 15, []string{"child.encryption_algorithm", "child.encryption_key_length_bits", "child.integrity_algorithm", "child.aead_tag_length_bits"}, assessChildSuite},
-	{"SIH_AUTH_001", "Configuration compliance", "Authentication configuration", "The authentication method is absent, unsupported, or unsafe. Method presence does not establish PSK entropy or certificate trust.", "Use an explicitly approved PSK, certificate, signature, or EAP configuration and validate credentials separately.", SeverityHigh, 5, []string{"ike.authentication_methods", "config.ike.authentication_class"}, assessAuthentication},
-	{"SIH_IKE_POLICY_001", "Configuration compliance", "Configured IKE proposal allowlist", "One or more configured IKE proposals are weak or outside the explicit project allowlist.", "Restrict configured IKE proposals to approved AES, HMAC, PRF, and DH combinations.", SeverityHigh, 5, []string{"config.ike.proposals"}, func(f Facts) ControlStatus { return assessConfiguredProposals(f.ConfiguredIKEProposals, true) }},
-	{"SIH_CHILD_POLICY_001", "Configuration compliance", "Configured CHILD proposal allowlist", "One or more configured ESP/AH proposals are weak or outside the explicit project allowlist.", "Restrict configured CHILD proposals to AES-GCM or AES-CBC with HMAC-SHA-256/384/512 and approved PFS groups.", SeverityHigh, 5, []string{"config.child.proposals"}, func(f Facts) ControlStatus { return assessConfiguredProposals(f.ConfiguredChildProposals, false) }},
-	{"SIH_DH_001", "Cryptographic strength", "Approved Diffie-Hellman group", "The key-exchange group does not meet the baseline.", "Use group 14-21 or 31. Keep unrecognized identifiers unsupported until policy is updated.", SeverityHigh, 10, []string{"ike.dh_group"}, assessDH},
-	{"SIH_SA_PARAMETERS_001", "SA parameters", "Installed SA parameters", "Mode, protocol, selectors, state, direction, or configured/runtime consistency is incomplete or inconsistent.", "Align configured policy with installed state and verify both selector directions.", SeverityMedium, 7, []string{"child.mode", "child.protocol", "child.state", "xfrm.direction", "child.local_traffic_selectors", "child.remote_traffic_selectors", "sa.configuration_runtime_consistent"}, assessSAParameters},
-	{"SIH_IKE_LIFETIME_001", "Key lifetime", "IKE SA lifetime", "The configured IKE lifetime exceeds the 24-hour project limit.", "Configure IKE rekey or expiry at no more than 24 hours.", SeverityMedium, 5, []string{"ike.lifetime_seconds"}, assessIKELifetime},
-	{"SIH_CHILD_LIFETIME_001", "Key lifetime", "CHILD SA lifetime", "The configured CHILD lifetime exceeds the one-hour project limit.", "Configure CHILD rekey or expiry at no more than one hour.", SeverityMedium, 10, []string{"child.lifetime_seconds", "child.install_age_seconds", "child.remaining_lifetime_seconds"}, assessChildLifetime},
-	{"SIH_REPLAY_001", "Replay protection", "Inbound anti-replay protection", "Verified inbound runtime state does not enforce an anti-replay window.", "Enable inbound anti-replay protection and monitor sequence limits; enable ESN where volume requires it.", SeverityHigh, 8, []string{"replay.enabled", "replay.window", "replay.extended_sequence_numbers", "replay.sequence", "xfrm.direction"}, assessReplay},
-	{"SIH_PFS_CONFIG_001", "Forward secrecy", "Perfect Forward Secrecy configuration", "The configured CHILD policy does not request a fresh approved key exchange on rekey.", "Configure CHILD PFS with an approved group.", SeverityMedium, 4, []string{"child.pfs", "child.pfs_group", "config.child.pfs_enabled"}, assessPFS},
-	{"SIH_PFS_EXCHANGE_001", "Forward secrecy", "Observed fresh CHILD key exchange", "A creation or rekey event was observed without evidence of a fresh key exchange.", "Verify the negotiated CHILD SA includes the configured PFS exchange.", SeverityMedium, 3, []string{"child.fresh_exchange_observed", "child.exchange_dh_group"}, assessFreshExchange},
-	{"SIH_METADATA_001", "Metadata exposure", "Observable IPsec metadata", "Outer endpoints, timing, packet sizes, volume, direction and possibly identities remain observable.", "Document residual exposure and apply traffic-flow confidentiality or identity protection where required.", SeverityLow, 5, []string{"metadata.exposure"}, assessMetadata},
+	{"SIH_IKE_VERSION_001", categoryKeyExchange, "Configuration compliance", "IKEv2 required", "The project baseline requires IKEv2; IKEv1 remains available for legacy analysis.", "Migrate the peer configuration to IKEv2.", SeverityMedium, []string{"ike.version"}, assessIKEVersion},
+	{"SIH_IKE_SUITE_001", categoryCryptography, "Cipher-suite strength", "IKE cryptographic suite", "The complete IKE suite does not meet the baseline.", "Use AES-128/256-GCM, or AES-128/256-CBC with HMAC-SHA-256/384/512.", SeverityHigh, []string{"ike.encryption", "ike.encryption_key_length_bits", "ike.integrity", "ike.aead_tag_length_bits"}, assessIKESuite},
+	{"SIH_CHILD_SUITE_001", categoryCryptography, "Cipher-suite strength", "CHILD SA cryptographic suite", "The complete ESP/AH suite does not meet the baseline.", "Use AES-128/256-GCM, or AES-128/256-CBC with HMAC-SHA-256/384/512.", SeverityHigh, []string{"child.encryption_algorithm", "child.encryption_key_length_bits", "child.integrity_algorithm", "child.aead_tag_length_bits"}, assessChildSuite},
+	{"SIH_AUTH_001", categoryAuthentication, "Configuration compliance", "Authentication configuration", "The authentication method is absent, unsupported, or unsafe. Method presence does not establish PSK entropy or certificate trust.", "Use an explicitly approved PSK, certificate, signature, or EAP configuration and validate credentials separately.", SeverityHigh, []string{"ike.authentication_methods", "config.ike.authentication_class"}, assessAuthentication},
+	{"SIH_IKE_POLICY_001", categoryCryptography, "Configuration compliance", "Configured IKE proposal allowlist", "One or more configured IKE proposals are weak or outside the explicit project allowlist.", "Restrict configured IKE proposals to approved AES, HMAC, PRF, and DH combinations.", SeverityHigh, []string{"config.ike.proposals"}, func(f Facts) ControlStatus { return assessConfiguredProposals(f.ConfiguredIKEProposals, true) }},
+	{"SIH_CHILD_POLICY_001", categoryCryptography, "Configuration compliance", "Configured CHILD proposal allowlist", "One or more configured ESP/AH proposals are weak or outside the explicit project allowlist.", "Restrict configured CHILD proposals to AES-GCM or AES-CBC with HMAC-SHA-256/384/512 and approved PFS groups.", SeverityHigh, []string{"config.child.proposals"}, func(f Facts) ControlStatus { return assessConfiguredProposals(f.ConfiguredChildProposals, false) }},
+	{"SIH_DH_001", categoryKeyExchange, "Cryptographic strength", "Approved Diffie-Hellman group", "The key-exchange group does not meet the baseline.", "Use group 14-21 or 31. Keep unrecognized identifiers unsupported until policy is updated.", SeverityHigh, []string{"ike.dh_group"}, assessDH},
+	{"SIH_SA_PARAMETERS_001", categorySAConfiguration, "SA parameters", "Installed SA parameters", "Mode, protocol, selectors, state, direction, or configured/runtime consistency is incomplete or inconsistent.", "Align configured policy with installed state and verify both selector directions.", SeverityMedium, []string{"child.mode", "child.protocol", "child.state", "xfrm.direction", "child.local_traffic_selectors", "child.remote_traffic_selectors", "sa.configuration_runtime_consistent"}, assessSAParameters},
+	{"SIH_IKE_LIFETIME_001", categoryLifecycle, "Key lifetime", "IKE SA lifetime", "The configured IKE lifetime exceeds the 24-hour project limit.", "Configure IKE rekey or expiry at no more than 24 hours.", SeverityMedium, []string{"ike.lifetime_seconds"}, assessIKELifetime},
+	{"SIH_CHILD_LIFETIME_001", categoryLifecycle, "Key lifetime", "CHILD SA lifetime", "The configured CHILD lifetime exceeds the one-hour project limit.", "Configure CHILD rekey or expiry at no more than one hour.", SeverityMedium, []string{"child.lifetime_seconds", "child.install_age_seconds", "child.remaining_lifetime_seconds"}, assessChildLifetime},
+	{"SIH_REPLAY_001", categoryReplay, "Replay protection", "Inbound anti-replay protection", "Verified inbound runtime state does not enforce an anti-replay window.", "Enable inbound anti-replay protection and monitor sequence limits; enable ESN where volume requires it.", SeverityHigh, []string{"replay.enabled", "replay.window", "replay.extended_sequence_numbers", "replay.sequence", "xfrm.direction"}, assessReplay},
+	{"SIH_PFS_CONFIG_001", categoryPFS, "Forward secrecy", "Perfect Forward Secrecy configuration", "The configured CHILD policy does not request a fresh approved key exchange on rekey.", "Configure CHILD PFS with an approved group.", SeverityMedium, []string{"child.pfs", "child.pfs_group", "config.child.pfs_enabled"}, assessPFS},
+	{"SIH_PFS_EXCHANGE_001", categoryPFS, "Forward secrecy", "Observed fresh CHILD key exchange", "A creation or rekey event was observed without evidence of a fresh key exchange.", "Verify the negotiated CHILD SA includes the configured PFS exchange.", SeverityMedium, []string{"child.fresh_exchange_observed", "child.exchange_dh_group"}, assessFreshExchange},
+	{"SIH_METADATA_001", categoryMetadata, "Metadata exposure", "Observable IPsec metadata", "Outer endpoints, timing, packet sizes, volume, direction and possibly identities remain observable.", "Document residual exposure and apply traffic-flow confidentiality or identity protection where an explicit deployment requirement calls for it.", SeverityLow, []string{"metadata.exposure", "policy.metadata_protection_required"}, assessMetadata},
 }
 
 func Assess(f Facts) Assessment {
 	r := Assessment{PolicyID: SIHBaselinePolicyID, PolicyLabel: SIHBaselinePolicyLabel, PolicyReference: SIHBaselineReference, ThreatMatrix: map[Severity]int{}, RuleResults: map[string]RuleResult{}}
+	applicable := map[string][]int{}
 	for _, d := range baselineControls {
 		status := d.evaluate(f)
 		evidence := evidenceFor(f, d.properties)
-		c := ControlResult{ControlID: d.id, Area: d.area, Title: d.title, Status: status, Severity: d.severity, Explanation: d.explanation, Remediation: d.remediation, ResourceType: f.ResourceType, EvidenceProperties: append([]string(nil), d.properties...), Evidence: evidence, PolicyID: SIHBaselinePolicyID, PolicyReference: SIHBaselineReference, Weight: d.weight}
+		severity := d.severity
+		critical := status == ControlFail && isCriticalFailure(d.id, f)
+		if critical {
+			severity = SeverityCritical
+			r.CriticalFailure = true
+		}
+		c := ControlResult{ControlID: d.id, Category: d.category, Area: d.area, Title: d.title, Status: status, Severity: severity, Explanation: d.explanation, Remediation: d.remediation, ResourceType: f.ResourceType, EvidenceProperties: append([]string(nil), d.properties...), Evidence: evidence, PolicyID: SIHBaselinePolicyID, PolicyReference: SIHBaselineReference}
 		r.Controls = append(r.Controls, c)
-		r.RuleResults[d.id] = RuleResult{Weight: d.weight, Status: status, Known: status == ControlPass || status == ControlFail, Failed: status == ControlFail}
-		switch status {
+		if status != ControlNotApplicable {
+			applicable[d.category] = append(applicable[d.category], len(r.Controls)-1)
+		}
+	}
+	for category, indices := range applicable {
+		weight := categoryWeights[category] / float64(len(indices))
+		for _, index := range indices {
+			r.Controls[index].Weight = weight
+		}
+	}
+	for _, c := range r.Controls {
+		r.RuleResults[c.ControlID] = RuleResult{Weight: c.Weight, Status: c.Status, Known: c.Status == ControlPass || c.Status == ControlFail, Failed: c.Status == ControlFail}
+		switch c.Status {
 		case ControlPass:
 			r.EvaluatedRule++
-			r.Score += d.weight
+			r.PassedWeight += c.Weight
 		case ControlFail:
 			r.EvaluatedRule++
-			r.ThreatMatrix[d.severity]++
-			r.Findings = append(r.Findings, Finding{RuleID: d.id, Title: d.title, Description: d.explanation, Recommendation: d.remediation, Severity: d.severity, EvidenceProperties: append([]string(nil), d.properties...), Evidence: evidence, ResourceType: f.ResourceType, PolicyID: SIHBaselinePolicyID, PolicyReference: SIHBaselineReference})
+			r.FailedWeight += c.Weight
+			r.ThreatMatrix[c.Severity]++
+			r.Findings = append(r.Findings, Finding{RuleID: c.ControlID, Title: c.Title, Description: c.Explanation, Recommendation: c.Remediation, Severity: c.Severity, EvidenceProperties: c.EvidenceProperties, Evidence: c.Evidence, ResourceType: f.ResourceType, PolicyID: SIHBaselinePolicyID, PolicyReference: SIHBaselineReference})
 		case ControlNotApplicable:
 			r.NotApplicableRule++
 		default:
 			r.UnknownRule++
+			r.UnknownWeight += c.Weight
 		}
 	}
 	sort.Slice(r.Findings, func(i, j int) bool {
@@ -147,12 +189,49 @@ func Assess(f Facts) Assessment {
 		}
 		return r.Findings[i].RuleID < r.Findings[j].RuleID
 	})
-	if total := r.EvaluatedRule + r.UnknownRule; total > 0 {
-		r.Coverage = r.EvaluatedRule * 100 / total
+	r.TotalWeight = r.PassedWeight + r.FailedWeight + r.UnknownWeight
+	if r.TotalWeight > 0 {
+		r.CoverageAvailable = true
+		r.Coverage = 100 * (r.PassedWeight + r.FailedWeight) / r.TotalWeight
+		r.SecurityLowerBound = 100 * r.PassedWeight / r.TotalWeight
+		r.SecurityUpperBound = 100 * (r.PassedWeight + r.UnknownWeight) / r.TotalWeight
+		r.BoundsAvailable = true
 	}
-	r.Grade = grade(r.Score)
+	if evaluated := r.PassedWeight + r.FailedWeight; evaluated > 0 {
+		r.ScoreAvailable = true
+		r.Score = 100 * r.PassedWeight / evaluated
+		if r.CriticalFailure && r.Score > 40 {
+			r.Score = 40
+			r.ScoreCapped = true
+		}
+		r.Grade = grade(r.Score)
+	} else {
+		r.Grade = "UNAVAILABLE"
+	}
+	r.Provisional = r.UnknownWeight > 0
 	return r
 }
+
+func isCriticalFailure(controlID string, f Facts) bool {
+	if controlID == "SIH_AUTH_001" {
+		return oneOf(algorithmToken(f.IKEAuthentication), "NONE", "NULL")
+	}
+	if controlID == "SIH_IKE_SUITE_001" {
+		return isNullCipher(f.IKEEncryption)
+	}
+	if controlID == "SIH_CHILD_SUITE_001" {
+		return isNullCipher(f.EncryptionAlgorithm)
+	}
+	if controlID == "SIH_IKE_POLICY_001" {
+		return strings.Contains(algorithmToken(f.ConfiguredIKEProposals), "ENCRNULL") || strings.Contains(algorithmToken(f.ConfiguredIKEProposals), "ENCR0")
+	}
+	if controlID == "SIH_CHILD_POLICY_001" {
+		return strings.Contains(algorithmToken(f.ConfiguredChildProposals), "ENCRNULL") || strings.Contains(algorithmToken(f.ConfiguredChildProposals), "ENCR0")
+	}
+	return false
+}
+
+func isNullCipher(value string) bool { return oneOf(algorithmToken(value), "NULL", "ENCR0") }
 
 func evidenceFor(f Facts, properties []string) []EvidenceReference {
 	var out []EvidenceReference
@@ -477,7 +556,9 @@ func assessMetadata(f Facts) ControlStatus {
 		}
 		return ControlUnknown
 	}
-	if f.MetadataExposure {
+	// ESP's normal outer metadata exposure is recorded as evidence but is not a
+	// failed baseline control unless a deployment supplies a stricter policy.
+	if f.MetadataProtectionRequired != nil && *f.MetadataProtectionRequired && f.MetadataExposure {
 		return ControlFail
 	}
 	return ControlPass
@@ -513,7 +594,7 @@ func severityWeight(s Severity) int {
 		return 3
 	}
 }
-func grade(score int) string {
+func grade(score float64) string {
 	switch {
 	case score >= 90:
 		return "A"

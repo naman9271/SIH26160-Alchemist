@@ -32,7 +32,7 @@ func TestReportDocumentIncludesOnlySupportedOptionalSections(t *testing.T) {
 		"vpn_sessions":           []*protocolv1.VpnSession{{SessionId: "session-1", Mode: "PASSIVE_PCAP", State: "READY"}},
 		"protocol_evidence":      []*protocolv1.ProtocolEvidence{{PropertyKey: "ike.version", Value: "IKEv2", Confidence: .95}},
 		"fusion_status":          &fusionv1.FusionStatus{State: "COMPLETE", EvidenceCount: 3, ConclusionCount: 1},
-		"risk_score":             &riskv1.SecurityScore{Score: 92, RiskLevel: "LOW", Confidence: .9, UnknownEvidenceCount: 2},
+		"risk_score":             &riskv1.SecurityScore{Score: 92, ObservedSecurityScore: 92, ScoreAvailable: true, RiskScore: 8, RiskLevel: "LOW", EvidenceCoverage: 90, CoverageAvailable: true, UnknownEvidenceCount: 2},
 		"risk_breakdown":         &riskv1.RiskBreakdown{Cryptography: &riskv1.RiskCategory{Score: 25, Maximum: 25}},
 		"system_capabilities":    coresystem.Capabilities{PassivePCAP: true, SecurityAssessment: true, ExecutiveReport: true},
 		"ml_worker":              &mlv1.MLWorkerStatus{Available: true, ModelLoaded: true, ModelVersion: "test"},

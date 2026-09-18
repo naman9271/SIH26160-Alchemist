@@ -37,6 +37,10 @@ const (
 	PropertySAConfigurationRuntimeConsistent = "sa.configuration_runtime_consistent"
 	PropertyConfiguredChildProposals         = "config.child.proposals"
 	PropertyMetadataExposure                 = "metadata.exposure"
+	// PropertyMetadataProtectionRequired is an explicit deployment policy. It
+	// is deliberately separate from ordinary ESP metadata observation: seeing
+	// outer packet metadata alone is not a baseline failure.
+	PropertyMetadataProtectionRequired = "policy.metadata_protection_required"
 )
 
 // SecurityConfigurationProperties are the six facts used to calculate

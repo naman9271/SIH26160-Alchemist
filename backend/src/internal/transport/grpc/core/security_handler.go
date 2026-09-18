@@ -134,13 +134,20 @@ func (h *SecurityHandler) Reevaluate(ctx context.Context, r *securityv1.Reevalua
 	return &securityv1.ReevaluateSecurityResponse{AssessmentId: v.ID, State: v.State}, shared.ToGRPC(e)
 }
 func assessment(v coresecurity.Record) *securityv1.SecurityAssessment {
-	out := &securityv1.SecurityAssessment{AssessmentId: v.ID, AnalysisId: v.AnalysisID, PolicyId: v.PolicyID, PolicyLabel: v.Result.PolicyLabel, PolicyReference: v.Result.PolicyReference, State: v.State, Score: uint32(v.Result.Score), Grade: v.Result.Grade, EvaluatedAt: timestamppb.New(v.UpdatedAt), FailureReason: v.Failure}
+	out := &securityv1.SecurityAssessment{AssessmentId: v.ID, AnalysisId: v.AnalysisID, PolicyId: v.PolicyID, PolicyLabel: v.Result.PolicyLabel, PolicyReference: v.Result.PolicyReference, State: v.State, Grade: v.Result.Grade, EvaluatedAt: timestamppb.New(v.UpdatedAt), FailureReason: v.Failure, ObservedSecurityScore: v.Result.Score, ScoreAvailable: v.Result.ScoreAvailable, EvidenceCoverage: v.Result.Coverage, CoverageAvailable: v.Result.CoverageAvailable, SecurityLowerBound: v.Result.SecurityLowerBound, SecurityUpperBound: v.Result.SecurityUpperBound, Provisional: v.Result.Provisional, CriticalScoreCapApplied: v.Result.ScoreCapped}
+	if v.Result.ScoreAvailable {
+		out.Score = uint32(v.Result.Score + .5)
+	}
 	for i, f := range v.Result.Findings {
 		out.Findings = append(out.Findings, finding(v.ID, i, f))
 	}
 	for _, control := range v.Result.Controls {
 		out.Controls = append(out.Controls, controlResult(control))
 	}
+	for _, item := range v.PerSAAssessments {
+		out.PerSaScores = append(out.PerSaScores, &securityv1.SASecurityScore{ResourceType: item.ResourceType, ResourceId: item.ResourceID, ObservedSecurityScore: item.Score, ScoreAvailable: item.ScoreAvailable, EvidenceCoverage: item.Coverage, CoverageAvailable: item.CoverageAvailable, SecurityLowerBound: item.SecurityLowerBound, SecurityUpperBound: item.SecurityUpperBound, Provisional: item.Provisional, CriticalScoreCapApplied: item.ScoreCapped, Grade: item.Grade})
+	}
+	out.IncompleteSaResourceIds = append(out.IncompleteSaResourceIds, v.IncompleteSAResourceIDs...)
 	return out
 }
 func finding(id string, index int, f rules.Finding) *securityv1.SecurityFinding {
@@ -161,7 +168,7 @@ func controlResult(value rules.ControlResult) *securityv1.SecurityControlResult 
 	case rules.ControlNotApplicable:
 		status = securityv1.ControlStatus_NOT_APPLICABLE
 	}
-	out := &securityv1.SecurityControlResult{ControlId: value.ControlID, Area: value.Area, Title: value.Title, Status: status, Severity: string(value.Severity), Explanation: value.Explanation, Remediation: value.Remediation, AffectedResourceType: value.ResourceType, AffectedResourceId: value.ResourceID, PolicyId: value.PolicyID, PolicyReference: value.PolicyReference, Weight: uint32(value.Weight)}
+	out := &securityv1.SecurityControlResult{ControlId: value.ControlID, Category: value.Category, Area: value.Area, Title: value.Title, Status: status, Severity: string(value.Severity), Explanation: value.Explanation, Remediation: value.Remediation, AffectedResourceType: value.ResourceType, AffectedResourceId: value.ResourceID, PolicyId: value.PolicyID, PolicyReference: value.PolicyReference, Weight: value.Weight}
 	for _, evidence := range value.Evidence {
 		out.Evidence = append(out.Evidence, supportingEvidence(evidence))
 	}

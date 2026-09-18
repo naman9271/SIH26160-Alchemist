@@ -13,10 +13,27 @@ service RiskService {
 message CalculateRiskRequest { string assessment_id = 1; string policy_id = 2; }
 message CalculateRiskResponse { SecurityScore score = 1; }
 message GetRiskScoreRequest { string assessment_id = 1; }
-message SecurityScore { string assessment_id = 1; uint32 score = 2; string risk_level = 3; double confidence = 4; uint64 unknown_evidence_count = 5; }
+message SecurityScore {
+  string assessment_id = 1;
+  // Deprecated: score availability is explicit in observed_security_score.
+  uint32 score = 2 [deprecated = true];
+  string risk_level = 3;
+  uint64 unknown_evidence_count = 5;
+  double observed_security_score = 6;
+  bool score_available = 7;
+  double evidence_coverage = 8;
+  bool coverage_available = 9;
+  double security_lower_bound = 10;
+  double security_upper_bound = 11;
+  double risk_score = 12;
+  double risk_lower_bound = 13;
+  double risk_upper_bound = 14;
+  bool provisional = 15;
+  bool critical_score_cap_applied = 16;
+}
 message GetRiskBreakdownRequest { string assessment_id = 1; }
-message RiskCategory { uint32 score = 1; uint32 maximum = 2; }
-message RiskBreakdown { RiskCategory cryptography = 1; RiskCategory authentication = 2; RiskCategory key_exchange = 3; RiskCategory pfs = 4; RiskCategory replay = 5; RiskCategory lifecycle = 6; RiskCategory metadata = 7; uint64 unknown_evidence_count = 8; double confidence_penalty = 9; }
+message RiskCategory { double score = 1; double maximum = 2; }
+message RiskBreakdown { RiskCategory cryptography = 1; RiskCategory authentication = 2; RiskCategory key_exchange = 3; RiskCategory pfs = 4; RiskCategory replay = 5; RiskCategory lifecycle = 6; RiskCategory metadata = 7; uint64 unknown_evidence_count = 8; double evidence_coverage = 9; RiskCategory sa_configuration = 10; }
 message GetCriticalOverridesRequest { string assessment_id = 1; }
 message CriticalOverride { string rule_id = 1; uint32 score_cap = 2; string reason = 3; }
 message CriticalOverridesResponse { repeated CriticalOverride overrides = 1; }
