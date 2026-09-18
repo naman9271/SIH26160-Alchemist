@@ -63,4 +63,14 @@ func TestStoreResultUsesCoreAPITrafficClassNames(t *testing.T) {
 	if _, ok := stored.GetClassProbabilities()["TRAFFIC_CLASS_VIDEO"]; ok {
 		t.Fatalf("class probabilities leaked worker enum prefix: %+v", stored.GetClassProbabilities())
 	}
+	if stored.GetConfidenceCalibrationStatus() != "CALIBRATED" || stored.GetAbstentionReason() != "NOT_ABSTAINED" {
+		t.Fatalf("prediction did not expose calibration and abstention state: %+v", stored)
+	}
+}
+
+func TestUnknownPredictionExplainsItsAbstention(t *testing.T) {
+	prediction, _ := predictionResult("inference-2", &worker.PredictionResult{FlowId: "flow-2", PredictedClass: worker.TrafficClass_TRAFFIC_CLASS_UNKNOWN, IsUnknown: true}, false)
+	if prediction == nil || prediction.GetAbstentionReason() == "" || prediction.GetAbstentionReason() == "NOT_ABSTAINED" || prediction.GetConfidenceCalibrationStatus() != "CALIBRATED" {
+		t.Fatalf("UNKNOWN did not retain its calibrated abstention explanation: %+v", prediction)
+	}
 }

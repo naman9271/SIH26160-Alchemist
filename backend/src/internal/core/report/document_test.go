@@ -8,6 +8,7 @@ import (
 	fusionv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/fusion"
 	mlv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/ml"
 	protocolv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/protocolread"
+	reportv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/report"
 	riskv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/risk"
 	workspacev1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/workspace"
 	flowv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/sensor/v1/flow"
@@ -69,6 +70,16 @@ func TestReportDocumentKeepsDashboardSectionsWhenDataIsUnavailable(t *testing.T)
 	for _, expected := range []string{"Progress Flow", "VPN Sessions", "Flows", "Traffic Classification", "Evidence", "Security Findings", "Risk & Fixes", "System Health"} {
 		if !titles[expected] {
 			t.Fatalf("dashboard section %q should explain unavailable data", expected)
+		}
+	}
+}
+
+func TestExecutiveReportExcludesTechnicalEvidenceSections(t *testing.T) {
+	now := time.Unix(100, 0).UTC()
+	document := buildReportDocumentForType(coreanalysis.Record{ID: "analysis", CreatedAt: now, UpdatedAt: now}, nil, nil, map[string]interface{}{}, reportv1.ReportType_EXECUTIVE, now)
+	for _, section := range document.Sections {
+		if section.Title == "Appendix: Evidence Conclusions" || section.Title == "Actionable Threat Entries" || section.Title == "Evidence" {
+			t.Fatalf("executive report retained technical section %q", section.Title)
 		}
 	}
 }

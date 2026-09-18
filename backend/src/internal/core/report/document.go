@@ -12,6 +12,7 @@ import (
 	fusionv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/fusion"
 	mlv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/ml"
 	protocolv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/protocolread"
+	reportv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/report"
 	riskv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/risk"
 	coreanalysis "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/analysis"
 	coreinput "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/input"
@@ -177,6 +178,9 @@ func buildReportDocument(record coreanalysis.Record, source *coreinput.Source, c
 	document.Sections = append(document.Sections, evidenceSection(payload))
 
 	if hasAssessment {
+		if len(assessment.ThreatEntries) > 0 {
+			document.Sections = append(document.Sections, threatEntriesSection(assessment.ThreatEntries))
+		}
 		findings := reportSection{Title: "Security Findings"}
 		if len(assessment.Findings) == 0 {
 			findings.Paragraphs = []string{"No supported deterministic security finding was produced from the available evidence. Unknown or unavailable evidence still requires review."}
@@ -217,6 +221,26 @@ func buildReportDocument(record coreanalysis.Record, source *coreinput.Source, c
 	return document
 }
 
+// buildReportDocumentForType keeps the technical report complete and reduces
+// executive output to decision-relevant sections. Both views use the same
+// server-side values; neither recalculates a security score in presentation.
+func buildReportDocumentForType(record coreanalysis.Record, source *coreinput.Source, conclusions []*fusionv1.FusedConclusion, payload map[string]interface{}, reportType reportv1.ReportType, generatedAt time.Time) reportDocument {
+	document := buildReportDocument(record, source, conclusions, payload, generatedAt)
+	if reportType != reportv1.ReportType_EXECUTIVE {
+		return document
+	}
+	document.Subtitle = "IPSEC VPN Executive Security Assessment"
+	allowed := map[string]bool{"Executive Summary": true, "Analysis Overview": true, "Traffic Analysis": true, "Security Findings": true, "Recommendations": true, "Risk & Fixes": true, "System Health": true, "Conclusion": true}
+	sections := make([]reportSection, 0, len(document.Sections))
+	for _, section := range document.Sections {
+		if allowed[section.Title] {
+			sections = append(sections, section)
+		}
+	}
+	document.Sections = sections
+	return document
+}
+
 func findingResource(finding rules.Finding) string {
 	if strings.TrimSpace(finding.ResourceID) == "" {
 		return ""
@@ -226,6 +250,19 @@ func findingResource(finding rules.Finding) string {
 		resourceType = "SA"
 	}
 	return fmt.Sprintf(" [%s %s]", resourceType, finding.ResourceID)
+}
+
+func threatEntriesSection(entries []rules.ThreatEntry) reportSection {
+	rows := make([][]string, 0, len(entries))
+	for _, entry := range entries {
+		resource := strings.Trim(strings.TrimSpace(entry.ResourceType+"/"+entry.ResourceID), "/")
+		evidence := make([]string, 0, len(entry.Evidence))
+		for _, reference := range entry.Evidence {
+			evidence = append(evidence, reference.PropertyKey+"="+reference.Value)
+		}
+		rows = append(rows, []string{entry.Threat, fallback(resource, "analysis"), fallback(strings.Join(evidence, "; "), "No supporting value recorded"), entry.Status, string(entry.Severity), entry.Impact, entry.Recommendation})
+	}
+	return reportSection{Title: "Actionable Threat Entries", Paragraphs: []string{"Each row records a supported configuration or metadata exposure. It is not evidence that exploitation occurred."}, Tables: []reportTable{{Headers: []string{"Threat", "Affected SA", "Evidence", "Status", "Severity", "Impact", "Recommendation"}, Rows: rows, Widths: []int{15, 13, 16, 9, 9, 19, 19}}}}
 }
 
 func progressSection(progress *analysisv1.AnalysisProgress) reportSection {

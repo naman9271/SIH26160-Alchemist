@@ -226,6 +226,10 @@ func (s *Service) render(ctx context.Context, r *reportv1.GenerateReportRequest,
 	if s.security != nil {
 		if assessment, err := s.security.LatestForAnalysis(ctx, r.GetAnalysisId()); err == nil {
 			payload["security_assessment"] = assessment.Result
+			payload["security_assessment_revision"] = assessment.Revision
+			payload["security_assessment_updated_at"] = assessment.UpdatedAt
+			payload["per_sa_assessments"] = assessment.PerSAAssessments
+			payload["incomplete_sa_resource_ids"] = assessment.IncompleteSAResourceIDs
 			payload["unknown_evidence_count"] = assessment.UnknownEvidence
 			payload["metadata_exposure"] = assessment.MetadataExposure
 			if s.risk != nil {
@@ -316,7 +320,7 @@ func (s *Service) render(ctx context.Context, r *reportv1.GenerateReportRequest,
 	if sourceErr == nil {
 		source = &inputSource
 	}
-	document := buildReportDocument(analysisRecord, source, conclusions, payload, generatedAt)
+	document := buildReportDocumentForType(analysisRecord, source, conclusions, payload, r.GetType(), generatedAt)
 	return buildReportPDF(document), "application/pdf", "alchemist-ipsec-analysis-report.pdf"
 }
 

@@ -84,6 +84,9 @@ func (h *SecurityHandler) GetThreatMatrix(ctx context.Context, r *securityv1.Get
 		out.SeverityCounts[string(f.Severity)]++
 		out.Findings = append(out.Findings, finding(record.ID, i, f))
 	}
+	for _, entry := range record.Result.ThreatEntries {
+		out.Entries = append(out.Entries, threatEntry(entry))
+	}
 	return out, nil
 }
 func (h *SecurityHandler) ListRecommendations(ctx context.Context, r *securityv1.ListRecommendationsRequest) (*securityv1.ListRecommendationsResponse, error) {
@@ -134,7 +137,7 @@ func (h *SecurityHandler) Reevaluate(ctx context.Context, r *securityv1.Reevalua
 	return &securityv1.ReevaluateSecurityResponse{AssessmentId: v.ID, State: v.State}, shared.ToGRPC(e)
 }
 func assessment(v coresecurity.Record) *securityv1.SecurityAssessment {
-	out := &securityv1.SecurityAssessment{AssessmentId: v.ID, AnalysisId: v.AnalysisID, PolicyId: v.PolicyID, PolicyLabel: v.Result.PolicyLabel, PolicyReference: v.Result.PolicyReference, State: v.State, Grade: v.Result.Grade, EvaluatedAt: timestamppb.New(v.UpdatedAt), FailureReason: v.Failure, ObservedSecurityScore: v.Result.Score, ScoreAvailable: v.Result.ScoreAvailable, EvidenceCoverage: v.Result.Coverage, CoverageAvailable: v.Result.CoverageAvailable, SecurityLowerBound: v.Result.SecurityLowerBound, SecurityUpperBound: v.Result.SecurityUpperBound, Provisional: v.Result.Provisional, CriticalScoreCapApplied: v.Result.ScoreCapped}
+	out := &securityv1.SecurityAssessment{AssessmentId: v.ID, AnalysisId: v.AnalysisID, PolicyId: v.PolicyID, PolicyLabel: v.Result.PolicyLabel, PolicyReference: v.Result.PolicyReference, State: v.State, Grade: v.Result.Grade, EvaluatedAt: timestamppb.New(v.UpdatedAt), ResultUpdatedAt: timestamppb.New(v.UpdatedAt), AssessmentRevision: v.Revision, FailureReason: v.Failure, ObservedSecurityScore: v.Result.Score, ScoreAvailable: v.Result.ScoreAvailable, EvidenceCoverage: v.Result.Coverage, CoverageAvailable: v.Result.CoverageAvailable, SecurityLowerBound: v.Result.SecurityLowerBound, SecurityUpperBound: v.Result.SecurityUpperBound, Provisional: v.Result.Provisional, CriticalScoreCapApplied: v.Result.ScoreCapped}
 	if v.Result.ScoreAvailable {
 		out.Score = uint32(v.Result.Score + .5)
 	}
@@ -144,10 +147,21 @@ func assessment(v coresecurity.Record) *securityv1.SecurityAssessment {
 	for _, control := range v.Result.Controls {
 		out.Controls = append(out.Controls, controlResult(control))
 	}
+	for _, entry := range v.Result.ThreatEntries {
+		out.ThreatEntries = append(out.ThreatEntries, threatEntry(entry))
+	}
 	for _, item := range v.PerSAAssessments {
 		out.PerSaScores = append(out.PerSaScores, &securityv1.SASecurityScore{ResourceType: item.ResourceType, ResourceId: item.ResourceID, ObservedSecurityScore: item.Score, ScoreAvailable: item.ScoreAvailable, EvidenceCoverage: item.Coverage, CoverageAvailable: item.CoverageAvailable, SecurityLowerBound: item.SecurityLowerBound, SecurityUpperBound: item.SecurityUpperBound, Provisional: item.Provisional, CriticalScoreCapApplied: item.ScoreCapped, Grade: item.Grade})
 	}
 	out.IncompleteSaResourceIds = append(out.IncompleteSaResourceIds, v.IncompleteSAResourceIDs...)
+	return out
+}
+
+func threatEntry(value rules.ThreatEntry) *securityv1.ThreatEntry {
+	out := &securityv1.ThreatEntry{Threat: value.Threat, ControlId: value.ControlID, AffectedResourceType: value.ResourceType, AffectedResourceId: value.ResourceID, Status: value.Status, Severity: string(value.Severity), Impact: value.Impact, Recommendation: value.Recommendation}
+	for _, evidence := range value.Evidence {
+		out.Evidence = append(out.Evidence, supportingEvidence(evidence))
+	}
 	return out
 }
 func finding(id string, index int, f rules.Finding) *securityv1.SecurityFinding {

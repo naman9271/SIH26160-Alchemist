@@ -29,7 +29,7 @@ message ListPredictionsRequest { string inference_id = 1; uint32 page_size = 2; 
 message ListPredictionsResponse { repeated TrafficPrediction predictions = 1; string next_page_token = 2; }
 message GetPredictionRequest { string inference_id = 1; string prediction_id = 2; }
 message RankedClassPrediction { string traffic_class = 1; double confidence = 2; }
-message TrafficPrediction { string prediction_id = 1; string flow_id = 2; string traffic_class = 3; double confidence = 4; map<string,double> class_probabilities = 5; bool is_unknown = 6; string model_version = 7; string feature_schema_version = 8; double inference_time_ms = 9; string window_id = 10; string aggregation_scope = 11; repeated RankedClassPrediction top_predictions = 12; }
+message TrafficPrediction { string prediction_id = 1; string flow_id = 2; string traffic_class = 3; double confidence = 4; map<string,double> class_probabilities = 5; bool is_unknown = 6; string model_version = 7; string feature_schema_version = 8; double inference_time_ms = 9; string window_id = 10; string aggregation_scope = 11; repeated RankedClassPrediction top_predictions = 12; string abstention_reason = 13; string confidence_calibration_status = 14; }
 message GetPredictionExplanationRequest { string inference_id = 1; string prediction_id = 2; }
 message PredictionExplanation { string prediction_id = 1; string method = 2; repeated FeatureAttribution features = 3; string unavailable_reason = 4; }
 message FeatureAttribution { string feature_name = 1; double value = 2; double attribution = 3; }

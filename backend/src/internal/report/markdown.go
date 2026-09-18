@@ -85,6 +85,20 @@ func Generate(input Input) Output {
 		fmt.Fprintf(&technical, "| %s | %s | %s | %s | %s |\n", markdown(control.ControlID), markdown(control.Area), control.Status, markdown(resource), markdown(strings.Join(refs, ", ")))
 	}
 	technical.WriteString("\n")
+	if len(input.Assessment.ThreatEntries) > 0 {
+		technical.WriteString("## Actionable threat entries\n\n")
+		technical.WriteString("Each row records a supported exposure; it is not proof that exploitation occurred.\n\n")
+		technical.WriteString("| Threat | Affected SA | Evidence | Status | Severity | Impact | Recommendation |\n|---|---|---|---|---|---|---|\n")
+		for _, entry := range input.Assessment.ThreatEntries {
+			refs := make([]string, 0, len(entry.Evidence))
+			for _, evidence := range entry.Evidence {
+				refs = append(refs, evidence.PropertyKey+"="+evidence.Value)
+			}
+			resource := strings.Trim(strings.TrimSpace(entry.ResourceType+"/"+entry.ResourceID), "/")
+			fmt.Fprintf(&technical, "| %s | %s | %s | %s | %s | %s | %s |\n", markdown(entry.Threat), markdown(resource), markdown(strings.Join(refs, ", ")), markdown(entry.Status), markdown(string(entry.Severity)), markdown(entry.Impact), markdown(entry.Recommendation))
+		}
+		technical.WriteString("\n")
+	}
 	technical.WriteString("## Interpretation limits\n\n")
 	technical.WriteString("ESP payloads were not decrypted. UNKNOWN means the classifier abstained; it does not mean the flow is anomalous. ANOMALY is a separate experimental signal. Missing gateway evidence is reported as unavailable, not guessed.\n")
 

@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"path/filepath"
+	"strings"
 	"time"
 
 	analysisv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/analysis"
@@ -376,6 +377,7 @@ func getAnalysisInsights(w http.ResponseWriter, r *http.Request, input *coreinpu
 		"progress": progress,
 		"summary":  summary,
 	}
+	sourceHealth := map[string]any{"analysis_updated_at": record.UpdatedAt, "analysis_state": record.State.String(), "status": "AVAILABLE"}
 
 	if protocol != nil {
 		section := map[string]any{}
@@ -413,12 +415,17 @@ func getAnalysisInsights(w http.ResponseWriter, r *http.Request, input *coreinpu
 		}
 		if value, sectionErr := fusion.Summary(r.Context(), analysisID); sectionErr == nil {
 			section["summary"] = value
+			sourceHealth["unavailable_sources"] = value.GetUnavailableSources()
+			if len(value.GetUnavailableSources()) > 0 {
+				sourceHealth["status"] = "DEGRADED"
+			}
 		}
 		if value, _, sectionErr := fusion.List(r.Context(), analysisID, &fusionv1.ListFusedConclusionsRequest{PageSize: 200}); sectionErr == nil {
 			section["conclusions"] = value
 		}
 		result["fusion"] = section
 	}
+	result["source_health"] = sourceHealth
 
 	if security != nil {
 		section := map[string]any{}
@@ -438,7 +445,7 @@ func getAnalysisInsights(w http.ResponseWriter, r *http.Request, input *coreinpu
 			if assessment.Result.CoverageAvailable {
 				coverage = assessment.Result.Coverage
 			}
-			section["assessment"] = map[string]any{"assessment_id": assessment.ID, "policy_id": assessment.PolicyID, "policy_label": assessment.Result.PolicyLabel, "policy_reference": assessment.Result.PolicyReference, "state": assessment.State.String(), "observed_security_score": score, "score_available": assessment.Result.ScoreAvailable, "security_bounds": map[string]any{"lower": assessment.Result.SecurityLowerBound, "upper": assessment.Result.SecurityUpperBound, "available": assessment.Result.BoundsAvailable}, "provisional": assessment.Result.Provisional, "critical_score_cap_applied": assessment.Result.ScoreCapped, "grade": assessment.Result.Grade, "findings": findings, "controls": assessment.Result.Controls, "per_sa_assessments": assessment.PerSAAssessments, "incomplete_sa_resource_ids": assessment.IncompleteSAResourceIDs, "threat_matrix": assessment.Result.ThreatMatrix, "rules_evaluated": assessment.Result.EvaluatedRule, "rules_unknown": assessment.Result.UnknownRule, "rules_not_applicable": assessment.Result.NotApplicableRule, "unknown_evidence_count": assessment.UnknownEvidence, "configuration_facts": configurationFacts, "configuration_facts_evaluated": evaluated, "evidence_coverage_percent": coverage, "metadata_exposure": assessment.MetadataExposure, "recommendations": recommendations}
+			section["assessment"] = map[string]any{"assessment_id": assessment.ID, "assessment_revision": assessment.Revision, "result_updated_at": assessment.UpdatedAt, "policy_id": assessment.PolicyID, "policy_label": assessment.Result.PolicyLabel, "policy_reference": assessment.Result.PolicyReference, "state": assessment.State.String(), "observed_security_score": score, "score_available": assessment.Result.ScoreAvailable, "security_bounds": map[string]any{"lower": assessment.Result.SecurityLowerBound, "upper": assessment.Result.SecurityUpperBound, "available": assessment.Result.BoundsAvailable}, "provisional": assessment.Result.Provisional, "critical_score_cap_applied": assessment.Result.ScoreCapped, "grade": assessment.Result.Grade, "findings": findings, "threat_entries": assessment.Result.ThreatEntries, "controls": assessment.Result.Controls, "per_sa_assessments": assessment.PerSAAssessments, "incomplete_sa_resource_ids": assessment.IncompleteSAResourceIDs, "threat_matrix": assessment.Result.ThreatMatrix, "rules_evaluated": assessment.Result.EvaluatedRule, "rules_unknown": assessment.Result.UnknownRule, "rules_not_applicable": assessment.Result.NotApplicableRule, "unknown_evidence_count": assessment.UnknownEvidence, "configuration_facts": configurationFacts, "configuration_facts_evaluated": evaluated, "evidence_coverage_percent": coverage, "metadata_exposure": assessment.MetadataExposure, "recommendations": recommendations}
 			if risk != nil {
 				if value, scoreErr := risk.Score(r.Context(), assessment.ID); scoreErr == nil {
 					section["risk_score"] = value
@@ -572,12 +579,30 @@ func getAnalysis(w http.ResponseWriter, r *http.Request, analysis *coreanalysis.
 }
 
 func generateReport(w http.ResponseWriter, r *http.Request, reports *corereport.Service) {
-	record, err := reports.Generate(r.Context(), &reportv1.GenerateReportRequest{AnalysisId: r.PathValue("analysisID"), Type: reportv1.ReportType_EXECUTIVE, Format: reportv1.ReportFormat_PDF, IncludeTimeline: true, IncludeThreatMatrix: true, IncludeShap: true, IncludeEvidenceChain: true})
+	var request struct {
+		Type string `json:"type"`
+	}
+	if r.Body != nil {
+		if err := json.NewDecoder(r.Body).Decode(&request); err != nil && err != io.EOF {
+			writeWorkflowError(w, shared.NewError(shared.InvalidArgument, "", "invalid JSON request"))
+			return
+		}
+	}
+	reportType := reportv1.ReportType_EXECUTIVE
+	switch strings.ToUpper(strings.TrimSpace(request.Type)) {
+	case "", "EXECUTIVE":
+	case "TECHNICAL":
+		reportType = reportv1.ReportType_TECHNICAL
+	default:
+		writeWorkflowError(w, shared.NewError(shared.InvalidArgument, "", "type must be EXECUTIVE or TECHNICAL"))
+		return
+	}
+	record, err := reports.Generate(r.Context(), &reportv1.GenerateReportRequest{AnalysisId: r.PathValue("analysisID"), Type: reportType, Format: reportv1.ReportFormat_PDF, IncludeTimeline: true, IncludeThreatMatrix: true, IncludeShap: true, IncludeEvidenceChain: true})
 	if err != nil {
 		writeWorkflowError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusAccepted, map[string]any{"report_id": record.ID, "state": record.State.String()})
+	writeJSON(w, http.StatusAccepted, map[string]any{"report_id": record.ID, "type": record.Type.String(), "format": record.Format.String(), "state": record.State.String()})
 }
 
 func getReport(w http.ResponseWriter, r *http.Request, reports *corereport.Service) {
@@ -586,7 +611,7 @@ func getReport(w http.ResponseWriter, r *http.Request, reports *corereport.Servi
 		writeWorkflowError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"report_id": record.ID, "analysis_id": record.AnalysisID, "state": record.State.String(), "failure_reason": record.Failure, "download_url": "/api/v1/reports/" + record.ID + "/download"})
+	writeJSON(w, http.StatusOK, map[string]any{"report_id": record.ID, "analysis_id": record.AnalysisID, "type": record.Type.String(), "format": record.Format.String(), "state": record.State.String(), "failure_reason": record.Failure, "download_url": "/api/v1/reports/" + record.ID + "/download"})
 }
 
 func downloadReport(w http.ResponseWriter, r *http.Request, reports *corereport.Service) {

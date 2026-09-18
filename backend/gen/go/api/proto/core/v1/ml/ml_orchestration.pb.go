@@ -743,21 +743,23 @@ func (x *RankedClassPrediction) GetConfidence() float64 {
 }
 
 type TrafficPrediction struct {
-	state                protoimpl.MessageState   `protogen:"open.v1"`
-	PredictionId         string                   `protobuf:"bytes,1,opt,name=prediction_id,json=predictionId,proto3" json:"prediction_id,omitempty"`
-	FlowId               string                   `protobuf:"bytes,2,opt,name=flow_id,json=flowId,proto3" json:"flow_id,omitempty"`
-	TrafficClass         string                   `protobuf:"bytes,3,opt,name=traffic_class,json=trafficClass,proto3" json:"traffic_class,omitempty"`
-	Confidence           float64                  `protobuf:"fixed64,4,opt,name=confidence,proto3" json:"confidence,omitempty"`
-	ClassProbabilities   map[string]float64       `protobuf:"bytes,5,rep,name=class_probabilities,json=classProbabilities,proto3" json:"class_probabilities,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"fixed64,2,opt,name=value"`
-	IsUnknown            bool                     `protobuf:"varint,6,opt,name=is_unknown,json=isUnknown,proto3" json:"is_unknown,omitempty"`
-	ModelVersion         string                   `protobuf:"bytes,7,opt,name=model_version,json=modelVersion,proto3" json:"model_version,omitempty"`
-	FeatureSchemaVersion string                   `protobuf:"bytes,8,opt,name=feature_schema_version,json=featureSchemaVersion,proto3" json:"feature_schema_version,omitempty"`
-	InferenceTimeMs      float64                  `protobuf:"fixed64,9,opt,name=inference_time_ms,json=inferenceTimeMs,proto3" json:"inference_time_ms,omitempty"`
-	WindowId             string                   `protobuf:"bytes,10,opt,name=window_id,json=windowId,proto3" json:"window_id,omitempty"`
-	AggregationScope     string                   `protobuf:"bytes,11,opt,name=aggregation_scope,json=aggregationScope,proto3" json:"aggregation_scope,omitempty"`
-	TopPredictions       []*RankedClassPrediction `protobuf:"bytes,12,rep,name=top_predictions,json=topPredictions,proto3" json:"top_predictions,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	state                       protoimpl.MessageState   `protogen:"open.v1"`
+	PredictionId                string                   `protobuf:"bytes,1,opt,name=prediction_id,json=predictionId,proto3" json:"prediction_id,omitempty"`
+	FlowId                      string                   `protobuf:"bytes,2,opt,name=flow_id,json=flowId,proto3" json:"flow_id,omitempty"`
+	TrafficClass                string                   `protobuf:"bytes,3,opt,name=traffic_class,json=trafficClass,proto3" json:"traffic_class,omitempty"`
+	Confidence                  float64                  `protobuf:"fixed64,4,opt,name=confidence,proto3" json:"confidence,omitempty"`
+	ClassProbabilities          map[string]float64       `protobuf:"bytes,5,rep,name=class_probabilities,json=classProbabilities,proto3" json:"class_probabilities,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"fixed64,2,opt,name=value"`
+	IsUnknown                   bool                     `protobuf:"varint,6,opt,name=is_unknown,json=isUnknown,proto3" json:"is_unknown,omitempty"`
+	ModelVersion                string                   `protobuf:"bytes,7,opt,name=model_version,json=modelVersion,proto3" json:"model_version,omitempty"`
+	FeatureSchemaVersion        string                   `protobuf:"bytes,8,opt,name=feature_schema_version,json=featureSchemaVersion,proto3" json:"feature_schema_version,omitempty"`
+	InferenceTimeMs             float64                  `protobuf:"fixed64,9,opt,name=inference_time_ms,json=inferenceTimeMs,proto3" json:"inference_time_ms,omitempty"`
+	WindowId                    string                   `protobuf:"bytes,10,opt,name=window_id,json=windowId,proto3" json:"window_id,omitempty"`
+	AggregationScope            string                   `protobuf:"bytes,11,opt,name=aggregation_scope,json=aggregationScope,proto3" json:"aggregation_scope,omitempty"`
+	TopPredictions              []*RankedClassPrediction `protobuf:"bytes,12,rep,name=top_predictions,json=topPredictions,proto3" json:"top_predictions,omitempty"`
+	AbstentionReason            string                   `protobuf:"bytes,13,opt,name=abstention_reason,json=abstentionReason,proto3" json:"abstention_reason,omitempty"`
+	ConfidenceCalibrationStatus string                   `protobuf:"bytes,14,opt,name=confidence_calibration_status,json=confidenceCalibrationStatus,proto3" json:"confidence_calibration_status,omitempty"`
+	unknownFields               protoimpl.UnknownFields
+	sizeCache                   protoimpl.SizeCache
 }
 
 func (x *TrafficPrediction) Reset() {
@@ -872,6 +874,20 @@ func (x *TrafficPrediction) GetTopPredictions() []*RankedClassPrediction {
 		return x.TopPredictions
 	}
 	return nil
+}
+
+func (x *TrafficPrediction) GetAbstentionReason() string {
+	if x != nil {
+		return x.AbstentionReason
+	}
+	return ""
+}
+
+func (x *TrafficPrediction) GetConfidenceCalibrationStatus() string {
+	if x != nil {
+		return x.ConfidenceCalibrationStatus
+	}
+	return ""
 }
 
 type GetPredictionExplanationRequest struct {
@@ -1212,7 +1228,7 @@ const file_api_proto_core_v1_ml_ml_orchestration_proto_rawDesc = "" +
 	"\rtraffic_class\x18\x01 \x01(\tR\ftrafficClass\x12\x1e\n" +
 	"\n" +
 	"confidence\x18\x02 \x01(\x01R\n" +
-	"confidence\"\x81\x05\n" +
+	"confidence\"\xf2\x05\n" +
 	"\x11TrafficPrediction\x12#\n" +
 	"\rprediction_id\x18\x01 \x01(\tR\fpredictionId\x12\x17\n" +
 	"\aflow_id\x18\x02 \x01(\tR\x06flowId\x12#\n" +
@@ -1229,7 +1245,9 @@ const file_api_proto_core_v1_ml_ml_orchestration_proto_rawDesc = "" +
 	"\twindow_id\x18\n" +
 	" \x01(\tR\bwindowId\x12+\n" +
 	"\x11aggregation_scope\x18\v \x01(\tR\x10aggregationScope\x12J\n" +
-	"\x0ftop_predictions\x18\f \x03(\v2!.core.ml.v1.RankedClassPredictionR\x0etopPredictions\x1aE\n" +
+	"\x0ftop_predictions\x18\f \x03(\v2!.core.ml.v1.RankedClassPredictionR\x0etopPredictions\x12+\n" +
+	"\x11abstention_reason\x18\r \x01(\tR\x10abstentionReason\x12B\n" +
+	"\x1dconfidence_calibration_status\x18\x0e \x01(\tR\x1bconfidenceCalibrationStatus\x1aE\n" +
 	"\x17ClassProbabilitiesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\"i\n" +

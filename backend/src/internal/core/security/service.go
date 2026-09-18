@@ -28,6 +28,7 @@ type Record struct {
 	Result                   rules.Assessment
 	PerSAAssessments         []rules.Assessment
 	IncompleteSAResourceIDs  []string
+	Revision                 uint64
 	UnknownEvidence          uint64
 	MetadataExposure         bool
 	CreatedAt, UpdatedAt     time.Time
@@ -146,12 +147,23 @@ func (s *Service) evaluate(ctx context.Context, id string) (Record, error) {
 			result.Controls[index].ResourceType = scope.ResourceType
 			result.Controls[index].ResourceID = scope.ResourceID
 		}
+		for index := range result.ThreatEntries {
+			result.ThreatEntries[index].ResourceType = scope.ResourceType
+			result.ThreatEntries[index].ResourceID = scope.ResourceID
+		}
 		results = append(results, result)
 	}
 	result, incomplete := deploymentAssessment(results)
+	perSA := make([]rules.Assessment, 0, len(results))
+	for _, item := range results {
+		if isSAResource(item.ResourceType) {
+			perSA = append(perSA, item)
+		}
+	}
 	s.mu.Lock()
 	stored := s.records[id]
-	stored.State, stored.Result, stored.PerSAAssessments, stored.IncompleteSAResourceIDs, stored.UnknownEvidence, stored.MetadataExposure = securityv1.AssessmentState_ASSESSMENT_COMPLETED, result, results, incomplete, unknown, metadata
+	stored.State, stored.Result, stored.PerSAAssessments, stored.IncompleteSAResourceIDs, stored.UnknownEvidence, stored.MetadataExposure = securityv1.AssessmentState_ASSESSMENT_COMPLETED, result, perSA, incomplete, unknown, metadata
+	stored.Revision++
 	stored.Failure, stored.UpdatedAt = "", time.Now().UTC()
 	out := *stored
 	s.mu.Unlock()
@@ -399,7 +411,7 @@ func deploymentAssessment(items []rules.Assessment) (rules.Assessment, []string)
 	candidates := make([]rules.Assessment, 0, len(items))
 	incomplete := make([]string, 0)
 	for _, item := range items {
-		if item.Provisional || !item.ScoreAvailable {
+		if isSAResource(item.ResourceType) && (item.Provisional || !item.ScoreAvailable) {
 			incomplete = append(incomplete, item.ResourceType+"/"+item.ResourceID)
 		}
 		if isSAResource(item.ResourceType) && item.ScoreAvailable {
@@ -419,6 +431,7 @@ func deploymentAssessment(items []rules.Assessment) (rules.Assessment, []string)
 		for _, item := range items {
 			out.Controls = append(out.Controls, item.Controls...)
 			out.Findings = append(out.Findings, item.Findings...)
+			out.ThreatEntries = append(out.ThreatEntries, item.ThreatEntries...)
 		}
 		return out, incomplete
 	}
@@ -430,6 +443,7 @@ func deploymentAssessment(items []rules.Assessment) (rules.Assessment, []string)
 	for _, item := range items {
 		out.Controls = append(out.Controls, item.Controls...)
 		out.Findings = append(out.Findings, item.Findings...)
+		out.ThreatEntries = append(out.ThreatEntries, item.ThreatEntries...)
 		for severity, count := range item.ThreatMatrix {
 			out.ThreatMatrix[severity] += count
 		}

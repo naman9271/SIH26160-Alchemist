@@ -302,7 +302,12 @@ func predictionResult(id string, result *worker.PredictionResult, shap bool) (*m
 	if windowID == "" {
 		windowID = result.GetFlowId()
 	}
-	p := &mlv1.TrafficPrediction{PredictionId: id + ":" + windowID, FlowId: result.GetFlowId(), WindowId: result.GetWindowId(), AggregationScope: result.GetAggregationScope(), TrafficClass: trafficClassName(result.GetPredictedClass()), Confidence: result.GetConfidence(), IsUnknown: result.GetIsUnknown(), ModelVersion: result.GetModelVersion(), FeatureSchemaVersion: "flow.v2", InferenceTimeMs: result.GetInferenceTimeMs(), ClassProbabilities: map[string]float64{}}
+	p := &mlv1.TrafficPrediction{PredictionId: id + ":" + windowID, FlowId: result.GetFlowId(), WindowId: result.GetWindowId(), AggregationScope: result.GetAggregationScope(), TrafficClass: trafficClassName(result.GetPredictedClass()), Confidence: result.GetConfidence(), IsUnknown: result.GetIsUnknown(), ModelVersion: result.GetModelVersion(), FeatureSchemaVersion: "flow.v2", InferenceTimeMs: result.GetInferenceTimeMs(), ClassProbabilities: map[string]float64{}, ConfidenceCalibrationStatus: "CALIBRATED"}
+	if p.IsUnknown {
+		p.AbstentionReason = "Maximum calibrated class probability was below the validated UNKNOWN threshold."
+	} else {
+		p.AbstentionReason = "NOT_ABSTAINED"
+	}
 	for _, top := range result.GetTopPredictions() {
 		name := trafficClassName(top.GetTrafficClass())
 		p.ClassProbabilities[name] = top.GetConfidence()

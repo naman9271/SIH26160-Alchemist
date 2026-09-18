@@ -69,6 +69,16 @@ type Finding struct {
 	Evidence                                            []EvidenceReference
 	ResourceType, ResourceID, PolicyID, PolicyReference string
 }
+
+// ThreatEntry describes a supported exposure for one affected resource. It is
+// deliberately not an exploitation claim: the evidence establishes a weak
+// configuration or observable metadata, not that an attacker used it.
+type ThreatEntry struct {
+	Threat, ControlID, Status, Impact, Recommendation string
+	Severity                                          Severity
+	ResourceType, ResourceID                          string
+	Evidence                                          []EvidenceReference
+}
 type ControlResult struct {
 	ControlID, Category, Area, Title string
 	Status                           ControlStatus
@@ -94,6 +104,7 @@ type Assessment struct {
 	ScoreAvailable                                         bool
 	Grade                                                  string
 	Findings                                               []Finding
+	ThreatEntries                                          []ThreatEntry
 	Controls                                               []ControlResult
 	ThreatMatrix                                           map[Severity]int
 	EvaluatedRule, UnknownRule, NotApplicableRule          int
@@ -183,6 +194,7 @@ func Assess(f Facts) Assessment {
 			r.UnknownWeight += c.Weight
 		}
 	}
+	r.ThreatEntries = actionableThreats(f, r.Controls)
 	sort.Slice(r.Findings, func(i, j int) bool {
 		if severityWeight(r.Findings[i].Severity) != severityWeight(r.Findings[j].Severity) {
 			return severityWeight(r.Findings[i].Severity) > severityWeight(r.Findings[j].Severity)
@@ -210,6 +222,52 @@ func Assess(f Facts) Assessment {
 	}
 	r.Provisional = r.UnknownWeight > 0
 	return r
+}
+
+func actionableThreats(f Facts, controls []ControlResult) []ThreatEntry {
+	entries := make([]ThreatEntry, 0, len(controls))
+	for _, control := range controls {
+		threat, impact, ok := threatDetails(control.ControlID)
+		if !ok {
+			continue
+		}
+		status := string(control.Status)
+		if control.ControlID == "SIH_METADATA_001" {
+			if !f.MetadataKnown || !f.MetadataExposure {
+				continue
+			}
+			// Observable outer metadata is a supported disclosure, even where the
+			// baseline does not treat it as a failed control.
+			status = "OBSERVED"
+		} else if control.Status != ControlFail {
+			continue
+		}
+		entries = append(entries, ThreatEntry{Threat: threat, ControlID: control.ControlID, Status: status, Severity: control.Severity, Impact: impact, Recommendation: control.Remediation, ResourceType: f.ResourceType, Evidence: append([]EvidenceReference(nil), control.Evidence...)})
+	}
+	return entries
+}
+
+func threatDetails(controlID string) (string, string, bool) {
+	switch controlID {
+	case "SIH_IKE_SUITE_001", "SIH_CHILD_SUITE_001":
+		return "Weak encryption", "The negotiated suite may provide insufficient confidentiality or integrity strength for the deployment baseline.", true
+	case "SIH_IKE_VERSION_001", "SIH_IKE_POLICY_001", "SIH_CHILD_POLICY_001", "SIH_DH_001":
+		return "Deprecated negotiation", "A legacy protocol, proposal, or key-exchange group may weaken the security properties of future SAs.", true
+	case "SIH_AUTH_001":
+		return "Authentication weakness", "Peer authentication was absent, unsupported, or outside the approved configuration baseline.", true
+	case "SIH_REPLAY_001":
+		return "Replay exposure", "The verified inbound SA does not enforce the required anti-replay protection.", true
+	case "SIH_IKE_LIFETIME_001", "SIH_CHILD_LIFETIME_001":
+		return "Excessive key lifetime", "Long-lived keys increase the exposure period if a key is compromised.", true
+	case "SIH_PFS_CONFIG_001":
+		return "Forward secrecy disabled", "CHILD-SA rekeying may not request a fresh key exchange.", true
+	case "SIH_PFS_EXCHANGE_001":
+		return "Missing fresh CHILD exchange", "The observed CHILD-SA creation or rekey lacked evidence of a fresh key exchange.", true
+	case "SIH_METADATA_001":
+		return "Metadata disclosure", "Outer endpoints, timing, direction, packet sizes, and volume remain observable even when ESP payloads are encrypted.", true
+	default:
+		return "", "", false
+	}
 }
 
 func isCriticalFailure(controlID string, f Facts) bool {

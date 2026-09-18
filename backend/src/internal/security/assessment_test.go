@@ -35,6 +35,47 @@ func TestMetadataExposureOnlyFailsWhenAnExplicitPolicyRequiresProtection(t *test
 	}
 }
 
+func TestActionableThreatEntriesKeepExposureAndEvidenceSeparateFromExploitation(t *testing.T) {
+	weak := Assess(Facts{ResourceType: "XFRM_STATE", EncryptionAlgorithm: "3DES-CBC", EncryptionKeyKnown: true, EncryptionKeyBits: 192})
+	if len(weak.ThreatEntries) != 1 {
+		t.Fatalf("weak suite must create one actionable threat entry: %+v", weak.ThreatEntries)
+	}
+	entry := weak.ThreatEntries[0]
+	if entry.Threat != "Weak encryption" || entry.Status != "FAIL" || entry.Impact == "" || entry.Recommendation == "" {
+		t.Fatalf("threat entry did not retain actionable context: %+v", entry)
+	}
+	metadata := Assess(Facts{ResourceType: "METADATA", MetadataKnown: true, MetadataExposure: true})
+	if len(metadata.ThreatEntries) != 1 || metadata.ThreatEntries[0].Threat != "Metadata disclosure" || metadata.ThreatEntries[0].Status != "OBSERVED" {
+		t.Fatalf("observable outer metadata must be reported as supported disclosure, not a failed control: %+v", metadata.ThreatEntries)
+	}
+}
+
+func TestActionableThreatEntriesCoverTheRequiredThreatClasses(t *testing.T) {
+	falseValue := false
+	tests := []struct {
+		name   string
+		facts  Facts
+		threat string
+	}{
+		{name: "deprecated negotiation", facts: Facts{IKEVersion: "IKEv1"}, threat: "Deprecated negotiation"},
+		{name: "authentication weakness", facts: Facts{IKEAuthentication: "NONE"}, threat: "Authentication weakness"},
+		{name: "replay exposure", facts: Facts{ResourceType: "XFRM_STATE", Direction: "in", ReplayProtection: &falseValue, ReplayWindowKnown: true}, threat: "Replay exposure"},
+		{name: "excessive lifetime", facts: Facts{ResourceType: "VICI_CHILD_SA", SALifetimeKnown: true, SALifetimeSeconds: 3601}, threat: "Excessive key lifetime"},
+		{name: "missing fresh child exchange", facts: Facts{ResourceType: "VICI_CHILD_SA", FreshExchangeObserved: &falseValue}, threat: "Missing fresh CHILD exchange"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result := Assess(test.facts)
+			for _, entry := range result.ThreatEntries {
+				if entry.Threat == test.threat {
+					return
+				}
+			}
+			t.Fatalf("missing %q in %+v", test.threat, result.ThreatEntries)
+		})
+	}
+}
+
 func TestCriticalNullCipherCapsObservedScoreAndMetadataDoesNotFailByDefault(t *testing.T) {
 	result := Assess(Facts{ResourceType: "VICI_IKE_SA", IKEVersion: "IKEv2", IKEEncryption: "NULL", IKEEncryptionKeyKnown: true, IKEEncryptionKeyBits: 128, IKEAuthentication: "PSK", DHGroup: "GROUP14", IKELifetimeKnown: true, IKELifetimeSeconds: 3600, MetadataKnown: true, MetadataExposure: true})
 	if !result.CriticalFailure || !result.ScoreCapped || result.Score != 40 {
