@@ -412,7 +412,7 @@ func getAnalysisInsights(w http.ResponseWriter, r *http.Request, input *coreinpu
 			if evaluated < 0 {
 				evaluated = 0
 			}
-			coverage := evaluated * 100 / configurationFacts
+			coverage := assessment.Result.Coverage
 			section["assessment"] = map[string]any{"assessment_id": assessment.ID, "policy_id": assessment.PolicyID, "state": assessment.State.String(), "score": assessment.Result.Score, "grade": assessment.Result.Grade, "findings": findings, "threat_matrix": assessment.Result.ThreatMatrix, "rules_evaluated": assessment.Result.EvaluatedRule, "unknown_evidence_count": assessment.UnknownEvidence, "configuration_facts": configurationFacts, "configuration_facts_evaluated": evaluated, "coverage_percent": coverage, "metadata_exposure": assessment.MetadataExposure, "recommendations": recommendations}
 			if risk != nil {
 				if value, scoreErr := risk.Score(r.Context(), assessment.ID); scoreErr == nil {

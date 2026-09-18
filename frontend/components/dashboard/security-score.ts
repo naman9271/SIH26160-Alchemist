@@ -25,7 +25,7 @@ export function securityScorePresentation(value: unknown): SecurityScorePresenta
   return {
     assessedScore,
     coveragePercent,
-    isProvisional: assessedScore !== undefined && (unknownEvidence === undefined || unknownEvidence > 0),
+    isProvisional: assessedScore !== undefined && (coveragePercent === undefined || coveragePercent < 100),
     unknownEvidence,
   };
 }

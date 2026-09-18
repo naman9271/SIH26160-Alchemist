@@ -62,7 +62,9 @@ func VICIEvidence(snapshot *viciv1.GatewaySnapshot) []ingest.EvidenceInput {
 		for key, value := range map[string]string{"child.state": child.GetState(), "child.mode": child.GetMode(), "child.protocol": child.GetProtocol(), "child.encryption_algorithm": child.GetEncryptionAlgorithm(), "child.integrity_algorithm": child.GetIntegrityAlgorithm(), "child.spi_in": fmt.Sprintf("0x%08x", child.GetSpiIn()), "child.spi_out": fmt.Sprintf("0x%08x", child.GetSpiOut()), "child.local_traffic_selectors": strings.Join(child.GetLocalTrafficSelectors(), ","), "child.remote_traffic_selectors": strings.Join(child.GetRemoteTrafficSelectors(), ",")} {
 			items = appendString(items, model.SourceVICI, key, value, "VICI_CHILD_SA", id, childAt, metadata, "vici:child-sa/"+child.GetName())
 		}
-		for key, value := range map[string]uint64{"child.bytes_in": child.GetBytesIn(), "child.bytes_out": child.GetBytesOut(), "child.packets_in": child.GetPacketsIn(), "child.packets_out": child.GetPacketsOut(), "child.rekey_seconds": child.GetRekeyTime(), "child.lifetime_seconds": child.GetLifeTime()} {
+		// VICI reports rekey-time and life-time as remaining durations for an
+		// installed CHILD_SA, not as its configured hard lifetime.
+		for key, value := range map[string]uint64{"child.bytes_in": child.GetBytesIn(), "child.bytes_out": child.GetBytesOut(), "child.packets_in": child.GetPacketsIn(), "child.packets_out": child.GetPacketsOut(), "child.remaining_rekey_seconds": child.GetRekeyTime(), model.PropertyChildRemainingLifetimeSeconds: child.GetLifeTime()} {
 			items = appendNumber(items, model.SourceVICI, key, float64(value), "VICI_CHILD_SA", id, childAt, metadata)
 		}
 	}

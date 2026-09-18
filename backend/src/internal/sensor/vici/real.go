@@ -2,6 +2,7 @@ package vici
 
 import (
 	"context"
+	"errors"
 	"net"
 	"net/url"
 	"strconv"
@@ -13,6 +14,8 @@ import (
 	govici "github.com/strongswan/govici/vici"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
+
+var errUnsupportedVICIView = errors.New("VICI view is not implemented by this collector")
 
 // RealBackend reads sanitized StrongSwan state using VICI commands. It never
 // requests or exposes private key material.
@@ -65,7 +68,10 @@ func (b *RealBackend) Capabilities(ctx context.Context, uri string) (*viciv1.Vic
 	if _, err := b.command(ctx, uri, "version", nil); err != nil {
 		return nil, err
 	}
-	return &viciv1.ViciCapabilities{ListSas: true, ListConnections: true, ListPolicies: true, ListAlgorithms: true, Stats: true, Counters: true, ListCertificates: true, ListAuthorities: true, Events: true}, nil
+	// Advertise only views that this backend actually decodes. Returning an
+	// empty successful result for an unimplemented command would incorrectly
+	// turn missing evidence into an observed empty configuration.
+	return &viciv1.ViciCapabilities{ListSas: true, ListConnections: true, Stats: true, Counters: true}, nil
 }
 func (b *RealBackend) DaemonStats(ctx context.Context, uri string) (*viciv1.ViciDaemonStats, error) {
 	message, err := b.command(ctx, uri, "stats", nil)
@@ -114,7 +120,12 @@ func decodeIke(name string, m *govici.Message) *viciv1.IkeSa {
 	return &viciv1.IkeSa{Name: name, UniqueId: uint64Value(m, "uniqueid"), State: stringValue(m, "state"), IkeVersion: normalizeIKEVersion(stringValue(m, "version")), LocalHost: stringValue(m, "local-host"), LocalPort: uint32(uint64Value(m, "local-port")), RemoteHost: stringValue(m, "remote-host"), RemotePort: uint32(uint64Value(m, "remote-port")), LocalIdentity: stringValue(m, "local-id"), RemoteIdentity: stringValue(m, "remote-id"), Initiator: yes(stringValue(m, "initiator")), InitiatorSpi: stringValue(m, "initiator-spi"), ResponderSpi: stringValue(m, "responder-spi"), EncryptionAlgorithm: stringValue(m, "encr-alg"), EncryptionKeySize: uint32(uint64Value(m, "encr-keysize")), IntegrityAlgorithm: stringValue(m, "integ-alg"), Prf: stringValue(m, "prf-alg"), DhGroup: stringValue(m, "dh-group"), EstablishedDuration: uint64Value(m, "established"), RekeyTime: uint64Value(m, "rekey-time"), ReauthTime: uint64Value(m, "reauth-time"), EvidenceStatus: commonv1.EvidenceStatus_VERIFIED_GATEWAY}
 }
 func decodeChild(name string, m *govici.Message) *viciv1.ChildSa {
-	return &viciv1.ChildSa{Name: name, UniqueId: uint64Value(m, "uniqueid"), Reqid: uint32(uint64Value(m, "reqid")), State: stringValue(m, "state"), Mode: strings.ToUpper(stringValue(m, "mode")), Protocol: strings.ToUpper(stringValue(m, "protocol")), SpiIn: uint32(hexOrDecimal(m, "spi-in")), SpiOut: uint32(hexOrDecimal(m, "spi-out")), EncryptionAlgorithm: stringValue(m, "encr-alg"), KeyLength: uint32(uint64Value(m, "encr-keysize")), IntegrityAlgorithm: stringValue(m, "integ-alg"), BytesIn: uint64Value(m, "bytes-in"), BytesOut: uint64Value(m, "bytes-out"), PacketsIn: uint64Value(m, "packets-in"), PacketsOut: uint64Value(m, "packets-out"), InstallTime: timestamppb.New(time.Unix(int64(uint64Value(m, "install-time")), 0).UTC()), RekeyTime: uint64Value(m, "rekey-time"), LifeTime: uint64Value(m, "life-time"), LocalTrafficSelectors: listValue(m, "local-ts"), RemoteTrafficSelectors: listValue(m, "remote-ts"), EvidenceStatus: commonv1.EvidenceStatus_VERIFIED_GATEWAY}
+	return decodeChildAt(name, m, time.Now().UTC())
+}
+func decodeChildAt(name string, m *govici.Message, observedAt time.Time) *viciv1.ChildSa {
+	installedFor := time.Duration(uint64Value(m, "install-time")) * time.Second
+	installedAt := observedAt.UTC().Add(-installedFor)
+	return &viciv1.ChildSa{Name: name, UniqueId: uint64Value(m, "uniqueid"), Reqid: uint32(uint64Value(m, "reqid")), State: stringValue(m, "state"), Mode: strings.ToUpper(stringValue(m, "mode")), Protocol: strings.ToUpper(stringValue(m, "protocol")), SpiIn: uint32(hexOrDecimal(m, "spi-in")), SpiOut: uint32(hexOrDecimal(m, "spi-out")), EncryptionAlgorithm: stringValue(m, "encr-alg"), KeyLength: uint32(uint64Value(m, "encr-keysize")), IntegrityAlgorithm: stringValue(m, "integ-alg"), BytesIn: uint64Value(m, "bytes-in"), BytesOut: uint64Value(m, "bytes-out"), PacketsIn: uint64Value(m, "packets-in"), PacketsOut: uint64Value(m, "packets-out"), InstallTime: timestamppb.New(installedAt), RekeyTime: uint64Value(m, "rekey-time"), LifeTime: uint64Value(m, "life-time"), LocalTrafficSelectors: listValue(m, "local-ts"), RemoteTrafficSelectors: listValue(m, "remote-ts"), EvidenceStatus: commonv1.EvidenceStatus_VERIFIED_GATEWAY}
 }
 func (b *RealBackend) Connections(ctx context.Context, uri string) ([]*viciv1.StrongSwanConnection, error) {
 	messages, err := b.streamed(ctx, uri, "list-conns", "list-conn")
@@ -132,12 +143,10 @@ func (b *RealBackend) Connections(ctx context.Context, uri string) ([]*viciv1.St
 	return result, nil
 }
 func (b *RealBackend) Policies(ctx context.Context, uri string) ([]*viciv1.ViciPolicy, error) {
-	_, err := b.streamed(ctx, uri, "list-pols", "list-policy")
-	return []*viciv1.ViciPolicy{}, err
+	return nil, errUnsupportedVICIView
 }
 func (b *RealBackend) Algorithms(ctx context.Context, uri string) ([]*viciv1.ViciAlgorithm, error) {
-	_, err := b.command(ctx, uri, "get-algorithms", nil)
-	return []*viciv1.ViciAlgorithm{}, err
+	return nil, errUnsupportedVICIView
 }
 func (b *RealBackend) Counters(ctx context.Context, uri, connection string, all bool) (*viciv1.ViciCounters, error) {
 	request := govici.NewMessage()
@@ -156,17 +165,13 @@ func (b *RealBackend) Counters(ctx context.Context, uri, connection string, all 
 	return &viciv1.ViciCounters{Values: values, EvidenceStatus: commonv1.EvidenceStatus_VERIFIED_GATEWAY}, nil
 }
 func (b *RealBackend) Certificates(ctx context.Context, uri string) ([]*viciv1.Certificate, error) {
-	_, err := b.streamed(ctx, uri, "list-certs", "list-cert")
-	return []*viciv1.Certificate{}, err
+	return nil, errUnsupportedVICIView
 }
 func (b *RealBackend) Authorities(ctx context.Context, uri string) ([]*viciv1.Authority, error) {
-	_, err := b.streamed(ctx, uri, "list-authorities", "list-authority")
-	return []*viciv1.Authority{}, err
+	return nil, errUnsupportedVICIView
 }
 func (b *RealBackend) Events(context.Context, string, uint32) (<-chan *viciv1.ViciEvent, error) {
-	channel := make(chan *viciv1.ViciEvent)
-	close(channel)
-	return channel, nil
+	return nil, errUnsupportedVICIView
 }
 
 func stringValue(m *govici.Message, key string) string {

@@ -5,18 +5,19 @@ package model
 // browser API.  Do not introduce aliases: an unavailable fact must remain
 // unavailable instead of being hidden behind a similarly named property.
 const (
-	PropertyIKEVersion           = "ike.version"
-	PropertyIKEEncryption        = "ike.encryption"
-	PropertyIKEIntegrity         = "ike.integrity"
-	PropertyIKEPRF               = "ike.prf"
-	PropertyIKEDHGroup           = "ike.dh_group"
-	PropertyChildMode            = "child.mode"
-	PropertyChildEncryption      = "child.encryption_algorithm"
-	PropertyChildIntegrity       = "child.integrity_algorithm"
-	PropertyChildPFS             = "child.pfs"
-	PropertyReplayEnabled        = "replay.enabled"
-	PropertyChildLifetimeSeconds = "child.lifetime_seconds"
-	PropertyMetadataExposure     = "metadata.exposure"
+	PropertyIKEVersion                    = "ike.version"
+	PropertyIKEEncryption                 = "ike.encryption"
+	PropertyIKEIntegrity                  = "ike.integrity"
+	PropertyIKEPRF                        = "ike.prf"
+	PropertyIKEDHGroup                    = "ike.dh_group"
+	PropertyChildMode                     = "child.mode"
+	PropertyChildEncryption               = "child.encryption_algorithm"
+	PropertyChildIntegrity                = "child.integrity_algorithm"
+	PropertyChildPFS                      = "child.pfs"
+	PropertyReplayEnabled                 = "replay.enabled"
+	PropertyChildLifetimeSeconds          = "child.lifetime_seconds"
+	PropertyChildRemainingLifetimeSeconds = "child.remaining_lifetime_seconds"
+	PropertyMetadataExposure              = "metadata.exposure"
 )
 
 // SecurityConfigurationProperties are the six facts used to calculate

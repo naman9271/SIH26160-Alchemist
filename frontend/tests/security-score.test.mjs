@@ -28,3 +28,10 @@ test("backend coverage is used when supplied", () => {
     { assessedScore: 100, coveragePercent: 0, isProvisional: true, unknownEvidence: 6 },
   );
 });
+
+test("missing lifecycle or metadata evidence keeps an otherwise complete configuration provisional", () => {
+  assert.deepEqual(
+    securityScorePresentation({ score: 85, unknown_evidence_count: 0, coverage_percent: 87 }),
+    { assessedScore: 85, coveragePercent: 87, isProvisional: true, unknownEvidence: 0 },
+  );
+});

@@ -591,24 +591,27 @@ func parseIKEv1SA(metadata *PacketMetadata, body []byte) {
 			return
 		}
 		// ISAKMP proposal payload: proposal #, protocol, SPI size, transform count.
+		proposalNumber, protocolID := body[4], body[5]
 		spiSize, transforms := int(body[6]), int(body[7])
 		if 8+spiSize > length {
 			return
 		}
+		proposal := IKEProposal{Number: proposalNumber, ProtocolID: protocolID, SPI: fmt.Sprintf("%x", body[8:8+spiSize])}
 		part := body[8+spiSize : length]
 		for i := 0; i < transforms && len(part) >= 8; i++ {
 			tNext, tLen := part[0], int(binary.BigEndian.Uint16(part[2:4]))
 			if tLen < 8 || tLen > len(part) {
 				return
 			}
-			// Transform # / transform ID. Attribute decoding is bounded below.
-			metadata.IKEEncryptionAlgorithms = appendUnique(metadata.IKEEncryptionAlgorithms, "IKEv1_TRANSFORM_"+strconv.Itoa(int(binary.BigEndian.Uint16(part[6:8]))))
-			parseIKEv1Attributes(metadata, part[8:tLen])
+			// IKEv1 transform IDs identify the transform payload itself. The
+			// cryptographic suite is carried by ISAKMP attributes inside it.
+			proposal.Transforms = append(proposal.Transforms, parseIKEv1Attributes(metadata, part[8:tLen])...)
 			part = part[tLen:]
 			if tNext == 0 && i+1 < transforms {
 				return
 			}
 		}
+		metadata.IKEProposals = append(metadata.IKEProposals, proposal)
 		body = body[length:]
 		if next == 0 {
 			return
@@ -616,30 +619,71 @@ func parseIKEv1SA(metadata *PacketMetadata, body []byte) {
 	}
 }
 
-func parseIKEv1Attributes(metadata *PacketMetadata, attributes []byte) {
+func parseIKEv1Attributes(metadata *PacketMetadata, attributes []byte) []IKETransform {
+	var encryptionID, keyLength uint16
+	transforms := make([]IKETransform, 0, 4)
 	for len(attributes) >= 4 {
 		typeAndFlag, value := binary.BigEndian.Uint16(attributes[:2]), binary.BigEndian.Uint16(attributes[2:4])
 		attributeType := typeAndFlag & 0x7fff
 		if typeAndFlag&0x8000 == 0 { // variable length attribute
 			length := int(value)
 			if length > len(attributes)-4 {
-				return
+				return transforms
 			}
+			// Life Duration and other variable-length attributes are not
+			// cryptographic identifiers. Skip their bounded value.
 			attributes = attributes[4+length:]
 			continue
 		}
 		switch attributeType {
-		case 2:
-			metadata.IKEEncryptionAlgorithms = appendUnique(metadata.IKEEncryptionAlgorithms, "IKEv1_ENCR_"+strconv.Itoa(int(value)))
-		case 3:
-			metadata.IKEIntegrityAlgorithms = appendUnique(metadata.IKEIntegrityAlgorithms, "IKEv1_HASH_"+strconv.Itoa(int(value)))
-		case 4:
-			metadata.IKEAuthMethods = appendUnique(metadata.IKEAuthMethods, "IKEv1_AUTH_"+strconv.Itoa(int(value)))
-		case 5:
-			metadata.IKEDHGroups = appendUnique(metadata.IKEDHGroups, "DH_"+strconv.Itoa(int(value)))
+		case 1: // Encryption Algorithm (RFC 2409 Appendix A).
+			encryptionID = value
+		case 2: // Hash Algorithm.
+			name := ikev1HashName(value)
+			metadata.IKEIntegrityAlgorithms = appendUnique(metadata.IKEIntegrityAlgorithms, name)
+			transforms = append(transforms, IKETransform{Type: 3, ID: value, Name: name})
+		case 3: // Authentication Method.
+			metadata.IKEAuthMethods = appendUnique(metadata.IKEAuthMethods, ikev1AuthName(value))
+		case 4: // Group Description.
+			name := ikeTransformName(4, value, 0)
+			metadata.IKEDHGroups = appendUnique(metadata.IKEDHGroups, name)
+			transforms = append(transforms, IKETransform{Type: 4, ID: value, Name: name})
+		case 14: // Key Length.
+			keyLength = value
 		}
 		attributes = attributes[4:]
 	}
+	if encryptionID != 0 {
+		name := ikev1EncryptionName(encryptionID, keyLength)
+		metadata.IKEEncryptionAlgorithms = appendUnique(metadata.IKEEncryptionAlgorithms, name)
+		transforms = append(transforms, IKETransform{Type: 1, ID: encryptionID, Name: name, KeyLengthBits: keyLength})
+	}
+	return transforms
+}
+
+func ikev1EncryptionName(id, keyLength uint16) string {
+	name := map[uint16]string{1: "DES-CBC", 2: "IDEA-CBC", 3: "BLOWFISH-CBC", 4: "RC5-CBC", 5: "3DES-CBC", 6: "CAST-CBC", 7: "AES-CBC"}[id]
+	if name == "" {
+		name = fmt.Sprintf("IKEV1-ENCR-%d", id)
+	}
+	if keyLength != 0 && (id == 7 || id == 6) {
+		return fmt.Sprintf("%s-%d", name, keyLength)
+	}
+	return name
+}
+
+func ikev1HashName(id uint16) string {
+	if name := map[uint16]string{1: "HMAC-MD5", 2: "HMAC-SHA1", 4: "HMAC-SHA2-256", 5: "HMAC-SHA2-384", 6: "HMAC-SHA2-512"}[id]; name != "" {
+		return name
+	}
+	return fmt.Sprintf("IKEV1-HASH-%d", id)
+}
+
+func ikev1AuthName(id uint16) string {
+	if name := map[uint16]string{1: "PSK", 3: "RSA-SIGNATURE", 9: "ECDSA-SHA256", 10: "ECDSA-SHA384", 11: "ECDSA-SHA512"}[id]; name != "" {
+		return name
+	}
+	return fmt.Sprintf("IKEV1-AUTH-%d", id)
 }
 
 func parseTrafficSelectors(metadata *PacketMetadata, body []byte) {

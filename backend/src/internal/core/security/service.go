@@ -125,8 +125,17 @@ func (s *Service) evaluate(ctx context.Context, id string) (Record, error) {
 		s.fail(id, err)
 		return s.Get(ctx, id)
 	}
-	facts, unknown, metadata := facts(items)
-	result := rules.Assess(facts)
+	scopes, unknown, metadata := facts(items)
+	results := make([]rules.Assessment, 0, len(scopes))
+	for _, scope := range scopes {
+		result := rules.Assess(scope.Facts)
+		for index := range result.Findings {
+			result.Findings[index].ResourceType = scope.ResourceType
+			result.Findings[index].ResourceID = scope.ResourceID
+		}
+		results = append(results, result)
+	}
+	result := mergeAssessments(results)
 	s.mu.Lock()
 	stored := s.records[id]
 	stored.State, stored.Result, stored.UnknownEvidence, stored.MetadataExposure = securityv1.AssessmentState_ASSESSMENT_COMPLETED, result, unknown, metadata
@@ -202,52 +211,171 @@ func priority(severity rules.Severity) string {
 		return "P3"
 	}
 }
-func facts(items []model.FusedConclusion) (rules.Facts, uint64, bool) {
-	winners := map[string]model.FusedConclusion{}
+
+type scopedFacts struct {
+	ResourceType string
+	ResourceID   string
+	Facts        rules.Facts
+}
+
+func facts(items []model.FusedConclusion) ([]scopedFacts, uint64, bool) {
+	type resource struct{ typ, id string }
+	winners := map[resource]map[string]model.FusedConclusion{}
+	knownConfiguration := map[string]bool{}
+	metadataKnown, metadataExposure := false, false
 	for _, item := range items {
 		if item.Status == commonv1.EvidenceStatus_UNKNOWN {
 			continue
 		}
-		if old, ok := winners[item.PropertyKey]; !ok || item.Confidence > old.Confidence || item.Confidence == old.Confidence && item.ID < old.ID {
-			winners[item.PropertyKey] = item
+		if item.PropertyKey == model.PropertyMetadataExposure {
+			metadataKnown = true
+			metadataExposure = metadataExposure || scalar(item) != ""
+			continue
 		}
-	}
-	get := func(names ...string) string {
-		for _, name := range names {
-			if item, ok := winners[name]; ok {
-				return scalar(item)
+		if !securityProperty(item.PropertyKey) {
+			continue
+		}
+		for _, property := range model.SecurityConfigurationProperties {
+			if item.PropertyKey == property {
+				knownConfiguration[property] = true
 			}
 		}
-		return ""
+		scope := resource{typ: item.ResourceType, id: item.ResourceID}
+		if scope.typ == "" && scope.id == "" {
+			scope = resource{typ: "ANALYSIS", id: "default"}
+		}
+		if winners[scope] == nil {
+			winners[scope] = map[string]model.FusedConclusion{}
+		}
+		if old, ok := winners[scope][item.PropertyKey]; !ok || item.Confidence > old.Confidence || item.Confidence == old.Confidence && item.ID < old.ID {
+			winners[scope][item.PropertyKey] = item
+		}
 	}
-	parseBool := func(names ...string) *bool {
-		for _, name := range names {
-			if item, ok := winners[name]; ok {
+	if len(winners) == 0 {
+		winners[resource{typ: "ANALYSIS", id: "default"}] = map[string]model.FusedConclusion{}
+	}
+	scopes := make([]scopedFacts, 0, len(winners))
+	childAEAD := false
+	for scope, values := range winners {
+		get := func(name string) string {
+			if item, ok := values[name]; ok {
+				return scalar(item)
+			}
+			return ""
+		}
+		parseBool := func(name string) *bool {
+			if item, ok := values[name]; ok {
 				value := strings.EqualFold(scalar(item), "true") || scalar(item) == "1"
 				return &value
 			}
+			return nil
 		}
-		return nil
+		f := rules.Facts{IKEVersion: get(model.PropertyIKEVersion), EncryptionAlgorithm: get(model.PropertyChildEncryption), IntegrityAlgorithm: get(model.PropertyChildIntegrity), DHGroup: get(model.PropertyIKEDHGroup), PFS: parseBool(model.PropertyChildPFS), ReplayProtection: parseBool(model.PropertyReplayEnabled), MetadataExposure: metadataExposure, MetadataKnown: metadataKnown}
+		// Only a CHILD-SA AEAD transform can supply CHILD-SA integrity. Never
+		// substitute the cipher or integrity algorithm protecting the IKE SA.
+		if f.IntegrityAlgorithm == "" && isAEAD(f.EncryptionAlgorithm) {
+			f.IntegrityAlgorithm = "AEAD"
+			childAEAD = true
+		}
+		if value := get(model.PropertyChildLifetimeSeconds); value != "" {
+			f.SALifetimeKnown = true
+			_, _ = fmt.Sscan(value, &f.SALifetimeSeconds)
+		}
+		scopes = append(scopes, scopedFacts{ResourceType: scope.typ, ResourceID: scope.id, Facts: f})
 	}
-	facts := rules.Facts{IKEVersion: get(model.PropertyIKEVersion), EncryptionAlgorithm: get(model.PropertyChildEncryption, model.PropertyIKEEncryption), IntegrityAlgorithm: get(model.PropertyChildIntegrity, model.PropertyIKEIntegrity), DHGroup: get(model.PropertyIKEDHGroup), PFS: parseBool(model.PropertyChildPFS), ReplayProtection: parseBool(model.PropertyReplayEnabled), MetadataExposure: get(model.PropertyMetadataExposure) != ""}
-	// AEAD transforms authenticate as well as encrypt, so a separate integrity
-	// transform is neither negotiated nor required. Preserve that fact for the
-	// rule engine and evidence-coverage calculation.
-	if facts.IntegrityAlgorithm == "" && isAEAD(facts.EncryptionAlgorithm) {
-		facts.IntegrityAlgorithm = "AEAD"
-	}
-	if value := get(model.PropertyChildLifetimeSeconds); value != "" {
-		var life uint64
-		_, _ = fmt.Sscan(value, &life)
-		facts.SALifetimeSeconds = life
+	if childAEAD {
+		knownConfiguration[model.PropertyChildIntegrity] = true
 	}
 	unknown := uint64(0)
-	for _, available := range []bool{facts.IKEVersion != "", facts.EncryptionAlgorithm != "", facts.IntegrityAlgorithm != "", facts.DHGroup != "", facts.PFS != nil, facts.ReplayProtection != nil} {
-		if !available {
+	for _, property := range model.SecurityConfigurationProperties {
+		if !knownConfiguration[property] {
 			unknown++
 		}
 	}
-	return facts, unknown, facts.MetadataExposure
+	sort.Slice(scopes, func(i, j int) bool {
+		return scopes[i].ResourceType+"\x00"+scopes[i].ResourceID < scopes[j].ResourceType+"\x00"+scopes[j].ResourceID
+	})
+	return scopes, unknown, metadataExposure
+}
+
+func securityProperty(key string) bool {
+	switch key {
+	case model.PropertyIKEVersion, model.PropertyIKEEncryption, model.PropertyIKEIntegrity, model.PropertyIKEDHGroup,
+		model.PropertyChildEncryption, model.PropertyChildIntegrity, model.PropertyChildPFS,
+		model.PropertyReplayEnabled, model.PropertyChildLifetimeSeconds:
+		return true
+	default:
+		return false
+	}
+}
+
+func mergeAssessments(items []rules.Assessment) rules.Assessment {
+	if len(items) == 0 {
+		return rules.Assess(rules.Facts{})
+	}
+	out := rules.Assessment{ThreatMatrix: map[rules.Severity]int{}, RuleResults: map[string]rules.RuleResult{}}
+	for _, item := range items {
+		for id, result := range item.RuleResults {
+			combined := out.RuleResults[id]
+			combined.Weight = result.Weight
+			combined.Known = combined.Known || result.Known
+			combined.Failed = combined.Failed || result.Failed
+			out.RuleResults[id] = combined
+		}
+		out.Findings = append(out.Findings, item.Findings...)
+		for severity, count := range item.ThreatMatrix {
+			out.ThreatMatrix[severity] += count
+		}
+	}
+	for _, result := range out.RuleResults {
+		if !result.Known {
+			out.UnknownRule++
+			continue
+		}
+		out.EvaluatedRule++
+		if !result.Failed {
+			out.Score += result.Weight
+		}
+	}
+	if total := out.EvaluatedRule + out.UnknownRule; total > 0 {
+		out.Coverage = out.EvaluatedRule * 100 / total
+	}
+	out.Grade = assessmentGrade(out.Score)
+	sort.Slice(out.Findings, func(i, j int) bool {
+		if out.Findings[i].Severity != out.Findings[j].Severity {
+			return severityRank(out.Findings[i].Severity) > severityRank(out.Findings[j].Severity)
+		}
+		return out.Findings[i].ResourceType+out.Findings[i].ResourceID+out.Findings[i].RuleID < out.Findings[j].ResourceType+out.Findings[j].ResourceID+out.Findings[j].RuleID
+	})
+	return out
+}
+
+func assessmentGrade(score int) string {
+	switch {
+	case score >= 90:
+		return "A"
+	case score >= 80:
+		return "B"
+	case score >= 70:
+		return "C"
+	case score >= 60:
+		return "D"
+	default:
+		return "F"
+	}
+}
+
+func severityRank(value rules.Severity) int {
+	switch value {
+	case rules.SeverityCritical:
+		return 4
+	case rules.SeverityHigh:
+		return 3
+	case rules.SeverityMedium:
+		return 2
+	default:
+		return 1
+	}
 }
 
 func isAEAD(algorithm string) bool {

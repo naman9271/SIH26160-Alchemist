@@ -35,7 +35,7 @@ func ikeTransformName(kind uint8, id uint16, keyLength uint16) string {
 	case 3:
 		name = map[uint16]string{0: "NONE", 2: "HMAC-SHA1-96", 5: "AES-XCBC-96", 12: "HMAC-SHA2-256-128", 13: "HMAC-SHA2-384-192", 14: "HMAC-SHA2-512-256"}[id]
 	case 4:
-		name = map[uint16]string{14: "MODP-2048", 15: "MODP-3072", 16: "MODP-4096", 17: "MODP-6144", 18: "MODP-8192", 19: "ECP-256", 20: "ECP-384", 21: "ECP-521", 31: "CURVE25519", 32: "CURVE448"}[id]
+		name = map[uint16]string{1: "MODP-768", 2: "MODP-1024", 5: "MODP-1536", 14: "MODP-2048", 15: "MODP-3072", 16: "MODP-4096", 17: "MODP-6144", 18: "MODP-8192", 19: "ECP-256", 20: "ECP-384", 21: "ECP-521", 31: "CURVE25519", 32: "CURVE448"}[id]
 	case 5:
 		name = map[uint16]string{0: "NO-ESN", 1: "ESN"}[id]
 	}

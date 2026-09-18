@@ -23,10 +23,9 @@ func (s *Service) Score(ctx context.Context, assessmentID string) (*riskv1.Secur
 	if err != nil {
 		return nil, err
 	}
-	confidence := 1.0 - float64(record.UnknownEvidence)*.05
-	if confidence < .5 {
-		confidence = .5
-	}
+	// This field is an evidence-coverage indicator, not statistical model
+	// confidence. Missing evidence therefore reduces it all the way to zero.
+	confidence := float64(record.Result.Coverage) / 100
 	return &riskv1.SecurityScore{AssessmentId: record.ID, Score: uint32(record.Result.Score), RiskLevel: level(record.Result.Score), Confidence: confidence, UnknownEvidenceCount: record.UnknownEvidence}, nil
 }
 func (s *Service) Breakdown(ctx context.Context, assessmentID string) (*riskv1.RiskBreakdown, error) {
@@ -34,23 +33,32 @@ func (s *Service) Breakdown(ctx context.Context, assessmentID string) (*riskv1.R
 	if err != nil {
 		return nil, err
 	}
-	deductions := map[string]uint32{"cryptography": 0, "authentication": 0, "key_exchange": 0, "pfs": 0, "replay": 0, "lifecycle": 0, "metadata": 0}
-	for _, finding := range record.Result.Findings {
-		category := category(finding)
-		deductions[category] += uint32(penalty(finding.Severity))
-	}
-	makeCategory := func(name string, max uint32) *riskv1.RiskCategory {
-		loss := deductions[name]
-		if loss > max {
-			loss = max
+	makeCategory := func(ruleIDs ...string) *riskv1.RiskCategory {
+		category := &riskv1.RiskCategory{}
+		for _, id := range ruleIDs {
+			result, ok := record.Result.RuleResults[id]
+			if !ok {
+				continue
+			}
+			category.Maximum += uint32(result.Weight)
+			if result.Known && !result.Failed {
+				category.Score += uint32(result.Weight)
+			}
 		}
-		return &riskv1.RiskCategory{Score: max - loss, Maximum: max}
+		return category
 	}
-	penaltyValue := float64(record.UnknownEvidence) * .05
-	if penaltyValue > .5 {
-		penaltyValue = .5
-	}
-	return &riskv1.RiskBreakdown{Cryptography: makeCategory("cryptography", 25), Authentication: makeCategory("authentication", 15), KeyExchange: makeCategory("key_exchange", 15), Pfs: makeCategory("pfs", 10), Replay: makeCategory("replay", 7), Lifecycle: makeCategory("lifecycle", 8), Metadata: makeCategory("metadata", 5), UnknownEvidenceCount: record.UnknownEvidence, ConfidencePenalty: penaltyValue}, nil
+	penaltyValue := 1 - float64(record.Result.Coverage)/100
+	return &riskv1.RiskBreakdown{
+		Cryptography:         makeCategory("IPSEC_CIPHER_001"),
+		Authentication:       makeCategory("IPSEC_INTEGRITY_001"),
+		KeyExchange:          makeCategory("IPSEC_IKE_001", "IPSEC_DH_001"),
+		Pfs:                  makeCategory("IPSEC_PFS_001"),
+		Replay:               makeCategory("IPSEC_REPLAY_001"),
+		Lifecycle:            makeCategory("IPSEC_LIFETIME_001"),
+		Metadata:             makeCategory("IPSEC_METADATA_001"),
+		UnknownEvidenceCount: record.UnknownEvidence,
+		ConfidencePenalty:    penaltyValue,
+	}, nil
 }
 func (s *Service) Overrides(ctx context.Context, assessmentID string) (*riskv1.CriticalOverridesResponse, error) {
 	record, err := s.record(ctx, assessmentID)
@@ -85,35 +93,4 @@ func level(score int) string {
 	default:
 		return "CRITICAL"
 	}
-}
-func penalty(severity rules.Severity) int {
-	switch severity {
-	case rules.SeverityCritical:
-		return 25
-	case rules.SeverityHigh:
-		return 15
-	case rules.SeverityMedium:
-		return 8
-	default:
-		return 3
-	}
-}
-func category(f rules.Finding) string {
-	for _, property := range f.EvidenceProperties {
-		switch {
-		case strings.Contains(property, "encryption") || strings.Contains(property, "integrity"):
-			return "cryptography"
-		case strings.Contains(property, "dh_group") || strings.Contains(property, "ike.version"):
-			return "key_exchange"
-		case strings.Contains(property, "pfs"):
-			return "pfs"
-		case strings.Contains(property, "replay"):
-			return "replay"
-		case strings.Contains(property, "lifetime"):
-			return "lifecycle"
-		case strings.Contains(property, "metadata"):
-			return "metadata"
-		}
-	}
-	return "authentication"
 }

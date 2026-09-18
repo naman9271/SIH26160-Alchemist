@@ -1,19 +1,21 @@
 {
   "chosen_threshold": 0.85,
   "chosen_threshold_metrics": {
-    "average_confidence_known": 0.973429,
+    "average_confidence_known": 0.981857,
     "average_confidence_unknown": 0.7366,
-    "balanced_open_set_score": 0.871429,
-    "false_unknown_rate": 0.057143,
+    "balanced_open_set_score": 0.885714,
+    "false_unknown_rate": 0.028571,
     "known_closed_set_accuracy": 1.0,
-    "known_traffic_accuracy": 0.942857,
+    "known_traffic_accuracy": 0.971429,
     "threshold": 0.85,
     "unknown_detection_rate": 0.8
   },
-  "generated_at": "2026-08-30T18:39:12.320135+00:00",
+  "generated_at": "2026-09-18T05:56:01.036377+00:00",
+  "known_calibration_partition": "validation",
   "known_samples": 35,
   "known_split_strategy": "source-declared group split",
   "limitation": "Confidence-threshold rejection is a baseline open-set method and cannot perfectly detect every unknown or out-of-distribution traffic type.",
+  "locked_test_samples_untouched": 35,
   "method": "max_class_probability_threshold",
   "model_version": "traffic-classifier-291d3300b298",
   "ood_summary": {
@@ -33,7 +35,7 @@
   "status": "complete",
   "threshold_results": [
     {
-      "average_confidence_known": 0.973429,
+      "average_confidence_known": 0.981857,
       "average_confidence_unknown": 0.7366,
       "balanced_open_set_score": 0.5,
       "false_unknown_rate": 0.0,
@@ -43,7 +45,7 @@
       "unknown_detection_rate": 0.0
     },
     {
-      "average_confidence_known": 0.973429,
+      "average_confidence_known": 0.981857,
       "average_confidence_unknown": 0.7366,
       "balanced_open_set_score": 0.5,
       "false_unknown_rate": 0.0,
@@ -53,7 +55,7 @@
       "unknown_detection_rate": 0.0
     },
     {
-      "average_confidence_known": 0.973429,
+      "average_confidence_known": 0.981857,
       "average_confidence_unknown": 0.7366,
       "balanced_open_set_score": 0.62,
       "false_unknown_rate": 0.0,
@@ -63,7 +65,7 @@
       "unknown_detection_rate": 0.24
     },
     {
-      "average_confidence_known": 0.973429,
+      "average_confidence_known": 0.981857,
       "average_confidence_unknown": 0.7366,
       "balanced_open_set_score": 0.66,
       "false_unknown_rate": 0.0,
@@ -73,7 +75,7 @@
       "unknown_detection_rate": 0.32
     },
     {
-      "average_confidence_known": 0.973429,
+      "average_confidence_known": 0.981857,
       "average_confidence_unknown": 0.7366,
       "balanced_open_set_score": 0.66,
       "false_unknown_rate": 0.0,
@@ -83,7 +85,7 @@
       "unknown_detection_rate": 0.32
     },
     {
-      "average_confidence_known": 0.973429,
+      "average_confidence_known": 0.981857,
       "average_confidence_unknown": 0.7366,
       "balanced_open_set_score": 0.66,
       "false_unknown_rate": 0.0,
@@ -93,52 +95,52 @@
       "unknown_detection_rate": 0.32
     },
     {
-      "average_confidence_known": 0.973429,
+      "average_confidence_known": 0.981857,
       "average_confidence_unknown": 0.7366,
-      "balanced_open_set_score": 0.645714,
-      "false_unknown_rate": 0.028571,
+      "balanced_open_set_score": 0.66,
+      "false_unknown_rate": 0.0,
       "known_closed_set_accuracy": 1.0,
-      "known_traffic_accuracy": 0.971429,
+      "known_traffic_accuracy": 1.0,
       "threshold": 0.75,
       "unknown_detection_rate": 0.32
     },
     {
-      "average_confidence_known": 0.973429,
+      "average_confidence_known": 0.981857,
       "average_confidence_unknown": 0.7366,
-      "balanced_open_set_score": 0.765714,
-      "false_unknown_rate": 0.028571,
+      "balanced_open_set_score": 0.78,
+      "false_unknown_rate": 0.0,
       "known_closed_set_accuracy": 1.0,
-      "known_traffic_accuracy": 0.971429,
+      "known_traffic_accuracy": 1.0,
       "threshold": 0.8,
       "unknown_detection_rate": 0.56
     },
     {
-      "average_confidence_known": 0.973429,
+      "average_confidence_known": 0.981857,
+      "average_confidence_unknown": 0.7366,
+      "balanced_open_set_score": 0.885714,
+      "false_unknown_rate": 0.028571,
+      "known_closed_set_accuracy": 1.0,
+      "known_traffic_accuracy": 0.971429,
+      "threshold": 0.85,
+      "unknown_detection_rate": 0.8
+    },
+    {
+      "average_confidence_known": 0.981857,
       "average_confidence_unknown": 0.7366,
       "balanced_open_set_score": 0.871429,
       "false_unknown_rate": 0.057143,
       "known_closed_set_accuracy": 1.0,
       "known_traffic_accuracy": 0.942857,
-      "threshold": 0.85,
-      "unknown_detection_rate": 0.8
-    },
-    {
-      "average_confidence_known": 0.973429,
-      "average_confidence_unknown": 0.7366,
-      "balanced_open_set_score": 0.842857,
-      "false_unknown_rate": 0.114286,
-      "known_closed_set_accuracy": 1.0,
-      "known_traffic_accuracy": 0.885714,
       "threshold": 0.9,
       "unknown_detection_rate": 0.8
     },
     {
-      "average_confidence_known": 0.973429,
+      "average_confidence_known": 0.981857,
       "average_confidence_unknown": 0.7366,
-      "balanced_open_set_score": 0.842857,
-      "false_unknown_rate": 0.114286,
+      "balanced_open_set_score": 0.857143,
+      "false_unknown_rate": 0.085714,
       "known_closed_set_accuracy": 1.0,
-      "known_traffic_accuracy": 0.885714,
+      "known_traffic_accuracy": 0.914286,
       "threshold": 0.95,
       "unknown_detection_rate": 0.8
     }

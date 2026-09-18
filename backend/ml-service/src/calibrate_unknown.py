@@ -365,11 +365,14 @@ def calibrate_unknown(config: CalibrationConfig) -> dict[str, Any]:
         )
 
     model = joblib.load(model_path)
-    known_probabilities = _probabilities(model, data.features[splits.test], len(class_order))
+    # Threshold selection is a tuning operation. Use the validation partition
+    # so the locked test partition remains untouched for final evaluation.
+    known_indices = splits.validation
+    known_probabilities = _probabilities(model, data.features[known_indices], len(class_order))
     unknown_probabilities = _probabilities(model, ood_features, len(class_order))
     threshold_results = _threshold_metrics(
         config.candidate_thresholds,
-        data.labels[splits.test],
+        data.labels[known_indices],
         known_probabilities,
         unknown_probabilities,
         class_order,
@@ -393,7 +396,9 @@ def calibrate_unknown(config: CalibrationConfig) -> dict[str, Any]:
         "chosen_threshold": chosen["threshold"],
         "chosen_threshold_metrics": chosen,
         "threshold_results": threshold_results,
-        "known_samples": int(len(splits.test)),
+        "known_samples": int(len(known_indices)),
+        "known_calibration_partition": "validation",
+        "locked_test_samples_untouched": int(len(splits.test)),
         "unknown_samples": int(len(ood_features)),
         "known_split_strategy": splits.strategy,
         "ood_summary": ood_summary,

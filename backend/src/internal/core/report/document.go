@@ -299,7 +299,7 @@ func evidenceSection(payload map[string]interface{}) reportSection {
 func riskAndFixesSection(payload map[string]interface{}, assessment rules.Assessment, hasAssessment bool) reportSection {
 	section := reportSection{Title: "Risk & Fixes"}
 	if score, ok := payload["risk_score"].(*riskv1.SecurityScore); ok && score != nil {
-		section.Tables = append(section.Tables, reportTable{Headers: []string{"Risk metric", "Value"}, Rows: [][]string{{"Observed-check score", fmt.Sprintf("%d/100", score.GetScore())}, {"Risk level", humanValue(score.GetRiskLevel())}, {"Assessment confidence", formatPercent(score.GetConfidence())}, {"Unknown critical facts", formatUint(score.GetUnknownEvidenceCount())}}, Widths: []int{40, 54}})
+		section.Tables = append(section.Tables, reportTable{Headers: []string{"Risk metric", "Value"}, Rows: [][]string{{"Evidence-backed score", fmt.Sprintf("%d/100", score.GetScore())}, {"Risk level", humanValue(score.GetRiskLevel())}, {"Evidence coverage", formatPercent(score.GetConfidence())}, {"Unknown critical facts", formatUint(score.GetUnknownEvidenceCount())}}, Widths: []int{40, 54}})
 	}
 	if breakdown, ok := payload["risk_breakdown"].(*riskv1.RiskBreakdown); ok && breakdown != nil {
 		categories := []struct {

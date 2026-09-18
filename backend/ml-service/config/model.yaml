@@ -21,7 +21,8 @@ grpc:
 
 unknown_detection:
   method: max_class_probability_threshold
-  # Calibrated on 35 locked known captures and 25 held-out OOD captures.
+  # Calibrated on 35 validation captures and 25 held-out OOD captures. The
+  # 35 locked-test captures remain untouched for final evaluation.
   # Re-run calibration whenever the model or deployment traffic changes.
   confidence_threshold: 0.85
   candidate_thresholds:

@@ -57,7 +57,7 @@
   "training_dataset": "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/backend/ml-service/data/processed/training_dataset.parquet",
   "training_dataset_sha256": "291d3300b29857603b91abf67e6944b89c99aaf18617434110fabdd1446835de",
   "unknown_detection": {
-    "calibrated_at": "2026-08-30T18:39:12.320135+00:00",
+    "calibrated_at": "2026-09-18T05:56:01.036377+00:00",
     "calibration_metrics": "/Users/dakshpathak/Desktop/SIH_IPSec/SIH26160---Team-Alchemist/backend/ml-service/artifacts/unknown_calibration.json",
     "confidence_threshold": 0.85,
     "limitation": "Confidence-threshold rejection is a baseline open-set method and cannot perfectly detect every unknown or out-of-distribution traffic type.",

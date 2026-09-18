@@ -210,6 +210,27 @@ func TestDecodeIKEv2CleartextPayloadsAndEncryptedBoundary(t *testing.T) {
 	}
 }
 
+func TestIKETransformKeyLengthsAndIKEv1AttributeMappings(t *testing.T) {
+	keyLength := []byte{0x80, 14, 0x01, 0x00}
+	transform := proposalTransform(keyLength, 1, 12)
+	if transform.Name != "AES-CBC-256" || transform.KeyLengthBits != 256 {
+		t.Fatalf("IKEv2 transform = %+v", transform)
+	}
+
+	attributes := []byte{
+		0x80, 1, 0, 7, // encryption = AES-CBC
+		0x80, 2, 0, 2, // hash = SHA-1
+		0x80, 3, 0, 1, // authentication = PSK
+		0x80, 4, 0, 2, // group = MODP-1024
+		0x80, 14, 0x01, 0x00, // key length = 256
+	}
+	var metadata PacketMetadata
+	parsed := parseIKEv1Attributes(&metadata, attributes)
+	if len(parsed) != 3 || metadata.IKEEncryptionAlgorithms[0] != "AES-CBC-256" || metadata.IKEIntegrityAlgorithms[0] != "HMAC-SHA1" || metadata.IKEAuthMethods[0] != "PSK" || metadata.IKEDHGroups[0] != "MODP-1024" {
+		t.Fatalf("IKEv1 attributes = %+v transforms=%+v", metadata, parsed)
+	}
+}
+
 func TestReadOfflinePCAPNGUsesSamePacketDecoder(t *testing.T) {
 	frame := ipv4UDPFrame(4500, 4500, []byte{0x12, 0x34, 0x56, 0x78, 1, 2, 3, 4})
 	input := pcapNG(frame)

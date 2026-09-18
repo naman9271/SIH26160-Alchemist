@@ -42,7 +42,7 @@ func TestAssessmentAndRiskReuseDeterministicRules(t *testing.T) {
 	}
 }
 
-func TestIKEAEADFallbackCountsEncryptionAndIntegrityEvidence(t *testing.T) {
+func TestIKECipherIsNotSubstitutedForMissingChildCipher(t *testing.T) {
 	service := coresecurity.New(conclusionFixture{
 		{ID: "c1", PropertyKey: "ike.version", Value: structpb.NewStringValue("IKEv2.0"), Status: commonv1.EvidenceStatus_OBSERVED, Confidence: .95},
 		{ID: "c2", PropertyKey: "ike.encryption", Value: structpb.NewStringValue("ENCR_20"), Status: commonv1.EvidenceStatus_OBSERVED, Confidence: .95},
@@ -53,11 +53,11 @@ func TestIKEAEADFallbackCountsEncryptionAndIntegrityEvidence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if record.UnknownEvidence != 2 {
-		t.Fatalf("unknown evidence = %d, want 2 (only PFS and replay)", record.UnknownEvidence)
+	if record.UnknownEvidence != 4 {
+		t.Fatalf("unknown evidence = %d, want CHILD-SA cipher/integrity/PFS/replay to remain unknown", record.UnknownEvidence)
 	}
-	if record.Result.Score != 100 || len(record.Result.Findings) != 0 {
-		t.Fatalf("assessment = %+v, want clean supported checks", record.Result)
+	if record.Result.Score >= 50 || len(record.Result.Findings) != 0 {
+		t.Fatalf("assessment = %+v, missing CHILD-SA cipher was treated as a pass", record.Result)
 	}
 
 	risk := corerisk.New(service)
@@ -65,8 +65,8 @@ func TestIKEAEADFallbackCountsEncryptionAndIntegrityEvidence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if score.UnknownEvidenceCount != 2 || score.Confidence != .9 {
-		t.Fatalf("risk score = %+v, want two unknown facts and 0.9 confidence", score)
+	if score.UnknownEvidenceCount != 4 || score.Confidence >= .5 {
+		t.Fatalf("risk score = %+v, missing evidence retained too much coverage", score)
 	}
 }
 
@@ -76,7 +76,7 @@ func TestUnavailableConfigurationNeverBecomesAPass(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if record.UnknownEvidence != 5 || record.Result.Score != 100 {
+	if record.UnknownEvidence != 5 || record.Result.Score >= 50 {
 		t.Fatalf("record=%+v", record)
 	}
 	score, err := corerisk.New(service).Score(context.Background(), record.ID)
@@ -85,5 +85,34 @@ func TestUnavailableConfigurationNeverBecomesAPass(t *testing.T) {
 	}
 	if score.UnknownEvidenceCount != 5 || score.Confidence >= 1 {
 		t.Fatalf("unknown evidence was represented as a pass: %+v", score)
+	}
+	breakdown, err := corerisk.New(service).Breakdown(context.Background(), record.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if breakdown.Cryptography.Score != 0 || breakdown.Authentication.Score != 0 || breakdown.KeyExchange.Score != 15 {
+		t.Fatalf("unknown category controls received credit: %+v", breakdown)
+	}
+}
+
+func TestAssessmentKeepsSecurityAssociationsSeparate(t *testing.T) {
+	service := coresecurity.New(conclusionFixture{
+		{ID: "a", ResourceType: "CHILD_SA", ResourceID: "strong", PropertyKey: model.PropertyChildEncryption, Value: structpb.NewStringValue("AES-GCM-16"), Status: commonv1.EvidenceStatus_VERIFIED_GATEWAY, Confidence: 1},
+		{ID: "b", ResourceType: "CHILD_SA", ResourceID: "weak", PropertyKey: model.PropertyChildEncryption, Value: structpb.NewStringValue("3DES-CBC"), Status: commonv1.EvidenceStatus_VERIFIED_GATEWAY, Confidence: 1},
+	})
+	record, err := service.Run(context.Background(), "analysis-scoped", "policy")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(record.Result.Findings) != 1 || record.Result.Findings[0].ResourceID != "weak" {
+		t.Fatalf("SA-scoped findings = %+v", record.Result.Findings)
+	}
+	breakdown, err := corerisk.New(service).Breakdown(context.Background(), record.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	total := breakdown.Cryptography.Maximum + breakdown.Authentication.Maximum + breakdown.KeyExchange.Maximum + breakdown.Pfs.Maximum + breakdown.Replay.Maximum + breakdown.Lifecycle.Maximum + breakdown.Metadata.Maximum
+	if total != 100 {
+		t.Fatalf("risk category maxima total %d, want 100", total)
 	}
 }
