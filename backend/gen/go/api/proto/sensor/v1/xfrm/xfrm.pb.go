@@ -128,30 +128,38 @@ func (x *XfrmCapabilities) GetReplayInformation() bool {
 }
 
 type XfrmState struct {
-	state                   protoimpl.MessageState `protogen:"open.v1"`
-	Source                  string                 `protobuf:"bytes,1,opt,name=source,proto3" json:"source,omitempty"`
-	Destination             string                 `protobuf:"bytes,2,opt,name=destination,proto3" json:"destination,omitempty"`
-	Protocol                string                 `protobuf:"bytes,3,opt,name=protocol,proto3" json:"protocol,omitempty"`
-	Spi                     uint32                 `protobuf:"varint,4,opt,name=spi,proto3" json:"spi,omitempty"`
-	Reqid                   uint32                 `protobuf:"varint,5,opt,name=reqid,proto3" json:"reqid,omitempty"`
-	Mode                    string                 `protobuf:"bytes,6,opt,name=mode,proto3" json:"mode,omitempty"`
-	Direction               string                 `protobuf:"bytes,7,opt,name=direction,proto3" json:"direction,omitempty"`
-	EncryptionAlgorithm     string                 `protobuf:"bytes,8,opt,name=encryption_algorithm,json=encryptionAlgorithm,proto3" json:"encryption_algorithm,omitempty"`
-	EncryptionKeyLength     uint32                 `protobuf:"varint,9,opt,name=encryption_key_length,json=encryptionKeyLength,proto3" json:"encryption_key_length,omitempty"`
-	AeadAlgorithm           string                 `protobuf:"bytes,10,opt,name=aead_algorithm,json=aeadAlgorithm,proto3" json:"aead_algorithm,omitempty"`
-	AeadIcvLength           uint32                 `protobuf:"varint,11,opt,name=aead_icv_length,json=aeadIcvLength,proto3" json:"aead_icv_length,omitempty"`
-	AuthenticationAlgorithm string                 `protobuf:"bytes,12,opt,name=authentication_algorithm,json=authenticationAlgorithm,proto3" json:"authentication_algorithm,omitempty"`
-	Encapsulation           string                 `protobuf:"bytes,13,opt,name=encapsulation,proto3" json:"encapsulation,omitempty"`
-	ReplayWindow            uint32                 `protobuf:"varint,14,opt,name=replay_window,json=replayWindow,proto3" json:"replay_window,omitempty"`
-	Sequence                uint64                 `protobuf:"varint,15,opt,name=sequence,proto3" json:"sequence,omitempty"`
-	ExtendedSequenceNumbers bool                   `protobuf:"varint,16,opt,name=extended_sequence_numbers,json=extendedSequenceNumbers,proto3" json:"extended_sequence_numbers,omitempty"`
-	ByteLimit               uint64                 `protobuf:"varint,17,opt,name=byte_limit,json=byteLimit,proto3" json:"byte_limit,omitempty"`
-	PacketLimit             uint64                 `protobuf:"varint,18,opt,name=packet_limit,json=packetLimit,proto3" json:"packet_limit,omitempty"`
-	Bytes                   uint64                 `protobuf:"varint,19,opt,name=bytes,proto3" json:"bytes,omitempty"`
-	Packets                 uint64                 `protobuf:"varint,20,opt,name=packets,proto3" json:"packets,omitempty"`
-	EvidenceStatus          v1.EvidenceStatus      `protobuf:"varint,21,opt,name=evidence_status,json=evidenceStatus,proto3,enum=ipsec.common.v1.EvidenceStatus" json:"evidence_status,omitempty"`
-	unknownFields           protoimpl.UnknownFields
-	sizeCache               protoimpl.SizeCache
+	state                    protoimpl.MessageState `protogen:"open.v1"`
+	Source                   string                 `protobuf:"bytes,1,opt,name=source,proto3" json:"source,omitempty"`
+	Destination              string                 `protobuf:"bytes,2,opt,name=destination,proto3" json:"destination,omitempty"`
+	Protocol                 string                 `protobuf:"bytes,3,opt,name=protocol,proto3" json:"protocol,omitempty"`
+	Spi                      uint32                 `protobuf:"varint,4,opt,name=spi,proto3" json:"spi,omitempty"`
+	Reqid                    uint32                 `protobuf:"varint,5,opt,name=reqid,proto3" json:"reqid,omitempty"`
+	Mode                     string                 `protobuf:"bytes,6,opt,name=mode,proto3" json:"mode,omitempty"`
+	Direction                string                 `protobuf:"bytes,7,opt,name=direction,proto3" json:"direction,omitempty"`
+	EncryptionAlgorithm      string                 `protobuf:"bytes,8,opt,name=encryption_algorithm,json=encryptionAlgorithm,proto3" json:"encryption_algorithm,omitempty"`
+	EncryptionKeyLength      uint32                 `protobuf:"varint,9,opt,name=encryption_key_length,json=encryptionKeyLength,proto3" json:"encryption_key_length,omitempty"`
+	AeadAlgorithm            string                 `protobuf:"bytes,10,opt,name=aead_algorithm,json=aeadAlgorithm,proto3" json:"aead_algorithm,omitempty"`
+	AeadIcvLength            uint32                 `protobuf:"varint,11,opt,name=aead_icv_length,json=aeadIcvLength,proto3" json:"aead_icv_length,omitempty"`
+	AuthenticationAlgorithm  string                 `protobuf:"bytes,12,opt,name=authentication_algorithm,json=authenticationAlgorithm,proto3" json:"authentication_algorithm,omitempty"`
+	Encapsulation            string                 `protobuf:"bytes,13,opt,name=encapsulation,proto3" json:"encapsulation,omitempty"`
+	ReplayWindow             uint32                 `protobuf:"varint,14,opt,name=replay_window,json=replayWindow,proto3" json:"replay_window,omitempty"`
+	Sequence                 uint64                 `protobuf:"varint,15,opt,name=sequence,proto3" json:"sequence,omitempty"`
+	ExtendedSequenceNumbers  bool                   `protobuf:"varint,16,opt,name=extended_sequence_numbers,json=extendedSequenceNumbers,proto3" json:"extended_sequence_numbers,omitempty"`
+	ByteLimit                uint64                 `protobuf:"varint,17,opt,name=byte_limit,json=byteLimit,proto3" json:"byte_limit,omitempty"`
+	PacketLimit              uint64                 `protobuf:"varint,18,opt,name=packet_limit,json=packetLimit,proto3" json:"packet_limit,omitempty"`
+	Bytes                    uint64                 `protobuf:"varint,19,opt,name=bytes,proto3" json:"bytes,omitempty"`
+	Packets                  uint64                 `protobuf:"varint,20,opt,name=packets,proto3" json:"packets,omitempty"`
+	EvidenceStatus           v1.EvidenceStatus      `protobuf:"varint,21,opt,name=evidence_status,json=evidenceStatus,proto3,enum=ipsec.common.v1.EvidenceStatus" json:"evidence_status,omitempty"`
+	AeadSaltLength           uint32                 `protobuf:"varint,22,opt,name=aead_salt_length,json=aeadSaltLength,proto3" json:"aead_salt_length,omitempty"`
+	AuthenticationKeyLength  uint32                 `protobuf:"varint,23,opt,name=authentication_key_length,json=authenticationKeyLength,proto3" json:"authentication_key_length,omitempty"`
+	ReplayApplicable         bool                   `protobuf:"varint,24,opt,name=replay_applicable,json=replayApplicable,proto3" json:"replay_applicable,omitempty"`
+	OutboundSequence         uint64                 `protobuf:"varint,25,opt,name=outbound_sequence,json=outboundSequence,proto3" json:"outbound_sequence,omitempty"`
+	ByteSoftLimit            uint64                 `protobuf:"varint,26,opt,name=byte_soft_limit,json=byteSoftLimit,proto3" json:"byte_soft_limit,omitempty"`
+	PacketSoftLimit          uint64                 `protobuf:"varint,27,opt,name=packet_soft_limit,json=packetSoftLimit,proto3" json:"packet_soft_limit,omitempty"`
+	InstallTimeEpochSeconds  uint64                 `protobuf:"varint,28,opt,name=install_time_epoch_seconds,json=installTimeEpochSeconds,proto3" json:"install_time_epoch_seconds,omitempty"`
+	FirstUseTimeEpochSeconds uint64                 `protobuf:"varint,29,opt,name=first_use_time_epoch_seconds,json=firstUseTimeEpochSeconds,proto3" json:"first_use_time_epoch_seconds,omitempty"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
 }
 
 func (x *XfrmState) Reset() {
@@ -329,6 +337,62 @@ func (x *XfrmState) GetEvidenceStatus() v1.EvidenceStatus {
 		return x.EvidenceStatus
 	}
 	return v1.EvidenceStatus(0)
+}
+
+func (x *XfrmState) GetAeadSaltLength() uint32 {
+	if x != nil {
+		return x.AeadSaltLength
+	}
+	return 0
+}
+
+func (x *XfrmState) GetAuthenticationKeyLength() uint32 {
+	if x != nil {
+		return x.AuthenticationKeyLength
+	}
+	return 0
+}
+
+func (x *XfrmState) GetReplayApplicable() bool {
+	if x != nil {
+		return x.ReplayApplicable
+	}
+	return false
+}
+
+func (x *XfrmState) GetOutboundSequence() uint64 {
+	if x != nil {
+		return x.OutboundSequence
+	}
+	return 0
+}
+
+func (x *XfrmState) GetByteSoftLimit() uint64 {
+	if x != nil {
+		return x.ByteSoftLimit
+	}
+	return 0
+}
+
+func (x *XfrmState) GetPacketSoftLimit() uint64 {
+	if x != nil {
+		return x.PacketSoftLimit
+	}
+	return 0
+}
+
+func (x *XfrmState) GetInstallTimeEpochSeconds() uint64 {
+	if x != nil {
+		return x.InstallTimeEpochSeconds
+	}
+	return 0
+}
+
+func (x *XfrmState) GetFirstUseTimeEpochSeconds() uint64 {
+	if x != nil {
+		return x.FirstUseTimeEpochSeconds
+	}
+	return 0
 }
 
 type ListXfrmStatesRequest struct {
@@ -1130,7 +1194,7 @@ const file_api_proto_sensor_v1_xfrm_xfrm_proto_rawDesc = "" +
 	"\vstate_query\x18\x02 \x01(\bR\n" +
 	"stateQuery\x12!\n" +
 	"\fpolicy_query\x18\x03 \x01(\bR\vpolicyQuery\x12-\n" +
-	"\x12replay_information\x18\x04 \x01(\bR\x11replayInformation\"\x8b\x06\n" +
+	"\x12replay_information\x18\x04 \x01(\bR\x11replayInformation\"\x9c\t\n" +
 	"\tXfrmState\x12\x16\n" +
 	"\x06source\x18\x01 \x01(\tR\x06source\x12 \n" +
 	"\vdestination\x18\x02 \x01(\tR\vdestination\x12\x1a\n" +
@@ -1154,7 +1218,15 @@ const file_api_proto_sensor_v1_xfrm_xfrm_proto_rawDesc = "" +
 	"\fpacket_limit\x18\x12 \x01(\x04R\vpacketLimit\x12\x14\n" +
 	"\x05bytes\x18\x13 \x01(\x04R\x05bytes\x12\x18\n" +
 	"\apackets\x18\x14 \x01(\x04R\apackets\x12H\n" +
-	"\x0fevidence_status\x18\x15 \x01(\x0e2\x1f.ipsec.common.v1.EvidenceStatusR\x0eevidenceStatus\"\xe5\x01\n" +
+	"\x0fevidence_status\x18\x15 \x01(\x0e2\x1f.ipsec.common.v1.EvidenceStatusR\x0eevidenceStatus\x12(\n" +
+	"\x10aead_salt_length\x18\x16 \x01(\rR\x0eaeadSaltLength\x12:\n" +
+	"\x19authentication_key_length\x18\x17 \x01(\rR\x17authenticationKeyLength\x12+\n" +
+	"\x11replay_applicable\x18\x18 \x01(\bR\x10replayApplicable\x12+\n" +
+	"\x11outbound_sequence\x18\x19 \x01(\x04R\x10outboundSequence\x12&\n" +
+	"\x0fbyte_soft_limit\x18\x1a \x01(\x04R\rbyteSoftLimit\x12*\n" +
+	"\x11packet_soft_limit\x18\x1b \x01(\x04R\x0fpacketSoftLimit\x12;\n" +
+	"\x1ainstall_time_epoch_seconds\x18\x1c \x01(\x04R\x17installTimeEpochSeconds\x12>\n" +
+	"\x1cfirst_use_time_epoch_seconds\x18\x1d \x01(\x04R\x18firstUseTimeEpochSeconds\"\xe5\x01\n" +
 	"\x15ListXfrmStatesRequest\x12\x16\n" +
 	"\x06source\x18\x01 \x01(\tR\x06source\x12 \n" +
 	"\vdestination\x18\x02 \x01(\tR\vdestination\x12\x1a\n" +

@@ -88,7 +88,10 @@ func (s *Service) Snapshot(ctx context.Context) (*xfrmv1.KernelSnapshot, error) 
 	}
 	out := &xfrmv1.KernelSnapshot{SchemaVersion: FixtureSchemaVersion, States: states, Policies: policies, SnapshotTimestamp: timestamppb.New(time.Now().UTC())}
 	for _, state := range states {
-		out.ReplayProtection = append(out.ReplayProtection, &xfrmv1.ReplayProtection{Available: state.GetReplayWindow() > 0, Enabled: state.GetReplayWindow() > 0,
+		if !state.GetReplayApplicable() {
+			continue
+		}
+		out.ReplayProtection = append(out.ReplayProtection, &xfrmv1.ReplayProtection{Available: true, Enabled: state.GetReplayWindow() > 0,
 			ReplayWindow: state.GetReplayWindow(), Sequence: state.GetSequence(), ExtendedSequenceNumbers: state.GetExtendedSequenceNumbers(), EvidenceStatus: commonv1.EvidenceStatus_VERIFIED_GATEWAY})
 	}
 	out.Availability = []*xfrmv1.ComponentAvailability{{Component: "states", Available: true}, {Component: "policies", Available: true}}

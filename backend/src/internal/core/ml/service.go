@@ -213,9 +213,15 @@ func (s *Service) storeResult(id string, result *worker.PredictionResult, shap b
 	if result == nil {
 		return
 	}
-	p := &mlv1.TrafficPrediction{PredictionId: id + ":" + result.GetFlowId(), FlowId: result.GetFlowId(), TrafficClass: trafficClassName(result.GetPredictedClass()), Confidence: result.GetConfidence(), IsUnknown: result.GetIsUnknown(), ModelVersion: result.GetModelVersion(), FeatureSchemaVersion: "flow.v2", InferenceTimeMs: result.GetInferenceTimeMs(), ClassProbabilities: map[string]float64{}}
+	windowID := result.GetWindowId()
+	if windowID == "" {
+		windowID = result.GetFlowId()
+	}
+	p := &mlv1.TrafficPrediction{PredictionId: id + ":" + windowID, FlowId: result.GetFlowId(), WindowId: result.GetWindowId(), AggregationScope: result.GetAggregationScope(), TrafficClass: trafficClassName(result.GetPredictedClass()), Confidence: result.GetConfidence(), IsUnknown: result.GetIsUnknown(), ModelVersion: result.GetModelVersion(), FeatureSchemaVersion: "flow.v2", InferenceTimeMs: result.GetInferenceTimeMs(), ClassProbabilities: map[string]float64{}}
 	for _, top := range result.GetTopPredictions() {
-		p.ClassProbabilities[trafficClassName(top.GetTrafficClass())] = top.GetConfidence()
+		name := trafficClassName(top.GetTrafficClass())
+		p.ClassProbabilities[name] = top.GetConfidence()
+		p.TopPredictions = append(p.TopPredictions, &mlv1.RankedClassPrediction{TrafficClass: name, Confidence: top.GetConfidence()})
 	}
 	explanation := &mlv1.PredictionExplanation{PredictionId: p.PredictionId}
 	if shap && len(result.GetTopExplanations()) > 0 {

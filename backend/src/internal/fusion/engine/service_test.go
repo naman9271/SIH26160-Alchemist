@@ -66,8 +66,8 @@ func evidence(property, value, resourceType, resourceID string, source model.Sou
 func seed(t *testing.T, fixture fixture) {
 	t.Helper()
 	batch, err := fixture.ingest.AddBatch(context.Background(), ingest.AddBatchRequest{FusionRunID: fixture.runID, Evidence: []ingest.EvidenceInput{
-		evidence("child.mode", "TUNNEL", "CHILD_SA", "passive-child", model.SourcePacketParser, commonv1.EvidenceStatus_DERIVED, .72, map[string]string{"reqid": "42"}),
-		evidence("child.mode", "TRANSPORT", "VICI_CHILD_SA", "vici-child", model.SourceVICI, commonv1.EvidenceStatus_VERIFIED_GATEWAY, 1, map[string]string{"reqid": "42"}),
+		evidence("child.mode", "TUNNEL", "CHILD_SA", "passive-child", model.SourcePacketParser, commonv1.EvidenceStatus_DERIVED, .72, map[string]string{"reqid": "42", "endpoint_pair": "192.0.2.1<>198.51.100.1", "esp_directional_wire": "esp|198.51.100.1|0x00000001"}),
+		evidence("child.mode", "TRANSPORT", "VICI_CHILD_SA", "vici-child", model.SourceVICI, commonv1.EvidenceStatus_VERIFIED_GATEWAY, 1, map[string]string{"reqid": "42", "endpoint_pair": "192.0.2.1<>198.51.100.1", "esp_directional_wire_in": "esp|198.51.100.1|0x00000001"}),
 		evidence("traffic.class", "VIDEO", "FLOW", "flow-1", model.SourceMLClassifier, commonv1.EvidenceStatus_INFERRED, .46, map[string]string{"endpoint_tuple": "a-b"}),
 	}})
 	if err != nil || batch.AcceptedCount != 3 {
@@ -139,7 +139,7 @@ func TestRecomputeOnlyAffectedCorrelationProperties(t *testing.T) {
 	for _, item := range before.Conclusions {
 		beforeByProperty[item.PropertyKey] = item
 	}
-	if _, err := fixture.ingest.Add(context.Background(), ingest.AddRequest{FusionRunID: fixture.runID, Evidence: evidence("child.integrity", "SHA256", "VICI_CHILD_SA", "vici-child", model.SourceVICI, commonv1.EvidenceStatus_VERIFIED_GATEWAY, 1, map[string]string{"reqid": "42"})}); err != nil {
+	if _, err := fixture.ingest.Add(context.Background(), ingest.AddRequest{FusionRunID: fixture.runID, Evidence: evidence("child.integrity", "SHA256", "VICI_CHILD_SA", "vici-child", model.SourceVICI, commonv1.EvidenceStatus_VERIFIED_GATEWAY, 1, map[string]string{"reqid": "42", "endpoint_pair": "192.0.2.1<>198.51.100.1", "esp_directional_wire_in": "esp|198.51.100.1|0x00000001"})}); err != nil {
 		t.Fatal(err)
 	}
 	response, err := fixture.service.Recompute(context.Background(), engine.RecomputeRequest{FusionRunID: fixture.runID, AffectedProperties: []string{"child.integrity"}})

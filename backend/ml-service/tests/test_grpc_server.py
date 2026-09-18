@@ -111,12 +111,15 @@ class ControlledPredictor:
         )
         return PredictionResult(
             flow_id="flow-001",
+            window_id="window-001",
+            aggregation_scope="aggregate_endpoint_channel_estimate",
             predicted_class=TrafficClass.WEB,
             confidence=0.8,
             is_unknown=False,
             top_predictions=[
                 ClassPrediction(traffic_class=TrafficClass.WEB, confidence=0.8),
-                ClassPrediction(traffic_class=TrafficClass.VIDEO, confidence=0.2),
+                ClassPrediction(traffic_class=TrafficClass.VIDEO, confidence=0.15),
+                ClassPrediction(traffic_class=TrafficClass.VOIP, confidence=0.05),
             ],
             model_version=self.model_version,
             top_explanations=explanations,

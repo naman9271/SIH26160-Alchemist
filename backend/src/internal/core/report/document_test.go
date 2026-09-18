@@ -72,3 +72,11 @@ func TestReportDocumentKeepsDashboardSectionsWhenDataIsUnavailable(t *testing.T)
 		}
 	}
 }
+
+func TestFindingResourceKeepsConcurrentSAsDistinguishable(t *testing.T) {
+	strong := findingResource(rules.Finding{ResourceType: "CHILD_SA", ResourceID: "child-strong"})
+	weak := findingResource(rules.Finding{ResourceType: "CHILD_SA", ResourceID: "child-weak"})
+	if strong != " [CHILD_SA child-strong]" || weak != " [CHILD_SA child-weak]" || strong == weak {
+		t.Fatalf("report SA labels were not distinct: strong=%q weak=%q", strong, weak)
+	}
+}

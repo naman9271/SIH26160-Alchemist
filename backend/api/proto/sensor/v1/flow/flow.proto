@@ -38,7 +38,7 @@ message GetFlowRequest { string flow_id = 1; }
 message GetFlowStatsRequest { string flow_id = 1; }
 
 message FeatureWindowSummary { string window_id = 1; string flow_id = 2; string session_id = 3; google.protobuf.Timestamp window_start = 4; google.protobuf.Timestamp window_end = 5; string feature_schema_version = 6; string sequence_schema_version = 7; uint64 packet_count = 8; bool finalized = 9; string eviction_reason = 10; }
-message FeatureWindow { string window_id = 1; string flow_id = 2; string session_id = 3; google.protobuf.Timestamp window_start = 4; google.protobuf.Timestamp window_end = 5; string feature_schema_version = 6; string sequence_schema_version = 7; repeated string feature_names = 8; repeated double feature_values = 9; string normalization_profile = 10; string direction_convention = 11; uint64 window_duration_ms = 12; uint64 packet_count = 13; bool finalized = 14; string eviction_reason = 15; }
+message FeatureWindow { string window_id = 1; string flow_id = 2; string session_id = 3; google.protobuf.Timestamp window_start = 4; google.protobuf.Timestamp window_end = 5; string feature_schema_version = 6; string sequence_schema_version = 7; repeated string feature_names = 8; repeated double feature_values = 9; string normalization_profile = 10; string direction_convention = 11; uint64 window_duration_ms = 12; uint64 packet_count = 13; bool finalized = 14; string eviction_reason = 15; string aggregation_scope = 16; }
 message ListFeatureWindowsRequest { string flow_id = 1; uint32 page_size = 2; string page_token = 3; }
 message ListFeatureWindowsResponse { repeated FeatureWindowSummary windows = 1; string next_page_token = 2; }
 message GetFeatureWindowRequest { string window_id = 1; }

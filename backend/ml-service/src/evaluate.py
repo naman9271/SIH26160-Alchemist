@@ -107,6 +107,29 @@ def _save_per_class_confidence(
     return per_class
 
 
+def _probability_calibration_metrics(
+    y_true: np.ndarray, probabilities: np.ndarray, classes: Sequence[str]
+) -> dict[str, float]:
+    class_index = {label: index for index, label in enumerate(classes)}
+    encoded = np.asarray([class_index[str(label)] for label in y_true], dtype=int)
+    one_hot = np.eye(len(classes), dtype=float)[encoded]
+    confidence = np.max(probabilities, axis=1)
+    correct = np.argmax(probabilities, axis=1) == encoded
+    ece = 0.0
+    for lower in np.linspace(0.0, 0.9, 10):
+        selected = (confidence >= lower) & (confidence < lower + 0.1)
+        if np.any(selected):
+            ece += float(np.mean(selected)) * abs(
+                float(np.mean(correct[selected])) - float(np.mean(confidence[selected]))
+            )
+    return {
+        "multiclass_brier_score": round(
+            float(np.mean(np.sum((probabilities - one_hot) ** 2, axis=1))), 6
+        ),
+        "expected_calibration_error": round(ece, 6),
+    }
+
+
 def _blocked_output(missing: Sequence[Path]) -> tuple[dict[str, Any], dict[str, Any]]:
     reason = "Required trained-model artifacts are unavailable; evaluation was not run."
     return (
@@ -186,6 +209,19 @@ def evaluate_production_model(
     probabilities = model.predict_proba(x_test)
     confidences = np.max(probabilities, axis=1)
     audit_metadata = _audit_metadata(dataset_path, len(data.labels))
+    test_audit = [audit_metadata[int(index)] for index in splits.test]
+    required_generation = "post-threshold-v2"
+    locked_test_is_new = bool(test_audit) and all(
+        row.get("locked_test_generation") == required_generation for row in test_audit
+    )
+    unknown_metadata = metadata.get("unknown_detection") or {}
+    threshold = unknown_metadata.get("confidence_threshold")
+    threshold_is_calibrated = (
+        unknown_metadata.get("status") == "calibrated"
+        and isinstance(threshold, (int, float))
+        and 0 <= float(threshold) <= 1
+    )
+    rejected = confidences < float(threshold) if threshold_is_calibrated else np.zeros(len(confidences), dtype=bool)
 
     report = classification_report(
         y_test, predictions, labels=class_order, output_dict=True, zero_division=0
@@ -237,6 +273,21 @@ def evaluate_production_model(
             "counts": np.histogram(confidences, bins=20, range=(0, 1))[0].tolist(),
         },
         "per_class_confidence": per_class_confidence,
+        "probability_calibration": _probability_calibration_metrics(
+            y_test, probabilities, class_order
+        ),
+        "abstention_rate": round(float(np.mean(rejected)), 6),
+        "unknown_threshold_status": (
+            "calibrated" if threshold_is_calibrated else "not_calibrated"
+        ),
+        "locked_test_set": {
+            "required_generation": required_generation,
+            "valid_final_evaluation": locked_test_is_new,
+            "status": "ready" if locked_test_is_new else "new_locked_captures_required",
+            "reason": None if locked_test_is_new else (
+                "The existing test data predates the current UNKNOWN calibration; its metrics are prototype evidence only."
+            ),
+        },
         "misclassified_sample_summary": {
             "total_misclassified": int(np.sum(y_test != predictions)),
             "samples": errors,

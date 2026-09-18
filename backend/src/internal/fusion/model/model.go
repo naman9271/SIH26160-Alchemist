@@ -111,13 +111,16 @@ func (e EvidenceItem) Clone() EvidenceItem {
 }
 
 type CorrelationGroup struct {
-	ID           string
-	ResourceType string
-	ResourceID   string
-	EvidenceIDs  []string
-	Keys         map[string]string
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID                 string
+	ResourceType       string
+	ResourceID         string
+	EvidenceIDs        []string
+	Keys               map[string]string
+	FirstObservedAt    time.Time
+	LastObservedAt     time.Time
+	UncertaintyReasons []string
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
 }
 
 type ConflictState string
@@ -303,6 +306,7 @@ func (g CorrelationGroup) Clone() CorrelationGroup {
 	copy := g
 	copy.EvidenceIDs = append([]string(nil), g.EvidenceIDs...)
 	copy.Keys = maps.Clone(g.Keys)
+	copy.UncertaintyReasons = append([]string(nil), g.UncertaintyReasons...)
 	return copy
 }
 

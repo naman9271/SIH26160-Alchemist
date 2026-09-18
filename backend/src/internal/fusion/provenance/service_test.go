@@ -37,7 +37,7 @@ func TestEvidenceChainExplanationContributionAndTimeline(t *testing.T) {
 	passive, err := runtime.Ingest.Add(context.Background(), ingest.AddRequest{FusionRunID: run.ID, Evidence: ingest.EvidenceInput{
 		PropertyKey: "child.mode", Value: structpb.NewStringValue("TUNNEL"), Source: model.SourcePacketParser,
 		Status: commonv1.EvidenceStatus_DERIVED, Confidence: .72, ObservedAt: observedAt,
-		ResourceType: "CHILD_SA", ResourceID: "passive-child", SourceReference: "capture:packet-7", Metadata: map[string]string{"reqid": "42"},
+		ResourceType: "CHILD_SA", ResourceID: "passive-child", SourceReference: "capture:packet-7", Metadata: map[string]string{"reqid": "42", "endpoint_pair": "192.0.2.1<>198.51.100.1", "esp_directional_wire": "esp|198.51.100.1|0x00000001"},
 	}})
 	if err != nil {
 		t.Fatal(err)
@@ -45,7 +45,7 @@ func TestEvidenceChainExplanationContributionAndTimeline(t *testing.T) {
 	verified, err := runtime.Ingest.Add(context.Background(), ingest.AddRequest{FusionRunID: run.ID, Evidence: ingest.EvidenceInput{
 		PropertyKey: "child.mode", Value: structpb.NewStringValue("TRANSPORT"), Source: model.SourceVICI,
 		Status: commonv1.EvidenceStatus_VERIFIED_GATEWAY, Confidence: 1, ObservedAt: observedAt.Add(time.Second),
-		ResourceType: "VICI_CHILD_SA", ResourceID: "vici-child", SourceReference: "vici:child-sa-42", Metadata: map[string]string{"reqid": "42"},
+		ResourceType: "VICI_CHILD_SA", ResourceID: "vici-child", SourceReference: "vici:child-sa-42", Metadata: map[string]string{"reqid": "42", "endpoint_pair": "192.0.2.1<>198.51.100.1", "esp_directional_wire_in": "esp|198.51.100.1|0x00000001"},
 	}})
 	if err != nil {
 		t.Fatal(err)

@@ -9,6 +9,7 @@ method; it is not a guarantee that every novel traffic type will be detected.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import logging
 import math
@@ -189,10 +190,11 @@ def load_ood_features(
     feature_order: Sequence[str],
     fitted_classes: set[str],
     training_sources: set[str],
-) -> tuple[np.ndarray, dict[str, Any]]:
-    """Load only OOD records evidenced by an unseen class or unseen source."""
+) -> tuple[np.ndarray, np.ndarray, dict[str, Any]]:
+    """Load and group-split OOD records into calibration and final evaluation."""
 
-    rows: list[list[float]] = []
+    calibration_rows: list[list[float]] = []
+    evaluation_rows: list[list[float]] = []
     per_path: dict[str, dict[str, Any]] = {}
     basis_counts: Counter[str] = Counter()
     for path in paths:
@@ -205,15 +207,19 @@ def load_ood_features(
             raise CalibrationError(
                 f"{path} lacks fitted features: {', '.join(sorted(missing_features))}"
             )
-        available_metadata = [
-            column for column in ("canonical_label", "dataset_source") if column in columns
-        ]
+        available_metadata = [column for column in (
+            "canonical_label", "dataset_source", "split_group_id", "capture_id"
+        ) if column in columns]
         if not available_metadata:
             raise CalibrationError(
                 f"{path} needs canonical_label or dataset_source to establish OOD eligibility"
             )
         selected = 0
         skipped = 0
+        if not ({"split_group_id", "capture_id"} & columns):
+            raise CalibrationError(
+                f"{path} needs split_group_id or capture_id for independent OOD partitions"
+            )
         read_columns = [*feature_order, *available_metadata]
         for batch in parquet_file.iter_batches(columns=read_columns, batch_size=65_536):
             for row in batch.to_pylist():
@@ -227,12 +233,27 @@ def load_ood_features(
                 if basis is None:
                     skipped += 1
                     continue
-                rows.append(_feature_row(row, feature_order, path))
+                group = row.get("split_group_id") or row.get("capture_id")
+                if not isinstance(group, str) or not group:
+                    raise CalibrationError(f"{path} contains an OOD record without a group identity")
+                feature_row = _feature_row(row, feature_order, path)
+                # A stable group assignment prevents records from one capture
+                # appearing in both threshold selection and final OOD metrics.
+                bucket = int(hashlib.sha256(group.encode("utf-8")).hexdigest()[:8], 16) % 5
+                if bucket == 0:
+                    evaluation_rows.append(feature_row)
+                else:
+                    calibration_rows.append(feature_row)
                 basis_counts[basis] += 1
                 selected += 1
         per_path[str(path)] = {"selected_ood_records": selected, "skipped_records": skipped}
-    return np.asarray(rows, dtype=float), {
-        "sample_count": len(rows),
+    if not calibration_rows or not evaluation_rows:
+        raise CalibrationError("OOD data needs enough independent groups for calibration and final evaluation")
+    return np.asarray(calibration_rows, dtype=float), np.asarray(evaluation_rows, dtype=float), {
+        "sample_count": len(calibration_rows) + len(evaluation_rows),
+        "calibration_sample_count": len(calibration_rows),
+        "final_evaluation_sample_count": len(evaluation_rows),
+		"partition_method": "sha256_group_mod_5",
         "selection_basis_counts": dict(sorted(basis_counts.items())),
         "datasets": per_path,
     }
@@ -352,13 +373,13 @@ def calibrate_unknown(config: CalibrationConfig) -> dict[str, Any]:
         n_jobs=int(stored_config.get("n_jobs", -1)),
     )
     splits = split_group_safe(data, split_config)
-    ood_features, ood_summary = load_ood_features(
+    ood_calibration_features, ood_evaluation_features, ood_summary = load_ood_features(
         config.ood_dataset_paths,
         feature_order,
         set(class_order),
         _training_sources(config.training_dataset_path),
     )
-    if not len(ood_features):
+    if not len(ood_calibration_features):
         return _blocked(
             config,
             "Configured datasets contain no eligible held-out-class or unseen-source OOD records.",
@@ -369,7 +390,7 @@ def calibrate_unknown(config: CalibrationConfig) -> dict[str, Any]:
     # so the locked test partition remains untouched for final evaluation.
     known_indices = splits.validation
     known_probabilities = _probabilities(model, data.features[known_indices], len(class_order))
-    unknown_probabilities = _probabilities(model, ood_features, len(class_order))
+    unknown_probabilities = _probabilities(model, ood_calibration_features, len(class_order))
     threshold_results = _threshold_metrics(
         config.candidate_thresholds,
         data.labels[known_indices],
@@ -386,6 +407,12 @@ def calibrate_unknown(config: CalibrationConfig) -> dict[str, Any]:
             -item["threshold"],
         ),
     )
+    final_ood_probabilities = _probabilities(
+        model, ood_evaluation_features, len(class_order)
+    )
+    final_ood_rejection_rate = float(
+        np.mean(np.max(final_ood_probabilities, axis=1) < float(chosen["threshold"]))
+    )
     report = {
         "status": "complete",
         "generated_at": datetime.now(UTC).isoformat(),
@@ -399,7 +426,9 @@ def calibrate_unknown(config: CalibrationConfig) -> dict[str, Any]:
         "known_samples": int(len(known_indices)),
         "known_calibration_partition": "validation",
         "locked_test_samples_untouched": int(len(splits.test)),
-        "unknown_samples": int(len(ood_features)),
+        "unknown_samples": int(len(ood_calibration_features)),
+		"final_ood_samples": int(len(ood_evaluation_features)),
+		"final_ood_rejection_rate": round(final_ood_rejection_rate, 6),
         "known_split_strategy": splits.strategy,
         "ood_summary": ood_summary,
         "limitation": LIMITATION,

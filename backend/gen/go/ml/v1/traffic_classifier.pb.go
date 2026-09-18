@@ -216,6 +216,8 @@ type FlowFeatures struct {
 	BurstCount           *int64                 `protobuf:"varint,22,opt,name=burst_count,json=burstCount,proto3,oneof" json:"burst_count,omitempty"`
 	MeanBurstSize        *float64               `protobuf:"fixed64,23,opt,name=mean_burst_size,json=meanBurstSize,proto3,oneof" json:"mean_burst_size,omitempty"`
 	IdleTimeRatio        *float64               `protobuf:"fixed64,24,opt,name=idle_time_ratio,json=idleTimeRatio,proto3,oneof" json:"idle_time_ratio,omitempty"`
+	WindowId             *string                `protobuf:"bytes,25,opt,name=window_id,json=windowId,proto3,oneof" json:"window_id,omitempty"`
+	AggregationScope     *string                `protobuf:"bytes,26,opt,name=aggregation_scope,json=aggregationScope,proto3,oneof" json:"aggregation_scope,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -418,6 +420,20 @@ func (x *FlowFeatures) GetIdleTimeRatio() float64 {
 	return 0
 }
 
+func (x *FlowFeatures) GetWindowId() string {
+	if x != nil && x.WindowId != nil {
+		return *x.WindowId
+	}
+	return ""
+}
+
+func (x *FlowFeatures) GetAggregationScope() string {
+	if x != nil && x.AggregationScope != nil {
+		return *x.AggregationScope
+	}
+	return ""
+}
+
 type ClassPrediction struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	TrafficClass  TrafficClass           `protobuf:"varint,1,opt,name=traffic_class,json=trafficClass,proto3,enum=sih.ipsec.ml.v1.TrafficClass" json:"traffic_class,omitempty"`
@@ -547,17 +563,19 @@ func (x *FeatureExplanation) GetDirection() ExplanationDirection {
 }
 
 type PredictionResult struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	FlowId          string                 `protobuf:"bytes,1,opt,name=flow_id,json=flowId,proto3" json:"flow_id,omitempty"`
-	PredictedClass  TrafficClass           `protobuf:"varint,2,opt,name=predicted_class,json=predictedClass,proto3,enum=sih.ipsec.ml.v1.TrafficClass" json:"predicted_class,omitempty"`
-	Confidence      float64                `protobuf:"fixed64,3,opt,name=confidence,proto3" json:"confidence,omitempty"`
-	IsUnknown       bool                   `protobuf:"varint,4,opt,name=is_unknown,json=isUnknown,proto3" json:"is_unknown,omitempty"`
-	TopPredictions  []*ClassPrediction     `protobuf:"bytes,5,rep,name=top_predictions,json=topPredictions,proto3" json:"top_predictions,omitempty"`
-	ModelVersion    string                 `protobuf:"bytes,6,opt,name=model_version,json=modelVersion,proto3" json:"model_version,omitempty"`
-	TopExplanations []*FeatureExplanation  `protobuf:"bytes,7,rep,name=top_explanations,json=topExplanations,proto3" json:"top_explanations,omitempty"`
-	InferenceTimeMs float64                `protobuf:"fixed64,8,opt,name=inference_time_ms,json=inferenceTimeMs,proto3" json:"inference_time_ms,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	FlowId           string                 `protobuf:"bytes,1,opt,name=flow_id,json=flowId,proto3" json:"flow_id,omitempty"`
+	PredictedClass   TrafficClass           `protobuf:"varint,2,opt,name=predicted_class,json=predictedClass,proto3,enum=sih.ipsec.ml.v1.TrafficClass" json:"predicted_class,omitempty"`
+	Confidence       float64                `protobuf:"fixed64,3,opt,name=confidence,proto3" json:"confidence,omitempty"`
+	IsUnknown        bool                   `protobuf:"varint,4,opt,name=is_unknown,json=isUnknown,proto3" json:"is_unknown,omitempty"`
+	TopPredictions   []*ClassPrediction     `protobuf:"bytes,5,rep,name=top_predictions,json=topPredictions,proto3" json:"top_predictions,omitempty"`
+	ModelVersion     string                 `protobuf:"bytes,6,opt,name=model_version,json=modelVersion,proto3" json:"model_version,omitempty"`
+	TopExplanations  []*FeatureExplanation  `protobuf:"bytes,7,rep,name=top_explanations,json=topExplanations,proto3" json:"top_explanations,omitempty"`
+	InferenceTimeMs  float64                `protobuf:"fixed64,8,opt,name=inference_time_ms,json=inferenceTimeMs,proto3" json:"inference_time_ms,omitempty"`
+	WindowId         string                 `protobuf:"bytes,9,opt,name=window_id,json=windowId,proto3" json:"window_id,omitempty"`
+	AggregationScope string                 `protobuf:"bytes,10,opt,name=aggregation_scope,json=aggregationScope,proto3" json:"aggregation_scope,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *PredictionResult) Reset() {
@@ -646,6 +664,20 @@ func (x *PredictionResult) GetInferenceTimeMs() float64 {
 	return 0
 }
 
+func (x *PredictionResult) GetWindowId() string {
+	if x != nil {
+		return x.WindowId
+	}
+	return ""
+}
+
+func (x *PredictionResult) GetAggregationScope() string {
+	if x != nil {
+		return x.AggregationScope
+	}
+	return ""
+}
+
 type HealthStatus struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Status        ServingStatus          `protobuf:"varint,1,opt,name=status,proto3,enum=sih.ipsec.ml.v1.ServingStatus" json:"status,omitempty"`
@@ -710,7 +742,7 @@ var File_ml_v1_traffic_classifier_proto protoreflect.FileDescriptor
 
 const file_ml_v1_traffic_classifier_proto_rawDesc = "" +
 	"\n" +
-	"\x1eml/v1/traffic_classifier.proto\x12\x0fsih.ipsec.ml.v1\x1a\x1bgoogle/protobuf/empty.proto\"\xa7\f\n" +
+	"\x1eml/v1/traffic_classifier.proto\x12\x0fsih.ipsec.ml.v1\x1a\x1bgoogle/protobuf/empty.proto\"\x9f\r\n" +
 	"\fFlowFeatures\x12\x1c\n" +
 	"\aflow_id\x18\x01 \x01(\tH\x00R\x06flowId\x88\x01\x01\x12\x1f\n" +
 	"\bduration\x18\x02 \x01(\x01H\x01R\bduration\x88\x01\x01\x12&\n" +
@@ -739,7 +771,9 @@ const file_ml_v1_traffic_classifier_proto_rawDesc = "" +
 	"\vburst_count\x18\x16 \x01(\x03H\x15R\n" +
 	"burstCount\x88\x01\x01\x12+\n" +
 	"\x0fmean_burst_size\x18\x17 \x01(\x01H\x16R\rmeanBurstSize\x88\x01\x01\x12+\n" +
-	"\x0fidle_time_ratio\x18\x18 \x01(\x01H\x17R\ridleTimeRatio\x88\x01\x01B\n" +
+	"\x0fidle_time_ratio\x18\x18 \x01(\x01H\x17R\ridleTimeRatio\x88\x01\x01\x12 \n" +
+	"\twindow_id\x18\x19 \x01(\tH\x18R\bwindowId\x88\x01\x01\x120\n" +
+	"\x11aggregation_scope\x18\x1a \x01(\tH\x19R\x10aggregationScope\x88\x01\x01B\n" +
 	"\n" +
 	"\b_flow_idB\v\n" +
 	"\t_durationB\x0f\n" +
@@ -764,7 +798,10 @@ const file_ml_v1_traffic_classifier_proto_rawDesc = "" +
 	"\x16_upload_download_ratioB\x0e\n" +
 	"\f_burst_countB\x12\n" +
 	"\x10_mean_burst_sizeB\x12\n" +
-	"\x10_idle_time_ratio\"u\n" +
+	"\x10_idle_time_ratioB\f\n" +
+	"\n" +
+	"_window_idB\x14\n" +
+	"\x12_aggregation_scope\"u\n" +
 	"\x0fClassPrediction\x12B\n" +
 	"\rtraffic_class\x18\x01 \x01(\x0e2\x1d.sih.ipsec.ml.v1.TrafficClassR\ftrafficClass\x12\x1e\n" +
 	"\n" +
@@ -775,7 +812,7 @@ const file_ml_v1_traffic_classifier_proto_rawDesc = "" +
 	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12\x14\n" +
 	"\x05value\x18\x03 \x01(\x01R\x05value\x12\x16\n" +
 	"\x06impact\x18\x04 \x01(\x01R\x06impact\x12C\n" +
-	"\tdirection\x18\x05 \x01(\x0e2%.sih.ipsec.ml.v1.ExplanationDirectionR\tdirection\"\x9e\x03\n" +
+	"\tdirection\x18\x05 \x01(\x0e2%.sih.ipsec.ml.v1.ExplanationDirectionR\tdirection\"\xe8\x03\n" +
 	"\x10PredictionResult\x12\x17\n" +
 	"\aflow_id\x18\x01 \x01(\tR\x06flowId\x12F\n" +
 	"\x0fpredicted_class\x18\x02 \x01(\x0e2\x1d.sih.ipsec.ml.v1.TrafficClassR\x0epredictedClass\x12\x1e\n" +
@@ -787,7 +824,10 @@ const file_ml_v1_traffic_classifier_proto_rawDesc = "" +
 	"\x0ftop_predictions\x18\x05 \x03(\v2 .sih.ipsec.ml.v1.ClassPredictionR\x0etopPredictions\x12#\n" +
 	"\rmodel_version\x18\x06 \x01(\tR\fmodelVersion\x12N\n" +
 	"\x10top_explanations\x18\a \x03(\v2#.sih.ipsec.ml.v1.FeatureExplanationR\x0ftopExplanations\x12*\n" +
-	"\x11inference_time_ms\x18\b \x01(\x01R\x0finferenceTimeMs\"\x8e\x01\n" +
+	"\x11inference_time_ms\x18\b \x01(\x01R\x0finferenceTimeMs\x12\x1b\n" +
+	"\twindow_id\x18\t \x01(\tR\bwindowId\x12+\n" +
+	"\x11aggregation_scope\x18\n" +
+	" \x01(\tR\x10aggregationScope\"\x8e\x01\n" +
 	"\fHealthStatus\x126\n" +
 	"\x06status\x18\x01 \x01(\x0e2\x1e.sih.ipsec.ml.v1.ServingStatusR\x06status\x12!\n" +
 	"\fmodel_loaded\x18\x02 \x01(\bR\vmodelLoaded\x12#\n" +

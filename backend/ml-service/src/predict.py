@@ -168,7 +168,7 @@ class Predictor:
     def _validate_feature_order(value: object) -> tuple[str, ...]:
         if not isinstance(value, list) or not value or not all(isinstance(item, str) for item in value):
             raise PredictionError("Model metadata feature_order is invalid")
-        allowed = set(FlowFeatures.model_fields) - {"flow_id"}
+        allowed = set(FlowFeatures.model_fields) - {"flow_id", "window_id", "aggregation_scope"}
         order = tuple(value)
         invalid = [feature for feature in order if feature not in allowed]
         if invalid or len(set(order)) != len(order):
@@ -247,6 +247,8 @@ class Predictor:
 
         return PredictionResult(
             flow_id=validated_flow.flow_id,
+            window_id=validated_flow.window_id,
+            aggregation_scope=validated_flow.aggregation_scope,
             predicted_class=TrafficClass(decision.predicted_class),
             confidence=decision.confidence,
             is_unknown=decision.is_unknown,

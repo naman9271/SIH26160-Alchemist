@@ -54,10 +54,13 @@ type PacketMetadata struct {
 	SourceAddress, DestinationAddress string
 	SourcePort, DestinationPort       uint16
 	SPI                               uint32
+	ESPSequence                       uint32
 	IKEInitiatorSPI, IKEResponderSPI  uint64
 	IKEVersion                        string
 	IKEExchangeType, IKEFlags         uint8
 	IKEMessageID                      uint32
+	IKEIsResponse                     bool
+	IKEOriginalInitiator              bool
 	// The following fields are extracted only from clear-text IKE payloads.
 	// Encrypted IKE payloads are deliberately never inspected.
 	IKEEncryptionAlgorithms []string
@@ -73,6 +76,11 @@ type PacketMetadata struct {
 	IKEProposals               []IKEProposal
 	IKE, NATT, EncapsulatedESP bool
 	NATKeepalive               bool
+	Fragmented                 bool
+	ProtocolIncomplete         bool
+	IncompleteReason           string
+	SALifetimeEpoch            uint32
+	CurrentSAEpoch             bool
 	Length                     uint64
 	SeenAt                     time.Time
 }

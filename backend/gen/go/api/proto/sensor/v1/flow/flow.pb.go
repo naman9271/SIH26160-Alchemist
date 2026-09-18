@@ -826,6 +826,7 @@ type FeatureWindow struct {
 	PacketCount           uint64                 `protobuf:"varint,13,opt,name=packet_count,json=packetCount,proto3" json:"packet_count,omitempty"`
 	Finalized             bool                   `protobuf:"varint,14,opt,name=finalized,proto3" json:"finalized,omitempty"`
 	EvictionReason        string                 `protobuf:"bytes,15,opt,name=eviction_reason,json=evictionReason,proto3" json:"eviction_reason,omitempty"`
+	AggregationScope      string                 `protobuf:"bytes,16,opt,name=aggregation_scope,json=aggregationScope,proto3" json:"aggregation_scope,omitempty"`
 	unknownFields         protoimpl.UnknownFields
 	sizeCache             protoimpl.SizeCache
 }
@@ -961,6 +962,13 @@ func (x *FeatureWindow) GetFinalized() bool {
 func (x *FeatureWindow) GetEvictionReason() string {
 	if x != nil {
 		return x.EvictionReason
+	}
+	return ""
+}
+
+func (x *FeatureWindow) GetAggregationScope() string {
+	if x != nil {
+		return x.AggregationScope
 	}
 	return ""
 }
@@ -1424,7 +1432,7 @@ const file_api_proto_sensor_v1_flow_flow_proto_rawDesc = "" +
 	"\fpacket_count\x18\b \x01(\x04R\vpacketCount\x12\x1c\n" +
 	"\tfinalized\x18\t \x01(\bR\tfinalized\x12'\n" +
 	"\x0feviction_reason\x18\n" +
-	" \x01(\tR\x0eevictionReason\"\x98\x05\n" +
+	" \x01(\tR\x0eevictionReason\"\xc5\x05\n" +
 	"\rFeatureWindow\x12\x1b\n" +
 	"\twindow_id\x18\x01 \x01(\tR\bwindowId\x12\x17\n" +
 	"\aflow_id\x18\x02 \x01(\tR\x06flowId\x12\x1d\n" +
@@ -1443,7 +1451,8 @@ const file_api_proto_sensor_v1_flow_flow_proto_rawDesc = "" +
 	"\x12window_duration_ms\x18\f \x01(\x04R\x10windowDurationMs\x12!\n" +
 	"\fpacket_count\x18\r \x01(\x04R\vpacketCount\x12\x1c\n" +
 	"\tfinalized\x18\x0e \x01(\bR\tfinalized\x12'\n" +
-	"\x0feviction_reason\x18\x0f \x01(\tR\x0eevictionReason\"p\n" +
+	"\x0feviction_reason\x18\x0f \x01(\tR\x0eevictionReason\x12+\n" +
+	"\x11aggregation_scope\x18\x10 \x01(\tR\x10aggregationScope\"p\n" +
 	"\x19ListFeatureWindowsRequest\x12\x17\n" +
 	"\aflow_id\x18\x01 \x01(\tR\x06flowId\x12\x1b\n" +
 	"\tpage_size\x18\x02 \x01(\rR\bpageSize\x12\x1d\n" +

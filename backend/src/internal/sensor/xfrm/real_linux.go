@@ -34,21 +34,31 @@ func (p *NetlinkProvider) States(ctx context.Context) ([]*xfrmv1.XfrmState, erro
 	}
 	result := make([]*xfrmv1.XfrmState, 0, len(states))
 	for _, state := range states {
-		item := &xfrmv1.XfrmState{Source: state.Src.String(), Destination: state.Dst.String(), Protocol: stringsUpper(state.Proto.String()), Spi: uint32(state.Spi), Reqid: uint32(state.Reqid), Mode: stringsUpper(state.Mode.String()), Direction: fmt.Sprint(state.SADir), ReplayWindow: uint32(state.ReplayWindow), ExtendedSequenceNumbers: state.ESN, ByteLimit: state.Limits.ByteHard, PacketLimit: state.Limits.PacketHard, Bytes: state.Statistics.Bytes, Packets: state.Statistics.Packets, EvidenceStatus: commonv1.EvidenceStatus_VERIFIED_GATEWAY}
+		direction := fmt.Sprint(state.SADir)
+		switch state.SADir {
+		case netlink.XFRM_SA_DIR_IN:
+			direction = "IN"
+		case netlink.XFRM_SA_DIR_OUT:
+			direction = "OUT"
+		}
+		item := &xfrmv1.XfrmState{Source: state.Src.String(), Destination: state.Dst.String(), Protocol: stringsUpper(state.Proto.String()), Spi: uint32(state.Spi), Reqid: uint32(state.Reqid), Mode: stringsUpper(state.Mode.String()), Direction: direction, ReplayWindow: uint32(state.ReplayWindow), ReplayApplicable: state.SADir == netlink.XFRM_SA_DIR_IN, ExtendedSequenceNumbers: state.ESN, ByteLimit: state.Limits.ByteHard, ByteSoftLimit: state.Limits.ByteSoft, PacketLimit: state.Limits.PacketHard, PacketSoftLimit: state.Limits.PacketSoft, Bytes: state.Statistics.Bytes, Packets: state.Statistics.Packets, InstallTimeEpochSeconds: state.Statistics.AddTime, FirstUseTimeEpochSeconds: state.Statistics.UseTime, EvidenceStatus: commonv1.EvidenceStatus_VERIFIED_GATEWAY}
 		if state.Crypt != nil {
 			item.EncryptionAlgorithm, item.EncryptionKeyLength = state.Crypt.Name, uint32(len(state.Crypt.Key)*8)
 		}
 		if state.Aead != nil {
-			item.AeadAlgorithm, item.EncryptionKeyLength, item.AeadIcvLength = state.Aead.Name, uint32(len(state.Aead.Key)*8), uint32(state.Aead.ICVLen)
+			item.AeadAlgorithm, item.AeadIcvLength = state.Aead.Name, uint32(state.Aead.ICVLen)
+			item.EncryptionKeyLength, item.AeadSaltLength = aeadKeyLengths(state.Aead.Name, len(state.Aead.Key))
 		}
 		if state.Auth != nil {
 			item.AuthenticationAlgorithm = state.Auth.Name
+			item.AuthenticationKeyLength = uint32(len(state.Auth.Key) * 8)
 		}
 		if state.Encap != nil {
 			item.Encapsulation = state.Encap.Type.String()
 		}
 		if state.Replay != nil {
 			item.Sequence = uint64(state.Replay.Seq)
+			item.OutboundSequence = uint64(state.Replay.OSeq)
 		}
 		result = append(result, item)
 	}

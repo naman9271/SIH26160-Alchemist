@@ -184,6 +184,8 @@ def _flow_from_proto(request: pb2.FlowFeatures) -> FlowFeatures:
 def _prediction_to_proto(result: PredictionResult) -> pb2.PredictionResult:
     return pb2.PredictionResult(
         flow_id=result.flow_id,
+        window_id=result.window_id,
+        aggregation_scope=result.aggregation_scope,
         predicted_class=TRAFFIC_CLASS_TO_PROTO[result.predicted_class],
         confidence=result.confidence,
         is_unknown=result.is_unknown,

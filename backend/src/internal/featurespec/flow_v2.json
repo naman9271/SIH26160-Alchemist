@@ -1,0 +1,24 @@
+{
+  "schema_version": "flow.v2",
+  "window_seconds": 10.0,
+  "burst_gap_seconds": 0.1,
+  "idle_gap_seconds": 1.0,
+  "time_unit": "seconds",
+  "size_unit": "bytes",
+  "percentile_method": "linear_interpolation_position_(n-1)*p",
+  "direction_convention": "positive=first_observed_direction",
+  "features": [
+    "duration", "packet_count", "total_bytes", "packets_per_second",
+    "bytes_per_second", "mean_packet_size", "std_packet_size",
+    "min_packet_size", "max_packet_size", "p25_packet_size",
+    "median_packet_size", "p75_packet_size", "p95_packet_size",
+    "mean_interarrival_time", "std_interarrival_time", "upload_packets",
+    "download_packets", "upload_bytes", "download_bytes",
+    "upload_download_ratio", "burst_count", "mean_burst_size",
+    "idle_time_ratio"
+  ],
+  "excluded_inputs": [
+    "addresses", "ports", "filenames", "profile_ids", "crypto_settings",
+    "generator_labels", "capture_ids", "flow_ids", "window_ids"
+  ]
+}

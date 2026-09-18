@@ -22,6 +22,7 @@ from typing import Any, Literal
 import joblib
 import numpy as np
 import pyarrow.parquet as pq
+from sklearn.calibration import CalibratedClassifierCV
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.impute import SimpleImputer
 from sklearn.metrics import (
@@ -457,6 +458,44 @@ def _refit_and_evaluate(
     return model, _metrics(y_test, model.predict(x_test), classes)
 
 
+def _probability_metrics(
+    labels: np.ndarray, probabilities: np.ndarray, class_count: int
+) -> dict[str, float]:
+    one_hot = np.eye(class_count, dtype=float)[labels]
+    brier = float(np.mean(np.sum((probabilities - one_hot) ** 2, axis=1)))
+    confidence = np.max(probabilities, axis=1)
+    correct = np.argmax(probabilities, axis=1) == labels
+    ece = 0.0
+    for lower in np.linspace(0.0, 0.9, 10):
+        selected = (confidence >= lower) & (confidence < lower + 0.1)
+        if np.any(selected):
+            ece += float(np.mean(selected)) * abs(
+                float(np.mean(correct[selected])) - float(np.mean(confidence[selected]))
+            )
+    return {"multiclass_brier_score": round(brier, 6), "expected_calibration_error": round(ece, 6)}
+
+
+def _calibrate_probabilities(
+    model: Pipeline,
+    features: np.ndarray,
+    labels: np.ndarray,
+    groups: np.ndarray,
+    seed: int,
+    n_jobs: int,
+) -> CalibratedClassifierCV:
+    group_counts = [len(np.unique(groups[labels == label])) for label in np.unique(labels)]
+    folds = min(3, min(group_counts, default=0))
+    if folds < 2:
+        raise TrainingError("Probability calibration needs at least two independent groups per class")
+    splitter = StratifiedGroupKFold(n_splits=folds, shuffle=True, random_state=seed)
+    group_safe_folds = list(splitter.split(features, labels, groups))
+    calibrated = CalibratedClassifierCV(
+        estimator=model, method="sigmoid", cv=group_safe_folds, n_jobs=n_jobs
+    )
+    calibrated.fit(features, labels)
+    return calibrated
+
+
 def _atomic_joblib_dump(value: Any, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary_path = path.with_name(f".{path.name}.tmp")
@@ -554,6 +593,34 @@ def train_models(config: TrainingConfig) -> dict[str, Any]:
         if rf_validation_macro_f1 >= xgb_validation_macro_f1
         else "xgboost"
     )
+    train_validation = np.concatenate((splits.train, splits.validation))
+    selected_template = rf_model if better_model == "random_forest" else xgb_model
+    calibrated_selected = _calibrate_probabilities(
+        selected_template,
+        data.features[train_validation],
+        encoded_labels[train_validation],
+        data.groups[train_validation],
+        config.random_seed,
+        config.n_jobs,
+    )
+    calibrated_probabilities = calibrated_selected.predict_proba(x_test)
+    calibrated_test_metrics = _metrics(
+        y_test, calibrated_selected.predict(x_test), list(range(len(classes)))
+    )
+    calibrated_test_metrics["per_class"] = {
+        class_names[int(label)]: value
+        for label, value in calibrated_test_metrics["per_class"].items()
+    }
+    calibrated_test_metrics["confusion_matrix_labels"] = class_names
+    calibrated_test_metrics["probability_calibration"] = _probability_metrics(
+        y_test, calibrated_probabilities, len(classes)
+    )
+    if better_model == "random_forest":
+        rf_final = calibrated_selected
+        rf_test_metrics = calibrated_test_metrics
+    else:
+        xgb_final = calibrated_selected
+        xgb_test_metrics = calibrated_test_metrics
     rf_path = config.models_dir / "random_forest.joblib"
     xgb_path = config.models_dir / "xgboost.joblib"
     _atomic_joblib_dump(rf_final, rf_path)
@@ -571,6 +638,8 @@ def train_models(config: TrainingConfig) -> dict[str, Any]:
         "generated_at": datetime.now(UTC).isoformat(),
         "selection_metric": "macro_f1",
         "selection_split": "validation",
+        "selection_policy": "random_forest_baseline_unless_xgboost_strictly_improves_validation_macro_f1",
+        "probability_calibration": "sigmoid_with_stratified_group_folds_on_train_and_validation_only",
         "selected_model": better_model,
         "models": {
             "random_forest": {

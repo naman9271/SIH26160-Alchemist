@@ -49,8 +49,8 @@ func evidence(property, value, resourceType, resourceID string, source model.Sou
 func seed(t *testing.T, fixture fixture) []string {
 	t.Helper()
 	response, err := fixture.ingest.AddBatch(context.Background(), ingest.AddBatchRequest{FusionRunID: fixture.runID, Evidence: []ingest.EvidenceInput{
-		evidence("ike.version", "IKEv2", "IKE_SA", "passive-ike", model.SourcePacketParser, commonv1.EvidenceStatus_OBSERVED, map[string]string{"ike_initiator_spi": "aabbcc"}),
-		evidence("ike.encryption", "AES_GCM", "VICI_IKE_SA", "vici-42", model.SourceVICI, commonv1.EvidenceStatus_VERIFIED_GATEWAY, map[string]string{"ike_initiator_spi": "AABBCC"}),
+		evidence("ike.version", "IKEv2", "IKE_SA", "passive-ike", model.SourcePacketParser, commonv1.EvidenceStatus_OBSERVED, map[string]string{"ike_initiator_spi": "aabbcc", "endpoint_pair": "192.0.2.1<>198.51.100.1"}),
+		evidence("ike.encryption", "AES_GCM", "VICI_IKE_SA", "vici-42", model.SourceVICI, commonv1.EvidenceStatus_VERIFIED_GATEWAY, map[string]string{"ike_initiator_spi": "AABBCC", "endpoint_pair": "192.0.2.1<>198.51.100.1"}),
 		evidence("traffic.class", "video", "FLOW", "flow-1", model.SourceMLClassifier, commonv1.EvidenceStatus_INFERRED, map[string]string{"endpoint_tuple": "10.0.0.1:1-10.0.0.2:2"}),
 		evidence("certificate.subject", "CN=test", "CERTIFICATE", "cert-1", model.SourcePacketParser, commonv1.EvidenceStatus_OBSERVED, nil),
 	}})
@@ -68,7 +68,7 @@ func TestCorrelateGetAndList(t *testing.T) {
 		t.Fatalf("Correlate() = %+v, %v", response, err)
 	}
 	ikeGroups, err := fixture.service.ListCorrelations(context.Background(), correlation.ListRequest{FusionRunID: fixture.runID, ResourceType: "IKE_SA"})
-	if err != nil || len(ikeGroups.Groups) != 1 || len(ikeGroups.Groups[0].EvidenceIDs) != 2 {
+	if err != nil || len(ikeGroups.Groups) != 1 || len(ikeGroups.Groups[0].EvidenceIDs) != 2 || ikeGroups.Groups[0].FirstObservedAt.IsZero() || ikeGroups.Groups[0].LastObservedAt.IsZero() {
 		t.Fatalf("ListCorrelations(IKE_SA) = %+v, %v", ikeGroups, err)
 	}
 	parsed, err := uuid.Parse(ikeGroups.Groups[0].ID)
@@ -78,6 +78,37 @@ func TestCorrelateGetAndList(t *testing.T) {
 	detail, err := fixture.service.GetCorrelation(context.Background(), correlation.GetRequest{FusionRunID: fixture.runID, CorrelationID: ikeGroups.Groups[0].ID})
 	if err != nil || len(detail.Evidence) != 2 || detail.Group.ResourceType != "IKE_SA" {
 		t.Fatalf("GetCorrelation() = %+v, %v", detail, err)
+	}
+}
+
+func TestBareSPIIsNeverAGlobalCorrelationKey(t *testing.T) {
+	fixture := newFixture(t)
+	_, err := fixture.ingest.AddBatch(context.Background(), ingest.AddBatchRequest{FusionRunID: fixture.runID, Evidence: []ingest.EvidenceInput{
+		evidence("esp.spi", "0x0000002a", "ESP_STREAM", "capture-a", model.SourcePacketParser, commonv1.EvidenceStatus_OBSERVED, map[string]string{"esp_spi": "0x0000002a", "destination_endpoint": "198.51.100.1", "capture_context": "one"}),
+		evidence("esp.spi", "0x0000002a", "ESP_STREAM", "capture-b", model.SourcePacketParser, commonv1.EvidenceStatus_OBSERVED, map[string]string{"esp_spi": "0x0000002a", "destination_endpoint": "203.0.113.1", "capture_context": "two"}),
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := fixture.service.Correlate(context.Background(), correlation.CorrelateRequest{FusionRunID: fixture.runID})
+	if err != nil || result.TotalGroups != 2 {
+		t.Fatalf("same SPI on unrelated SAs was merged: %+v, %v", result, err)
+	}
+}
+
+func TestGatewayChildLinksBothDirectionalESPAssociations(t *testing.T) {
+	fixture := newFixture(t)
+	_, err := fixture.ingest.AddBatch(context.Background(), ingest.AddBatchRequest{FusionRunID: fixture.runID, Evidence: []ingest.EvidenceInput{
+		evidence("esp.spi", "0x1", "ESP_STREAM", "passive-in", model.SourcePacketParser, commonv1.EvidenceStatus_OBSERVED, map[string]string{"esp_directional_wire": "esp|192.0.2.1|0x00000001"}),
+		evidence("esp.spi", "0x2", "ESP_STREAM", "passive-out", model.SourcePacketParser, commonv1.EvidenceStatus_OBSERVED, map[string]string{"esp_directional_wire": "esp|198.51.100.1|0x00000002"}),
+		evidence("child.mode", "TUNNEL", "VICI_CHILD_SA", "gateway-child", model.SourceVICI, commonv1.EvidenceStatus_VERIFIED_GATEWAY, map[string]string{"esp_directional_wire_in": "esp|192.0.2.1|0x00000001", "esp_directional_wire_out": "esp|198.51.100.1|0x00000002", "parent_ike_resource_id": "ike-1", "child_unique_id": "7"}),
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := fixture.service.Correlate(context.Background(), correlation.CorrelateRequest{FusionRunID: fixture.runID})
+	if err != nil || result.TotalGroups != 1 || result.EvidenceItemsLinked != 3 {
+		t.Fatalf("gateway CHILD association was not correlated: %+v, %v", result, err)
 	}
 }
 
@@ -106,7 +137,7 @@ func TestRebuildLinksNewEvidenceAndPreservesGroupID(t *testing.T) {
 		t.Fatal(err)
 	}
 	before, _ := fixture.service.ListCorrelations(context.Background(), correlation.ListRequest{FusionRunID: fixture.runID, ResourceType: "IKE_SA"})
-	added, err := fixture.ingest.Add(context.Background(), ingest.AddRequest{FusionRunID: fixture.runID, Evidence: evidence("ike.integrity", "SHA256", "IKE_SA", "parser-2", model.SourcePacketParser, commonv1.EvidenceStatus_DERIVED, map[string]string{"ike_initiator_spi": "aabbcc"})})
+	added, err := fixture.ingest.Add(context.Background(), ingest.AddRequest{FusionRunID: fixture.runID, Evidence: evidence("ike.integrity", "SHA256", "IKE_SA", "parser-2", model.SourcePacketParser, commonv1.EvidenceStatus_DERIVED, map[string]string{"ike_initiator_spi": "aabbcc", "endpoint_pair": "192.0.2.1<>198.51.100.1"})})
 	if err != nil || !added.Accepted {
 		t.Fatalf("Add() = %+v, %v", added, err)
 	}

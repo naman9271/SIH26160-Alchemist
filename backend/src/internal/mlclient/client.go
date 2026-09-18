@@ -11,21 +11,13 @@ import (
 
 	flowv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/sensor/v1/flow"
 	mlv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/ml/v1"
+	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/featurespec"
 	"google.golang.org/grpc/metadata"
 )
 
-const featureSchemaVersion = "flow.v2"
-
-var expectedFeatureNames = []string{
-	"duration", "packet_count", "total_bytes", "packets_per_second",
-	"bytes_per_second", "mean_packet_size", "std_packet_size",
-	"min_packet_size", "max_packet_size", "p25_packet_size",
-	"median_packet_size", "p75_packet_size", "p95_packet_size",
-	"mean_interarrival_time", "std_interarrival_time", "upload_packets",
-	"download_packets", "upload_bytes", "download_bytes",
-	"upload_download_ratio", "burst_count", "mean_burst_size",
-	"idle_time_ratio",
-}
+var featureSpec = featurespec.MustLoad()
+var featureSchemaVersion = featureSpec.SchemaVersion
+var expectedFeatureNames = append([]string(nil), featureSpec.Features...)
 
 // Client invokes one already-configured ML gRPC client with bounded requests.
 type Client struct {
@@ -150,8 +142,10 @@ func RequestFromWindow(window *flowv1.FeatureWindow) (*mlv1.FlowFeatures, error)
 		return nil, fmt.Errorf("packet-size percentiles must be ordered")
 	}
 	flowID := window.GetFlowId()
+	windowID := window.GetWindowId()
+	aggregationScope := window.GetAggregationScope()
 	return &mlv1.FlowFeatures{
-		FlowId: &flowID, Duration: number(values["duration"]), PacketCount: packetCount, TotalBytes: totalBytes,
+		FlowId: &flowID, WindowId: &windowID, AggregationScope: &aggregationScope, Duration: number(values["duration"]), PacketCount: packetCount, TotalBytes: totalBytes,
 		PacketsPerSecond: number(values["packets_per_second"]), BytesPerSecond: number(values["bytes_per_second"]),
 		MeanPacketSize: number(values["mean_packet_size"]), StdPacketSize: number(values["std_packet_size"]),
 		MinPacketSize: number(values["min_packet_size"]), MaxPacketSize: number(values["max_packet_size"]),
@@ -203,6 +197,12 @@ func validateResponse(result *mlv1.PredictionResult) error {
 	}
 	if result.GetIsUnknown() != (result.GetPredictedClass() == mlv1.TrafficClass_TRAFFIC_CLASS_UNKNOWN) {
 		return fmt.Errorf("ML service returned inconsistent UNKNOWN state")
+	}
+	if len(result.GetTopPredictions()) != 3 {
+		return fmt.Errorf("ML service must return exactly three ranked predictions")
+	}
+	if result.GetAggregationScope() != "aggregate_endpoint_channel_estimate" && result.GetAggregationScope() != "paired_bidirectional_sa_channel" {
+		return fmt.Errorf("ML service returned an invalid aggregation scope")
 	}
 	return nil
 }

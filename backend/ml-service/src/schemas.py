@@ -31,6 +31,11 @@ class FlowFeatures(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
     flow_id: str = Field(min_length=1)
+    window_id: str = Field(default="", max_length=200)
+    aggregation_scope: str = Field(
+        default="aggregate_endpoint_channel_estimate",
+        pattern="^(aggregate_endpoint_channel_estimate|paired_bidirectional_sa_channel)$",
+    )
     duration: float = Field(gt=0)
     packet_count: int = Field(ge=1)
     total_bytes: int = Field(ge=0)
@@ -141,10 +146,15 @@ class PredictionResult(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
     flow_id: str = Field(min_length=1)
+    window_id: str = Field(default="", max_length=200)
+    aggregation_scope: str = Field(
+        default="aggregate_endpoint_channel_estimate",
+        pattern="^(aggregate_endpoint_channel_estimate|paired_bidirectional_sa_channel)$",
+    )
     predicted_class: TrafficClass
     confidence: float = Field(ge=0, le=1)
     is_unknown: bool
-    top_predictions: list[ClassPrediction] = Field(min_length=1)
+    top_predictions: list[ClassPrediction] = Field(min_length=3, max_length=3)
     model_version: str = Field(min_length=1)
     top_explanations: list[FeatureExplanation] = Field(default_factory=list)
     inference_time_ms: float = Field(ge=0)

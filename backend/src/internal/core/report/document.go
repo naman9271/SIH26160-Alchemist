@@ -176,14 +176,14 @@ func buildReportDocument(record coreanalysis.Record, source *coreinput.Source, c
 			findings.Paragraphs = []string{"No supported deterministic security finding was produced from the available evidence. Unknown or unavailable evidence still requires review."}
 		} else {
 			for _, finding := range assessment.Findings {
-				findings.Items = append(findings.Items, reportItem{Heading: fmt.Sprintf("%s - %s (%s)", finding.Severity, finding.Title, finding.RuleID), Body: finding.Description})
+				findings.Items = append(findings.Items, reportItem{Heading: fmt.Sprintf("%s - %s (%s)%s", finding.Severity, finding.Title, finding.RuleID, findingResource(finding)), Body: finding.Description})
 			}
 		}
 		document.Sections = append(document.Sections, findings)
 		if len(assessment.Findings) > 0 {
 			recommendations := reportSection{Title: "Recommendations", Paragraphs: []string{"Actions below are derived directly from supported deterministic findings and are ordered by severity."}}
 			for _, finding := range assessment.Findings {
-				recommendations.Items = append(recommendations.Items, reportItem{Heading: fmt.Sprintf("%s priority - %s", finding.Severity, finding.Title), Body: finding.Recommendation})
+				recommendations.Items = append(recommendations.Items, reportItem{Heading: fmt.Sprintf("%s priority - %s%s", finding.Severity, finding.Title, findingResource(finding)), Body: finding.Recommendation})
 			}
 			document.Sections = append(document.Sections, recommendations)
 		}
@@ -205,6 +205,17 @@ func buildReportDocument(record coreanalysis.Record, source *coreinput.Source, c
 		document.Sections = append(document.Sections, reportSection{Title: "Appendix: Evidence Conclusions", Paragraphs: []string{"This technical appendix lists Fusion's winning conclusions. Status identifies whether a fact was observed, derived, inferred, gateway-verified, or unknown."}, Tables: []reportTable{conclusionTable(conclusions)}})
 	}
 	return document
+}
+
+func findingResource(finding rules.Finding) string {
+	if strings.TrimSpace(finding.ResourceID) == "" {
+		return ""
+	}
+	resourceType := strings.TrimSpace(finding.ResourceType)
+	if resourceType == "" {
+		resourceType = "SA"
+	}
+	return fmt.Sprintf(" [%s %s]", resourceType, finding.ResourceID)
 }
 
 func progressSection(progress *analysisv1.AnalysisProgress) reportSection {

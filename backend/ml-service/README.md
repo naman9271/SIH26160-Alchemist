@@ -10,6 +10,8 @@ Initial classes are:
 
 `web`, `video`, `voip`, `email`, `file_transfer`, `messaging`, and `icmp`.
 
+The current synthetic WebSocket captures support the `messaging` label only. They do not validate WhatsApp recognition. A WhatsApp-specific claim requires separately labelled, authorized real captures and an independent evaluation.
+
 Predictions return `UNKNOWN` when confidence is below the configured threshold. Responses include the predicted class, confidence, unknown status, top predictions, model version, inference time, and optional explainability details.
 
 ## Current IPsec-lab training run
@@ -32,7 +34,7 @@ python -m src.anomaly.train
 
 The group cap keeps one representative window per capture so long captures cannot dominate. The resulting table has 25 captures per class and excludes duration plus all identifiers, labels, addresses, timestamps, filenames, dataset identity, and IPsec configuration fields from model inputs.
 
-The current selected Random Forest scored 1.00 macro F1 on the 35-capture locked lab test. This is an internal synthetic-lab result, not a production-generalization claim: all captures came from one generator environment. UNKNOWN calibration selected 0.85 on the current holdouts (80% OOD detection and 5.7% false-unknown rate). The experimental Isolation Forest reached 0.918 anomaly F1 on its 65-capture lab evaluation. Exact generated results live under `artifacts/`.
+The current selected Random Forest scored 1.00 macro F1 on the 35-capture lab test. This is internal prototype evidence from one generator environment. Because that test generation predates the present threshold-selection process, `src.evaluate` marks it as non-final until a new disjoint test corpus carries `locked_test_generation=post-threshold-v2`. UNKNOWN calibration now divides OOD capture groups into separate calibration and final-evaluation partitions. The experimental Isolation Forest reached 0.918 anomaly F1 on its 65-capture lab evaluation. Exact generated results live under `artifacts/`.
 
 ## UNKNOWN calibration
 
@@ -42,7 +44,7 @@ UNKNOWN detection uses maximum model class probability as a rejection baseline. 
 python -m src.calibrate_unknown
 ```
 
-The command evaluates several thresholds against the group-safe known holdout and eligible held-out-class or unseen-source traffic. It writes calibration metrics to `artifacts/unknown_calibration.json`, then stores the selected threshold in both `config/model.yaml` and model metadata. It never retrains the classifier.
+The command evaluates several thresholds against the group-safe known validation partition and the OOD calibration partition. OOD capture groups assigned to final evaluation never participate in threshold selection; their rejection rate is reported after the threshold is fixed. It writes calibration metrics to `artifacts/unknown_calibration.json`, then stores the selected threshold in both `config/model.yaml` and model metadata. It never retrains the classifier.
 
 This confidence-threshold approach is a baseline open-set method, not perfect unknown detection. Unseen traffic can still receive high confidence, and known traffic can be rejected. Recalibrate with representative deployment OOD captures before production use.
 
@@ -124,7 +126,7 @@ Go sends validated flow-level features to the Python gRPC service. The service i
 
 Public datasets are supplementary training material; VPN-labeled public traffic is not automatically equivalent to traffic observed around an IPsec ESP tunnel. Final model selection, UNKNOWN calibration, anomaly evaluation, and leakage checks require team-generated strongSwan/IPsec captures with known dominant application traffic.
 
-The model classifies only metadata and traffic patterns. It never decrypts or inspects encrypted payload contents. Mixed inner applications inside one opaque site-to-site tunnel are a harder unresolved case and must not be presented as perfectly separable by this MVP.
+The model classifies only metadata and traffic patterns. It never decrypts or inspects encrypted payload contents. Mixed inner applications inside one opaque site-to-site tunnel are reported as the dominant ten-second window behaviour or `UNKNOWN`. The result is not a recovery of every simultaneous inner application. When opposite ESP directions cannot be paired reliably, the API marks the result as an `aggregate_endpoint_channel_estimate`.
 
 ## MVP limitation
 

@@ -407,102 +407,131 @@ func decodePacketMetadata(packet []byte, length uint64, seenAt time.Time) (Packe
 	return decodePacketMetadataLink(packet, length, seenAt, 1)
 }
 func decodePacketMetadataLink(packet []byte, length uint64, seenAt time.Time, linkType uint16) (PacketMetadata, bool) {
-	protocol, payload, source, destination, ok := networkPayloadLink(packet, linkType)
+	view, ok := decodeNetworkPacket(packet, linkType)
 	if !ok {
 		return PacketMetadata{}, false
 	}
-	m := PacketMetadata{Protocol: protocol, SourceAddress: source, DestinationAddress: destination, Length: length, SeenAt: seenAt}
-	if protocol == 17 && len(payload) >= 8 {
-		m.SourcePort = binary.BigEndian.Uint16(payload[:2])
-		m.DestinationPort = binary.BigEndian.Uint16(payload[2:4])
-		udpPayload := payload[8:]
+	m := PacketMetadata{Protocol: view.protocol, SourceAddress: view.source, DestinationAddress: view.destination, Fragmented: view.fragmented, ProtocolIncomplete: view.incomplete, IncompleteReason: view.reason, Length: length, SeenAt: seenAt}
+	if view.incomplete {
+		return m, true
+	}
+	if view.protocol == 17 && len(view.payload) >= 8 {
+		udpLength := int(binary.BigEndian.Uint16(view.payload[4:6]))
+		if udpLength < 8 || udpLength > len(view.payload) {
+			m.ProtocolIncomplete, m.IncompleteReason = true, "invalid UDP length"
+			return m, true
+		}
+		m.SourcePort = binary.BigEndian.Uint16(view.payload[:2])
+		m.DestinationPort = binary.BigEndian.Uint16(view.payload[2:4])
+		udpPayload := view.payload[8:udpLength]
 		switch {
 		case m.SourcePort == 500 || m.DestinationPort == 500:
-			m.IKE = true
-			parseIKE(&m, udpPayload)
+			m.IKE = parseIKE(&m, udpPayload)
 		case m.SourcePort == 4500 || m.DestinationPort == 4500:
 			m.NATT = true
 			switch {
 			case len(udpPayload) == 1 && udpPayload[0] == 0xff:
 				m.NATKeepalive = true
 			case len(udpPayload) >= 4 && bytes.Equal(udpPayload[:4], []byte{0, 0, 0, 0}):
-				m.IKE = true
-				parseIKE(&m, udpPayload[4:])
-			case len(udpPayload) >= 4:
+				m.IKE = parseIKE(&m, udpPayload[4:])
+			case len(udpPayload) >= 8 && binary.BigEndian.Uint32(udpPayload[:4]) != 0:
 				m.EncapsulatedESP = true
 				m.SPI = binary.BigEndian.Uint32(udpPayload[:4])
+				m.ESPSequence = binary.BigEndian.Uint32(udpPayload[4:8])
 			}
 		}
 	}
-	if protocol == 50 && len(payload) >= 4 {
-		m.SPI = binary.BigEndian.Uint32(payload[:4])
+	if view.protocol == 50 && len(view.payload) >= 8 && binary.BigEndian.Uint32(view.payload[:4]) != 0 {
+		m.SPI = binary.BigEndian.Uint32(view.payload[:4])
+		m.ESPSequence = binary.BigEndian.Uint32(view.payload[4:8])
 	}
-	if protocol == 51 && len(payload) >= 8 {
-		m.SPI = binary.BigEndian.Uint32(payload[4:8])
+	if view.protocol == 51 && len(view.payload) >= 12 {
+		m.SPI = binary.BigEndian.Uint32(view.payload[4:8])
 	}
 	return m, true
 }
-func setIKESPIs(metadata *PacketMetadata, payload []byte) {
-	if len(payload) < 16 {
-		return
-	}
+
+func setIKEHeader(metadata *PacketMetadata, payload []byte) {
 	metadata.IKEInitiatorSPI = binary.BigEndian.Uint64(payload[:8])
 	metadata.IKEResponderSPI = binary.BigEndian.Uint64(payload[8:16])
-	if len(payload) < 28 {
-		return
-	}
-	declaredLength := binary.BigEndian.Uint32(payload[24:28])
-	if declaredLength < 28 || uint64(declaredLength) > uint64(len(payload)) {
-		return
-	}
 	major, minor := payload[17]>>4, payload[17]&0x0f
-	if major == 1 || major == 2 {
-		metadata.IKEVersion = "IKEv" + strconv.Itoa(int(major)) + "." + strconv.Itoa(int(minor))
-	}
+	metadata.IKEVersion = "IKEv" + strconv.Itoa(int(major)) + "." + strconv.Itoa(int(minor))
 	metadata.IKEExchangeType = payload[18]
 	metadata.IKEFlags = payload[19]
 	metadata.IKEMessageID = binary.BigEndian.Uint32(payload[20:24])
+	if major == 2 {
+		metadata.IKEIsResponse = payload[19]&0x20 != 0
+		metadata.IKEOriginalInitiator = payload[19]&0x08 != 0
+	}
 }
 
 // parseIKE recognizes the clear-text, length-delimited portion of IKEv1/v2.
 // It is intentionally conservative: malformed payloads simply stop parsing
 // and encrypted payload bodies are never read.
-func parseIKE(metadata *PacketMetadata, payload []byte) {
-	setIKESPIs(metadata, payload)
+func parseIKE(metadata *PacketMetadata, payload []byte) bool {
 	if len(payload) < 28 {
-		return
+		return false
 	}
 	declared := int(binary.BigEndian.Uint32(payload[24:28]))
-	if declared < 28 || declared > len(payload) {
-		return
+	if declared != len(payload) || binary.BigEndian.Uint64(payload[:8]) == 0 {
+		return false
 	}
 	major := payload[17] >> 4
+	exchange := payload[18]
+	if !validIKEExchange(major, exchange) {
+		return false
+	}
+	header := *metadata
+	setIKEHeader(&header, payload)
+	parsed := header
 	firstPayload := payload[16]
 	if major == 2 {
 		// IKEv2 bit 0x20 is the RESPONSE flag, not an encryption flag. The
 		// payload chain below marks encryption only when it reaches SK/SKF.
-		parseIKEv2Payloads(metadata, firstPayload, payload[28:declared])
-		return
-	}
-	if major == 1 {
-		if payload[19]&0x01 != 0 { // IKEv1 encrypted flag.
-			metadata.IKEPayloadEncrypted = true
-			return
+		if !parseIKEv2Payloads(&parsed, firstPayload, payload[28:declared]) {
+			header.ProtocolIncomplete, header.IncompleteReason = true, "malformed IKEv2 payload chain"
+			*metadata = header
+			return true
 		}
-		parseIKEv1Payloads(metadata, firstPayload, payload[28:declared])
+		*metadata = parsed
+		return true
 	}
+	if payload[19]&0x01 != 0 { // IKEv1 encrypted flag.
+		parsed.IKEPayloadEncrypted = true
+		*metadata = parsed
+		return true
+	}
+	if !parseIKEv1Payloads(&parsed, firstPayload, payload[28:declared]) {
+		header.ProtocolIncomplete, header.IncompleteReason = true, "malformed IKEv1 payload chain"
+		*metadata = header
+		return true
+	}
+	*metadata = parsed
+	return true
 }
 
-func parseIKEv2Payloads(metadata *PacketMetadata, kind uint8, body []byte) {
+func validIKEExchange(major, exchange uint8) bool {
+	if major == 2 {
+		return exchange >= 34 && exchange <= 37
+	}
+	if major == 1 {
+		return exchange >= 1 && exchange <= 6 || exchange == 32 || exchange == 33
+	}
+	return false
+}
+
+func parseIKEv2Payloads(metadata *PacketMetadata, kind uint8, body []byte) bool {
 	for len(body) >= 4 && kind != 0 {
 		next, length := body[0], int(binary.BigEndian.Uint16(body[2:4]))
 		if length < 4 || length > len(body) {
-			return
+			return false
 		}
 		payload := body[4:length]
 		switch kind {
 		case 33: // SA
-			parseIKEv2SA(metadata, payload)
+			if !parseIKEv2SA(metadata, payload) {
+				return false
+			}
 		case 39: // AUTH
 			if len(payload) > 0 {
 				metadata.IKEAuthMethods = appendUnique(metadata.IKEAuthMethods, ikeAuthName(payload[0]))
@@ -515,31 +544,35 @@ func parseIKEv2Payloads(metadata *PacketMetadata, kind uint8, body []byte) {
 			parseTrafficSelectors(metadata, payload)
 		case 46, 53: // SK/SKF: ciphertext begins after its generic header.
 			metadata.IKEPayloadEncrypted = true
-			return
+			return true
 		}
 		kind, body = next, body[length:]
 	}
+	return kind == 0 && len(body) == 0
 }
 
-func parseIKEv2SA(metadata *PacketMetadata, body []byte) {
+func parseIKEv2SA(metadata *PacketMetadata, body []byte) bool {
 	for len(body) >= 8 {
 		next, length := body[0], int(binary.BigEndian.Uint16(body[2:4]))
 		if length < 8 || length > len(body) {
-			return
+			return false
 		}
 		proposalNumber, protocolID, spiSize := body[4], body[5], int(body[6])
 		transforms := int(body[7])
-		if 8+spiSize > length {
-			return
+		if proposalNumber == 0 || protocolID < 1 || protocolID > 3 || transforms == 0 || !validProposalSPI(protocolID, spiSize) || 8+spiSize > length || body[1] != 0 || next != 0 && next != 2 {
+			return false
 		}
 		proposal := IKEProposal{Number: proposalNumber, ProtocolID: protocolID, SPI: fmt.Sprintf("%x", body[8:8+spiSize]), Selected: metadata.IKEFlags&0x20 != 0}
 		part := body[8+spiSize : length]
 		for i := 0; i < transforms && len(part) >= 8; i++ {
 			tNext, tLen := part[0], int(binary.BigEndian.Uint16(part[2:4]))
 			if tLen < 8 || tLen > len(part) {
-				return
+				return false
 			}
 			transformType, transformID := part[4], binary.BigEndian.Uint16(part[6:8])
+			if transformType < 1 || transformType > 5 || part[5] != 0 || tNext != 0 && tNext != 3 || !validTransformAttributes(part[8:tLen]) {
+				return false
+			}
 			transform := proposalTransform(part[8:tLen], transformType, transformID)
 			proposal.Transforms = append(proposal.Transforms, transform)
 			// Retain legacy packet fields for callers that only need an offer
@@ -548,27 +581,40 @@ func parseIKEv2SA(metadata *PacketMetadata, body []byte) {
 			addTransform(metadata, transform)
 			part = part[tLen:]
 			if tNext == 0 && i+1 < transforms {
-				return
+				return false
 			}
+		}
+		if len(proposal.Transforms) != transforms || len(part) != 0 {
+			return false
 		}
 		metadata.IKEProposals = append(metadata.IKEProposals, proposal)
 		body = body[length:]
 		if next == 0 {
-			return
+			return len(body) == 0
 		}
 	}
+	return len(body) == 0
 }
 
-func parseIKEv1Payloads(metadata *PacketMetadata, kind uint8, body []byte) {
+func validProposalSPI(protocolID uint8, size int) bool {
+	if protocolID == 1 {
+		return size == 0 || size == 8
+	}
+	return size == 4
+}
+
+func parseIKEv1Payloads(metadata *PacketMetadata, kind uint8, body []byte) bool {
 	for len(body) >= 4 && kind != 0 {
 		next, length := body[0], int(binary.BigEndian.Uint16(body[2:4]))
 		if length < 4 || length > len(body) {
-			return
+			return false
 		}
 		payload := body[4:length]
 		switch kind {
 		case 1:
-			parseIKEv1SA(metadata, payload)
+			if !parseIKEv1SA(metadata, payload) {
+				return false
+			}
 		case 6:
 			if len(payload) > 0 {
 				metadata.IKECertificateTypes = appendUnique(metadata.IKECertificateTypes, certificateName(payload[0]))
@@ -578,45 +624,53 @@ func parseIKEv1Payloads(metadata *PacketMetadata, kind uint8, body []byte) {
 		}
 		kind, body = next, body[length:]
 	}
+	return kind == 0 && len(body) == 0
 }
 
-func parseIKEv1SA(metadata *PacketMetadata, body []byte) {
+func parseIKEv1SA(metadata *PacketMetadata, body []byte) bool {
 	if len(body) < 8 {
-		return
+		return false
 	} // DOI and situation.
 	body = body[8:]
 	for len(body) >= 8 {
 		next, length := body[0], int(binary.BigEndian.Uint16(body[2:4]))
 		if length < 8 || length > len(body) {
-			return
+			return false
 		}
 		// ISAKMP proposal payload: proposal #, protocol, SPI size, transform count.
 		proposalNumber, protocolID := body[4], body[5]
 		spiSize, transforms := int(body[6]), int(body[7])
-		if 8+spiSize > length {
-			return
+		if proposalNumber == 0 || protocolID < 1 || protocolID > 4 || transforms == 0 || 8+spiSize > length || body[1] != 0 || next != 0 && next != 2 {
+			return false
 		}
 		proposal := IKEProposal{Number: proposalNumber, ProtocolID: protocolID, SPI: fmt.Sprintf("%x", body[8:8+spiSize])}
 		part := body[8+spiSize : length]
 		for i := 0; i < transforms && len(part) >= 8; i++ {
 			tNext, tLen := part[0], int(binary.BigEndian.Uint16(part[2:4]))
 			if tLen < 8 || tLen > len(part) {
-				return
+				return false
 			}
 			// IKEv1 transform IDs identify the transform payload itself. The
 			// cryptographic suite is carried by ISAKMP attributes inside it.
+			if part[5] != 0 || tNext != 0 && tNext != 3 || !validTransformAttributes(part[8:tLen]) {
+				return false
+			}
 			proposal.Transforms = append(proposal.Transforms, parseIKEv1Attributes(metadata, part[8:tLen])...)
 			part = part[tLen:]
 			if tNext == 0 && i+1 < transforms {
-				return
+				return false
 			}
+		}
+		if len(part) != 0 {
+			return false
 		}
 		metadata.IKEProposals = append(metadata.IKEProposals, proposal)
 		body = body[length:]
 		if next == 0 {
-			return
+			return len(body) == 0
 		}
 	}
+	return len(body) == 0
 }
 
 func parseIKEv1Attributes(metadata *PacketMetadata, attributes []byte) []IKETransform {
@@ -648,6 +702,10 @@ func parseIKEv1Attributes(metadata *PacketMetadata, attributes []byte) []IKETran
 			name := ikeTransformName(4, value, 0)
 			metadata.IKEDHGroups = appendUnique(metadata.IKEDHGroups, name)
 			transforms = append(transforms, IKETransform{Type: 4, ID: value, Name: name})
+		case 13: // Pseudorandom Function.
+			name := ikeTransformName(2, value, 0)
+			metadata.IKEPRFs = appendUnique(metadata.IKEPRFs, name)
+			transforms = append(transforms, IKETransform{Type: 2, ID: value, Name: name})
 		case 14: // Key Length.
 			keyLength = value
 		}
@@ -680,7 +738,7 @@ func ikev1HashName(id uint16) string {
 }
 
 func ikev1AuthName(id uint16) string {
-	if name := map[uint16]string{1: "PSK", 3: "RSA-SIGNATURE", 9: "ECDSA-SHA256", 10: "ECDSA-SHA384", 11: "ECDSA-SHA512"}[id]; name != "" {
+	if name := map[uint16]string{1: "PSK", 2: "DSS-SIGNATURE", 3: "RSA-SIGNATURE", 4: "RSA-ENCRYPTION", 5: "REVISED-RSA-ENCRYPTION", 9: "ECDSA-SHA256", 10: "ECDSA-SHA384", 11: "ECDSA-SHA512"}[id]; name != "" {
 		return name
 	}
 	return fmt.Sprintf("IKEV1-AUTH-%d", id)
@@ -787,28 +845,42 @@ func networkPayload(packet []byte) (uint8, []byte, string, string, bool) {
 	return networkPayloadLink(packet, 1)
 }
 func networkPayloadLink(packet []byte, linkType uint16) (uint8, []byte, string, string, bool) {
+	view, ok := decodeNetworkPacket(packet, linkType)
+	return view.protocol, view.payload, view.source, view.destination, ok
+}
+
+type networkPacket struct {
+	protocol            uint8
+	payload             []byte
+	source, destination string
+	fragmented          bool
+	incomplete          bool
+	reason              string
+}
+
+func decodeNetworkPacket(packet []byte, linkType uint16) (networkPacket, bool) {
 	if linkType == 101 { // DLT_RAW
 		if len(packet) == 0 {
-			return 0, nil, "", "", false
+			return networkPacket{}, false
 		}
 		if packet[0]>>4 == 4 {
 			packet = append([]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x08, 0}, packet...)
 		} else if packet[0]>>4 == 6 {
 			packet = append([]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x86, 0xdd}, packet...)
 		} else {
-			return 0, nil, "", "", false
+			return networkPacket{}, false
 		}
 	}
 	if linkType != 0 && linkType != 1 && linkType != 101 {
-		return 0, nil, "", "", false
+		return networkPacket{}, false
 	}
 	if len(packet) < 14 {
-		return 0, nil, "", "", false
+		return networkPacket{}, false
 	}
 	offset, etherType := 14, binary.BigEndian.Uint16(packet[12:14])
 	for etherType == 0x8100 || etherType == 0x88a8 {
 		if len(packet) < offset+4 {
-			return 0, nil, "", "", false
+			return networkPacket{}, false
 		}
 		etherType = binary.BigEndian.Uint16(packet[offset+2 : offset+4])
 		offset += 4
@@ -816,44 +888,62 @@ func networkPayloadLink(packet []byte, linkType uint16) (uint8, []byte, string, 
 	switch etherType {
 	case 0x0800:
 		if len(packet) < offset+20 {
-			return 0, nil, "", "", false
+			return networkPacket{}, false
 		}
 		ihl := int(packet[offset]&15) * 4
-		if ihl < 20 || len(packet) < offset+ihl {
-			return 0, nil, "", "", false
+		totalLength := int(binary.BigEndian.Uint16(packet[offset+2 : offset+4]))
+		if packet[offset]>>4 != 4 || ihl < 20 || totalLength < ihl || len(packet) < offset+totalLength {
+			return networkPacket{}, false
 		}
 		source := netip.AddrFrom4([4]byte(packet[offset+12 : offset+16])).String()
 		destination := netip.AddrFrom4([4]byte(packet[offset+16 : offset+20])).String()
-		return packet[offset+9], packet[offset+ihl:], source, destination, true
+		protocol := packet[offset+9]
+		fragment := binary.BigEndian.Uint16(packet[offset+6 : offset+8])
+		if fragment&0x3fff != 0 { // More Fragments or a non-zero fragment offset.
+			return networkPacket{protocol: protocol, source: source, destination: destination, fragmented: true, incomplete: true, reason: "fragmented IPv4 datagram requires reassembly"}, true
+		}
+		return networkPacket{protocol: protocol, payload: packet[offset+ihl : offset+totalLength], source: source, destination: destination}, true
 	case 0x86dd:
 		if len(packet) < offset+40 {
-			return 0, nil, "", "", false
+			return networkPacket{}, false
+		}
+		if packet[offset]>>4 != 6 {
+			return networkPacket{}, false
+		}
+		payloadLength := int(binary.BigEndian.Uint16(packet[offset+4 : offset+6]))
+		if len(packet) < offset+40+payloadLength {
+			return networkPacket{}, false
 		}
 		source := netip.AddrFrom16([16]byte(packet[offset+8 : offset+24])).String()
 		destination := netip.AddrFrom16([16]byte(packet[offset+24 : offset+40])).String()
-		next, payload := packet[offset+6], packet[offset+40:]
+		next, payload := packet[offset+6], packet[offset+40:offset+40+payloadLength]
 		for {
 			switch next {
 			case 0, 43, 60: // Hop-by-Hop, Routing, Destination Options.
 				if len(payload) < 2 {
-					return 0, nil, "", "", false
+					return networkPacket{}, false
 				}
 				headerLength := (int(payload[1]) + 1) * 8
 				if len(payload) < headerLength {
-					return 0, nil, "", "", false
+					return networkPacket{}, false
 				}
 				next, payload = payload[0], payload[headerLength:]
-			case 44: // Fragment header; only the first fragment has a transport header.
-				if len(payload) < 8 || binary.BigEndian.Uint16(payload[2:4])&0xfff8 != 0 {
-					return 0, nil, "", "", false
+			case 44: // Fragmented negotiations are not parsed without reassembly.
+				if len(payload) < 8 {
+					return networkPacket{}, false
 				}
-				next, payload = payload[0], payload[8:]
+				fragmentNext := payload[0]
+				fragmentBits := binary.BigEndian.Uint16(payload[2:4])
+				if fragmentBits&0xfff9 != 0 { // non-zero offset or More Fragments
+					return networkPacket{protocol: fragmentNext, source: source, destination: destination, fragmented: true, incomplete: true, reason: "fragmented IPv6 datagram requires reassembly"}, true
+				}
+				next, payload = fragmentNext, payload[8:] // atomic fragment
 			default:
-				return next, payload, source, destination, true
+				return networkPacket{protocol: next, payload: payload, source: source, destination: destination}, true
 			}
 		}
 	default:
-		return 0, nil, "", "", false
+		return networkPacket{}, false
 	}
 }
 

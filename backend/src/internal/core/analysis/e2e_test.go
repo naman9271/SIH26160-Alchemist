@@ -90,6 +90,13 @@ func TestDeterministicOfflinePipelineWithFixtureTelemetryAndPDF(t *testing.T) {
 	if err != nil || len(conclusions) == 0 {
 		t.Fatalf("fused conclusions = %d, err=%v", len(conclusions), err)
 	}
+	for _, conclusion := range conclusions {
+		for _, source := range conclusion.GetWinningSources() {
+			if source == "VICI" || source == "XFRM" {
+				t.Fatalf("offline PCAP was enriched with unrelated current gateway state: %#v", conclusion)
+			}
+		}
+	}
 	reportDirectory := t.TempDir()
 	reports := corereport.New(analysis, fusionService, coreartifact.New(func() string { return reportDirectory }), workspace, security, nil, nil, events)
 	report, err := reports.Generate(ctx, &reportv1.GenerateReportRequest{AnalysisId: record.ID, Type: reportv1.ReportType_EXECUTIVE, Format: reportv1.ReportFormat_PDF})

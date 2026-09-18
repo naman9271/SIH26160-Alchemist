@@ -52,6 +52,7 @@ def valid_prediction_result() -> dict[str, object]:
         "top_predictions": [
             ClassPrediction(traffic_class=TrafficClass.VIDEO, confidence=0.91),
             ClassPrediction(traffic_class=TrafficClass.WEB, confidence=0.08),
+            ClassPrediction(traffic_class=TrafficClass.EMAIL, confidence=0.01),
         ],
         "model_version": "0.1.0",
         "top_explanations": [
@@ -121,8 +122,9 @@ def test_prediction_result_accepts_unknown_prediction() -> None:
         confidence=0.35,
         is_unknown=True,
         top_predictions=[
-            ClassPrediction(traffic_class=TrafficClass.WEB, confidence=0.35),
-            ClassPrediction(traffic_class=TrafficClass.VIDEO, confidence=0.3),
+                ClassPrediction(traffic_class=TrafficClass.WEB, confidence=0.35),
+                ClassPrediction(traffic_class=TrafficClass.VIDEO, confidence=0.3),
+                ClassPrediction(traffic_class=TrafficClass.EMAIL, confidence=0.2),
         ],
     )
 
@@ -137,8 +139,10 @@ def test_prediction_result_rejects_unknown_as_fitted_probability() -> None:
         predicted_class=TrafficClass.UNKNOWN,
         confidence=0.35,
         is_unknown=True,
-        top_predictions=[
-            ClassPrediction(traffic_class=TrafficClass.UNKNOWN, confidence=0.35),
+            top_predictions=[
+                ClassPrediction(traffic_class=TrafficClass.UNKNOWN, confidence=0.35),
+                ClassPrediction(traffic_class=TrafficClass.WEB, confidence=0.3),
+                ClassPrediction(traffic_class=TrafficClass.VIDEO, confidence=0.2),
         ],
     )
 
@@ -159,6 +163,7 @@ def test_prediction_result_rejects_unsorted_predictions() -> None:
     values["top_predictions"] = [
         ClassPrediction(traffic_class=TrafficClass.VIDEO, confidence=0.5),
         ClassPrediction(traffic_class=TrafficClass.WEB, confidence=0.9),
+        ClassPrediction(traffic_class=TrafficClass.EMAIL, confidence=0.1),
     ]
 
     with pytest.raises(ValidationError, match="descending confidence"):

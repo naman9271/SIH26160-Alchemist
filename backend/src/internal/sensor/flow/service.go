@@ -12,27 +12,20 @@ import (
 
 	flowv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/sensor/v1/flow"
 	shared "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/domain/sensor"
+	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/featurespec"
 )
 
 const (
-	FeatureSchemaVersion  = "flow.v2"
 	SequenceSchemaVersion = "sequence.v1"
 	maxSequencePackets    = 256
-	defaultWindowDuration = 10 * time.Second
-	defaultBurstGap       = 100 * time.Millisecond
-	defaultIdleGap        = time.Second
 )
 
-var FeatureNames = []string{
-	"duration", "packet_count", "total_bytes", "packets_per_second",
-	"bytes_per_second", "mean_packet_size", "std_packet_size",
-	"min_packet_size", "max_packet_size", "p25_packet_size",
-	"median_packet_size", "p75_packet_size", "p95_packet_size",
-	"mean_interarrival_time", "std_interarrival_time", "upload_packets",
-	"download_packets", "upload_bytes", "download_bytes",
-	"upload_download_ratio", "burst_count", "mean_burst_size",
-	"idle_time_ratio",
-}
+var featureSpec = featurespec.MustLoad()
+var FeatureSchemaVersion = featureSpec.SchemaVersion
+var FeatureNames = append([]string(nil), featureSpec.Features...)
+var defaultWindowDuration = time.Duration(featureSpec.WindowSeconds * float64(time.Second))
+var defaultBurstGap = time.Duration(featureSpec.BurstGapSeconds * float64(time.Second))
+var defaultIdleGap = time.Duration(featureSpec.IdleGapSeconds * float64(time.Second))
 
 type Config struct {
 	WindowDuration time.Duration
@@ -81,6 +74,7 @@ type record struct {
 }
 type window struct {
 	id, flowID, sessionID, reason string
+	aggregationScope              string
 	start, end                    time.Time
 	burstGap, idleGap             time.Duration
 	finalized                     bool
@@ -160,7 +154,7 @@ func (s *Service) ObservePacket(ctx context.Context, p Packet) (string, error) {
 	}
 	forward := p.SourceAddress == r.src && p.DestinationAddress == r.dst && p.SourcePort == r.sport && p.DestinationPort == r.dport
 	var ready *window
-	if len(r.pending) > 0 && !p.SeenAt.Before(r.pending[0].at.Add(s.windowDuration)) {
+	if len(r.pending) > 0 && windowBucket(p.SeenAt, r.stats.first, s.windowDuration) > windowBucket(r.pending[0].at, r.stats.first, s.windowDuration) {
 		ready = s.finalizeLocked(r, "WINDOW_DURATION")
 	}
 	update(&r.stats, p, forward, s.burstGap, s.idleGap)
@@ -174,6 +168,13 @@ func (s *Service) ObservePacket(ctx context.Context, p Packet) (string, error) {
 		s.publish(ready)
 	}
 	return r.id, nil
+}
+
+func windowBucket(at, anchor time.Time, duration time.Duration) int64 {
+	if duration <= 0 || at.Before(anchor) {
+		return 0
+	}
+	return int64(at.Sub(anchor) / duration)
 }
 func flowKey(p Packet) string {
 	a := p.SourceAddress + ":" + strconv.FormatUint(uint64(p.SourcePort), 10)
@@ -245,7 +246,16 @@ func (s *Service) finalizeLocked(r *record, reason string) *window {
 		return nil
 	}
 	p := append([]packet(nil), r.pending...)
-	w := &window{id: string(id), flowID: r.id, sessionID: r.session, reason: reason, start: p[0].at, end: p[len(p)-1].at, burstGap: s.burstGap, idleGap: s.idleGap, finalized: true, packets: p}
+	scope := "aggregate_endpoint_channel_estimate"
+	forward, reverse := false, false
+	for _, packet := range p {
+		forward = forward || packet.forward
+		reverse = reverse || !packet.forward
+	}
+	if forward && reverse && len(r.spis) >= 2 {
+		scope = "paired_bidirectional_sa_channel"
+	}
+	w := &window{id: string(id), flowID: r.id, sessionID: r.session, reason: reason, aggregationScope: scope, start: p[0].at, end: p[len(p)-1].at, burstGap: s.burstGap, idleGap: s.idleGap, finalized: true, packets: p}
 	s.windows[w.id] = w
 	r.windows = append(r.windows, w.id)
 	r.pending = nil
@@ -522,7 +532,7 @@ func Stats(r *record) *flowv1.FlowStats {
 	return &flowv1.FlowStats{FlowId: r.id, PacketCount: a.count, ByteCount: a.bytes, DurationMs: uint64(a.last.Sub(a.first).Milliseconds()), MinPacketSize: a.min, MaxPacketSize: a.max, MeanPacketSize: a.mean, PacketSizeStddev: std, ForwardPackets: a.forwardPackets, ReversePackets: a.reversePackets, ForwardBytes: a.forwardBytes, ReverseBytes: a.reverseBytes, MeanInterarrivalUs: a.iaMean, InterarrivalStddevUs: ia, BurstCount: a.bursts, MeanBurstPackets: meanBurst, IdlePeriodCount: a.idles, MeanIdleMs: meanIdle}
 }
 func ToFeature(w *window) *flowv1.FeatureWindow {
-	f := &flowv1.FeatureWindow{WindowId: w.id, FlowId: w.flowID, SessionId: w.sessionID, WindowStart: shared.Timestamp(w.start), WindowEnd: shared.Timestamp(w.end), FeatureSchemaVersion: FeatureSchemaVersion, SequenceSchemaVersion: SequenceSchemaVersion, NormalizationProfile: "none", DirectionConvention: "positive=first_observed_direction", WindowDurationMs: uint64(w.end.Sub(w.start).Milliseconds()), PacketCount: uint64(len(w.packets)), Finalized: w.finalized, EvictionReason: w.reason}
+	f := &flowv1.FeatureWindow{WindowId: w.id, FlowId: w.flowID, SessionId: w.sessionID, WindowStart: shared.Timestamp(w.start), WindowEnd: shared.Timestamp(w.end), FeatureSchemaVersion: FeatureSchemaVersion, SequenceSchemaVersion: SequenceSchemaVersion, NormalizationProfile: "none", DirectionConvention: featureSpec.DirectionConvention, WindowDurationMs: uint64(w.end.Sub(w.start).Milliseconds()), PacketCount: uint64(len(w.packets)), Finalized: w.finalized, EvictionReason: w.reason, AggregationScope: w.aggregationScope}
 	f.FeatureNames = append([]string(nil), FeatureNames...)
 	f.FeatureValues = featureValues(w)
 	return f

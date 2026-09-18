@@ -61,6 +61,8 @@ message FlowFeatures {
   optional int64 burst_count = 22;
   optional double mean_burst_size = 23;
   optional double idle_time_ratio = 24;
+  optional string window_id = 25;
+  optional string aggregation_scope = 26;
 }
 
 message ClassPrediction {
@@ -85,6 +87,8 @@ message PredictionResult {
   string model_version = 6;
   repeated FeatureExplanation top_explanations = 7;
   double inference_time_ms = 8;
+  string window_id = 9;
+  string aggregation_scope = 10;
 }
 
 message HealthStatus {

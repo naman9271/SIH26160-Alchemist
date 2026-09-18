@@ -75,6 +75,7 @@ def test_calibration_evaluates_thresholds_and_persists_choice(tmp_path: Path) ->
                     "mean_packet_size": 500.0 + index,
                     "canonical_label": "icmp",
                     "dataset_source": "held-out-source",
+                    "split_group_id": f"ood-capture-{index}",
                 }
                 for index in range(8)
             ]
@@ -99,7 +100,8 @@ def test_calibration_evaluates_thresholds_and_persists_choice(tmp_path: Path) ->
     assert report["known_samples"] > 0
     assert report["known_calibration_partition"] == "validation"
     assert report["locked_test_samples_untouched"] > 0
-    assert report["unknown_samples"] == 8
+    assert report["unknown_samples"] + report["final_ood_samples"] == 8
+    assert 0 <= report["final_ood_rejection_rate"] <= 1
     assert {
         "known_traffic_accuracy",
         "false_unknown_rate",

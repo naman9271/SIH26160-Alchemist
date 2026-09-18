@@ -472,32 +472,34 @@ func (x *ViciDaemonStats) GetLoadedPlugins() []string {
 }
 
 type IkeSa struct {
-	state               protoimpl.MessageState `protogen:"open.v1"`
-	Name                string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	UniqueId            uint64                 `protobuf:"varint,2,opt,name=unique_id,json=uniqueId,proto3" json:"unique_id,omitempty"`
-	State               string                 `protobuf:"bytes,3,opt,name=state,proto3" json:"state,omitempty"`
-	IkeVersion          string                 `protobuf:"bytes,4,opt,name=ike_version,json=ikeVersion,proto3" json:"ike_version,omitempty"`
-	LocalHost           string                 `protobuf:"bytes,5,opt,name=local_host,json=localHost,proto3" json:"local_host,omitempty"`
-	LocalPort           uint32                 `protobuf:"varint,6,opt,name=local_port,json=localPort,proto3" json:"local_port,omitempty"`
-	RemoteHost          string                 `protobuf:"bytes,7,opt,name=remote_host,json=remoteHost,proto3" json:"remote_host,omitempty"`
-	RemotePort          uint32                 `protobuf:"varint,8,opt,name=remote_port,json=remotePort,proto3" json:"remote_port,omitempty"`
-	LocalIdentity       string                 `protobuf:"bytes,9,opt,name=local_identity,json=localIdentity,proto3" json:"local_identity,omitempty"`
-	RemoteIdentity      string                 `protobuf:"bytes,10,opt,name=remote_identity,json=remoteIdentity,proto3" json:"remote_identity,omitempty"`
-	Initiator           bool                   `protobuf:"varint,11,opt,name=initiator,proto3" json:"initiator,omitempty"`
-	InitiatorSpi        string                 `protobuf:"bytes,12,opt,name=initiator_spi,json=initiatorSpi,proto3" json:"initiator_spi,omitempty"`
-	ResponderSpi        string                 `protobuf:"bytes,13,opt,name=responder_spi,json=responderSpi,proto3" json:"responder_spi,omitempty"`
-	EncryptionAlgorithm string                 `protobuf:"bytes,14,opt,name=encryption_algorithm,json=encryptionAlgorithm,proto3" json:"encryption_algorithm,omitempty"`
-	EncryptionKeySize   uint32                 `protobuf:"varint,15,opt,name=encryption_key_size,json=encryptionKeySize,proto3" json:"encryption_key_size,omitempty"`
-	IntegrityAlgorithm  string                 `protobuf:"bytes,16,opt,name=integrity_algorithm,json=integrityAlgorithm,proto3" json:"integrity_algorithm,omitempty"`
-	Prf                 string                 `protobuf:"bytes,17,opt,name=prf,proto3" json:"prf,omitempty"`
-	DhGroup             string                 `protobuf:"bytes,18,opt,name=dh_group,json=dhGroup,proto3" json:"dh_group,omitempty"`
-	EstablishedDuration uint64                 `protobuf:"varint,19,opt,name=established_duration,json=establishedDuration,proto3" json:"established_duration,omitempty"`
-	RekeyTime           uint64                 `protobuf:"varint,20,opt,name=rekey_time,json=rekeyTime,proto3" json:"rekey_time,omitempty"`
-	ReauthTime          uint64                 `protobuf:"varint,21,opt,name=reauth_time,json=reauthTime,proto3" json:"reauth_time,omitempty"`
-	AssociatedChildSas  []*ChildSa             `protobuf:"bytes,22,rep,name=associated_child_sas,json=associatedChildSas,proto3" json:"associated_child_sas,omitempty"`
-	EvidenceStatus      v1.EvidenceStatus      `protobuf:"varint,23,opt,name=evidence_status,json=evidenceStatus,proto3,enum=ipsec.common.v1.EvidenceStatus" json:"evidence_status,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	state                  protoimpl.MessageState `protogen:"open.v1"`
+	Name                   string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	UniqueId               uint64                 `protobuf:"varint,2,opt,name=unique_id,json=uniqueId,proto3" json:"unique_id,omitempty"`
+	State                  string                 `protobuf:"bytes,3,opt,name=state,proto3" json:"state,omitempty"`
+	IkeVersion             string                 `protobuf:"bytes,4,opt,name=ike_version,json=ikeVersion,proto3" json:"ike_version,omitempty"`
+	LocalHost              string                 `protobuf:"bytes,5,opt,name=local_host,json=localHost,proto3" json:"local_host,omitempty"`
+	LocalPort              uint32                 `protobuf:"varint,6,opt,name=local_port,json=localPort,proto3" json:"local_port,omitempty"`
+	RemoteHost             string                 `protobuf:"bytes,7,opt,name=remote_host,json=remoteHost,proto3" json:"remote_host,omitempty"`
+	RemotePort             uint32                 `protobuf:"varint,8,opt,name=remote_port,json=remotePort,proto3" json:"remote_port,omitempty"`
+	LocalIdentity          string                 `protobuf:"bytes,9,opt,name=local_identity,json=localIdentity,proto3" json:"local_identity,omitempty"`
+	RemoteIdentity         string                 `protobuf:"bytes,10,opt,name=remote_identity,json=remoteIdentity,proto3" json:"remote_identity,omitempty"`
+	Initiator              bool                   `protobuf:"varint,11,opt,name=initiator,proto3" json:"initiator,omitempty"`
+	InitiatorSpi           string                 `protobuf:"bytes,12,opt,name=initiator_spi,json=initiatorSpi,proto3" json:"initiator_spi,omitempty"`
+	ResponderSpi           string                 `protobuf:"bytes,13,opt,name=responder_spi,json=responderSpi,proto3" json:"responder_spi,omitempty"`
+	EncryptionAlgorithm    string                 `protobuf:"bytes,14,opt,name=encryption_algorithm,json=encryptionAlgorithm,proto3" json:"encryption_algorithm,omitempty"`
+	EncryptionKeySize      uint32                 `protobuf:"varint,15,opt,name=encryption_key_size,json=encryptionKeySize,proto3" json:"encryption_key_size,omitempty"`
+	IntegrityAlgorithm     string                 `protobuf:"bytes,16,opt,name=integrity_algorithm,json=integrityAlgorithm,proto3" json:"integrity_algorithm,omitempty"`
+	Prf                    string                 `protobuf:"bytes,17,opt,name=prf,proto3" json:"prf,omitempty"`
+	DhGroup                string                 `protobuf:"bytes,18,opt,name=dh_group,json=dhGroup,proto3" json:"dh_group,omitempty"`
+	EstablishedDuration    uint64                 `protobuf:"varint,19,opt,name=established_duration,json=establishedDuration,proto3" json:"established_duration,omitempty"`
+	RekeyTime              uint64                 `protobuf:"varint,20,opt,name=rekey_time,json=rekeyTime,proto3" json:"rekey_time,omitempty"`
+	ReauthTime             uint64                 `protobuf:"varint,21,opt,name=reauth_time,json=reauthTime,proto3" json:"reauth_time,omitempty"`
+	AssociatedChildSas     []*ChildSa             `protobuf:"bytes,22,rep,name=associated_child_sas,json=associatedChildSas,proto3" json:"associated_child_sas,omitempty"`
+	EvidenceStatus         v1.EvidenceStatus      `protobuf:"varint,23,opt,name=evidence_status,json=evidenceStatus,proto3,enum=ipsec.common.v1.EvidenceStatus" json:"evidence_status,omitempty"`
+	IntegrityKeySize       uint32                 `protobuf:"varint,24,opt,name=integrity_key_size,json=integrityKeySize,proto3" json:"integrity_key_size,omitempty"`
+	AdditionalKeyExchanges []string               `protobuf:"bytes,25,rep,name=additional_key_exchanges,json=additionalKeyExchanges,proto3" json:"additional_key_exchanges,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *IkeSa) Reset() {
@@ -691,31 +693,51 @@ func (x *IkeSa) GetEvidenceStatus() v1.EvidenceStatus {
 	return v1.EvidenceStatus(0)
 }
 
+func (x *IkeSa) GetIntegrityKeySize() uint32 {
+	if x != nil {
+		return x.IntegrityKeySize
+	}
+	return 0
+}
+
+func (x *IkeSa) GetAdditionalKeyExchanges() []string {
+	if x != nil {
+		return x.AdditionalKeyExchanges
+	}
+	return nil
+}
+
 type ChildSa struct {
-	state                  protoimpl.MessageState `protogen:"open.v1"`
-	Name                   string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	UniqueId               uint64                 `protobuf:"varint,2,opt,name=unique_id,json=uniqueId,proto3" json:"unique_id,omitempty"`
-	Reqid                  uint32                 `protobuf:"varint,3,opt,name=reqid,proto3" json:"reqid,omitempty"`
-	State                  string                 `protobuf:"bytes,4,opt,name=state,proto3" json:"state,omitempty"`
-	Mode                   string                 `protobuf:"bytes,5,opt,name=mode,proto3" json:"mode,omitempty"`
-	Protocol               string                 `protobuf:"bytes,6,opt,name=protocol,proto3" json:"protocol,omitempty"`
-	SpiIn                  uint32                 `protobuf:"varint,7,opt,name=spi_in,json=spiIn,proto3" json:"spi_in,omitempty"`
-	SpiOut                 uint32                 `protobuf:"varint,8,opt,name=spi_out,json=spiOut,proto3" json:"spi_out,omitempty"`
-	EncryptionAlgorithm    string                 `protobuf:"bytes,9,opt,name=encryption_algorithm,json=encryptionAlgorithm,proto3" json:"encryption_algorithm,omitempty"`
-	KeyLength              uint32                 `protobuf:"varint,10,opt,name=key_length,json=keyLength,proto3" json:"key_length,omitempty"`
-	IntegrityAlgorithm     string                 `protobuf:"bytes,11,opt,name=integrity_algorithm,json=integrityAlgorithm,proto3" json:"integrity_algorithm,omitempty"`
-	BytesIn                uint64                 `protobuf:"varint,12,opt,name=bytes_in,json=bytesIn,proto3" json:"bytes_in,omitempty"`
-	BytesOut               uint64                 `protobuf:"varint,13,opt,name=bytes_out,json=bytesOut,proto3" json:"bytes_out,omitempty"`
-	PacketsIn              uint64                 `protobuf:"varint,14,opt,name=packets_in,json=packetsIn,proto3" json:"packets_in,omitempty"`
-	PacketsOut             uint64                 `protobuf:"varint,15,opt,name=packets_out,json=packetsOut,proto3" json:"packets_out,omitempty"`
-	InstallTime            *timestamppb.Timestamp `protobuf:"bytes,16,opt,name=install_time,json=installTime,proto3" json:"install_time,omitempty"`
-	RekeyTime              uint64                 `protobuf:"varint,17,opt,name=rekey_time,json=rekeyTime,proto3" json:"rekey_time,omitempty"`
-	LifeTime               uint64                 `protobuf:"varint,18,opt,name=life_time,json=lifeTime,proto3" json:"life_time,omitempty"`
-	LocalTrafficSelectors  []string               `protobuf:"bytes,19,rep,name=local_traffic_selectors,json=localTrafficSelectors,proto3" json:"local_traffic_selectors,omitempty"`
-	RemoteTrafficSelectors []string               `protobuf:"bytes,20,rep,name=remote_traffic_selectors,json=remoteTrafficSelectors,proto3" json:"remote_traffic_selectors,omitempty"`
-	EvidenceStatus         v1.EvidenceStatus      `protobuf:"varint,21,opt,name=evidence_status,json=evidenceStatus,proto3,enum=ipsec.common.v1.EvidenceStatus" json:"evidence_status,omitempty"`
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
+	state                   protoimpl.MessageState `protogen:"open.v1"`
+	Name                    string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	UniqueId                uint64                 `protobuf:"varint,2,opt,name=unique_id,json=uniqueId,proto3" json:"unique_id,omitempty"`
+	Reqid                   uint32                 `protobuf:"varint,3,opt,name=reqid,proto3" json:"reqid,omitempty"`
+	State                   string                 `protobuf:"bytes,4,opt,name=state,proto3" json:"state,omitempty"`
+	Mode                    string                 `protobuf:"bytes,5,opt,name=mode,proto3" json:"mode,omitempty"`
+	Protocol                string                 `protobuf:"bytes,6,opt,name=protocol,proto3" json:"protocol,omitempty"`
+	SpiIn                   uint32                 `protobuf:"varint,7,opt,name=spi_in,json=spiIn,proto3" json:"spi_in,omitempty"`
+	SpiOut                  uint32                 `protobuf:"varint,8,opt,name=spi_out,json=spiOut,proto3" json:"spi_out,omitempty"`
+	EncryptionAlgorithm     string                 `protobuf:"bytes,9,opt,name=encryption_algorithm,json=encryptionAlgorithm,proto3" json:"encryption_algorithm,omitempty"`
+	KeyLength               uint32                 `protobuf:"varint,10,opt,name=key_length,json=keyLength,proto3" json:"key_length,omitempty"`
+	IntegrityAlgorithm      string                 `protobuf:"bytes,11,opt,name=integrity_algorithm,json=integrityAlgorithm,proto3" json:"integrity_algorithm,omitempty"`
+	BytesIn                 uint64                 `protobuf:"varint,12,opt,name=bytes_in,json=bytesIn,proto3" json:"bytes_in,omitempty"`
+	BytesOut                uint64                 `protobuf:"varint,13,opt,name=bytes_out,json=bytesOut,proto3" json:"bytes_out,omitempty"`
+	PacketsIn               uint64                 `protobuf:"varint,14,opt,name=packets_in,json=packetsIn,proto3" json:"packets_in,omitempty"`
+	PacketsOut              uint64                 `protobuf:"varint,15,opt,name=packets_out,json=packetsOut,proto3" json:"packets_out,omitempty"`
+	InstallTime             *timestamppb.Timestamp `protobuf:"bytes,16,opt,name=install_time,json=installTime,proto3" json:"install_time,omitempty"`
+	RekeyTime               uint64                 `protobuf:"varint,17,opt,name=rekey_time,json=rekeyTime,proto3" json:"rekey_time,omitempty"`
+	LifeTime                uint64                 `protobuf:"varint,18,opt,name=life_time,json=lifeTime,proto3" json:"life_time,omitempty"`
+	LocalTrafficSelectors   []string               `protobuf:"bytes,19,rep,name=local_traffic_selectors,json=localTrafficSelectors,proto3" json:"local_traffic_selectors,omitempty"`
+	RemoteTrafficSelectors  []string               `protobuf:"bytes,20,rep,name=remote_traffic_selectors,json=remoteTrafficSelectors,proto3" json:"remote_traffic_selectors,omitempty"`
+	EvidenceStatus          v1.EvidenceStatus      `protobuf:"varint,21,opt,name=evidence_status,json=evidenceStatus,proto3,enum=ipsec.common.v1.EvidenceStatus" json:"evidence_status,omitempty"`
+	IntegrityKeySize        uint32                 `protobuf:"varint,22,opt,name=integrity_key_size,json=integrityKeySize,proto3" json:"integrity_key_size,omitempty"`
+	Prf                     string                 `protobuf:"bytes,23,opt,name=prf,proto3" json:"prf,omitempty"`
+	DhGroup                 string                 `protobuf:"bytes,24,opt,name=dh_group,json=dhGroup,proto3" json:"dh_group,omitempty"`
+	AdditionalKeyExchanges  []string               `protobuf:"bytes,25,rep,name=additional_key_exchanges,json=additionalKeyExchanges,proto3" json:"additional_key_exchanges,omitempty"`
+	ExtendedSequenceNumbers bool                   `protobuf:"varint,26,opt,name=extended_sequence_numbers,json=extendedSequenceNumbers,proto3" json:"extended_sequence_numbers,omitempty"`
+	InstallDuration         uint64                 `protobuf:"varint,27,opt,name=install_duration,json=installDuration,proto3" json:"install_duration,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
 }
 
 func (x *ChildSa) Reset() {
@@ -893,6 +915,48 @@ func (x *ChildSa) GetEvidenceStatus() v1.EvidenceStatus {
 		return x.EvidenceStatus
 	}
 	return v1.EvidenceStatus(0)
+}
+
+func (x *ChildSa) GetIntegrityKeySize() uint32 {
+	if x != nil {
+		return x.IntegrityKeySize
+	}
+	return 0
+}
+
+func (x *ChildSa) GetPrf() string {
+	if x != nil {
+		return x.Prf
+	}
+	return ""
+}
+
+func (x *ChildSa) GetDhGroup() string {
+	if x != nil {
+		return x.DhGroup
+	}
+	return ""
+}
+
+func (x *ChildSa) GetAdditionalKeyExchanges() []string {
+	if x != nil {
+		return x.AdditionalKeyExchanges
+	}
+	return nil
+}
+
+func (x *ChildSa) GetExtendedSequenceNumbers() bool {
+	if x != nil {
+		return x.ExtendedSequenceNumbers
+	}
+	return false
+}
+
+func (x *ChildSa) GetInstallDuration() uint64 {
+	if x != nil {
+		return x.InstallDuration
+	}
+	return 0
 }
 
 type ListIkeSasRequest struct {
@@ -1271,6 +1335,354 @@ func (x *GetChildSaRequest) GetChildUniqueId() uint64 {
 	return 0
 }
 
+type ViciProposal struct {
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	Encryption            []string               `protobuf:"bytes,1,rep,name=encryption,proto3" json:"encryption,omitempty"`
+	Integrity             []string               `protobuf:"bytes,2,rep,name=integrity,proto3" json:"integrity,omitempty"`
+	Prf                   []string               `protobuf:"bytes,3,rep,name=prf,proto3" json:"prf,omitempty"`
+	KeyExchange           []string               `protobuf:"bytes,4,rep,name=key_exchange,json=keyExchange,proto3" json:"key_exchange,omitempty"`
+	AdditionalKeyExchange []string               `protobuf:"bytes,5,rep,name=additional_key_exchange,json=additionalKeyExchange,proto3" json:"additional_key_exchange,omitempty"`
+	SequenceNumber        []string               `protobuf:"bytes,6,rep,name=sequence_number,json=sequenceNumber,proto3" json:"sequence_number,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
+}
+
+func (x *ViciProposal) Reset() {
+	*x = ViciProposal{}
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ViciProposal) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ViciProposal) ProtoMessage() {}
+
+func (x *ViciProposal) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ViciProposal.ProtoReflect.Descriptor instead.
+func (*ViciProposal) Descriptor() ([]byte, []int) {
+	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *ViciProposal) GetEncryption() []string {
+	if x != nil {
+		return x.Encryption
+	}
+	return nil
+}
+
+func (x *ViciProposal) GetIntegrity() []string {
+	if x != nil {
+		return x.Integrity
+	}
+	return nil
+}
+
+func (x *ViciProposal) GetPrf() []string {
+	if x != nil {
+		return x.Prf
+	}
+	return nil
+}
+
+func (x *ViciProposal) GetKeyExchange() []string {
+	if x != nil {
+		return x.KeyExchange
+	}
+	return nil
+}
+
+func (x *ViciProposal) GetAdditionalKeyExchange() []string {
+	if x != nil {
+		return x.AdditionalKeyExchange
+	}
+	return nil
+}
+
+func (x *ViciProposal) GetSequenceNumber() []string {
+	if x != nil {
+		return x.SequenceNumber
+	}
+	return nil
+}
+
+type ViciAuthConfig struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Side             string                 `protobuf:"bytes,1,opt,name=side,proto3" json:"side,omitempty"`
+	SectionName      string                 `protobuf:"bytes,2,opt,name=section_name,json=sectionName,proto3" json:"section_name,omitempty"`
+	AuthClass        string                 `protobuf:"bytes,3,opt,name=auth_class,json=authClass,proto3" json:"auth_class,omitempty"`
+	EapType          string                 `protobuf:"bytes,4,opt,name=eap_type,json=eapType,proto3" json:"eap_type,omitempty"`
+	EapVendor        string                 `protobuf:"bytes,5,opt,name=eap_vendor,json=eapVendor,proto3" json:"eap_vendor,omitempty"`
+	XauthBackend     string                 `protobuf:"bytes,6,opt,name=xauth_backend,json=xauthBackend,proto3" json:"xauth_backend,omitempty"`
+	RevocationPolicy string                 `protobuf:"bytes,7,opt,name=revocation_policy,json=revocationPolicy,proto3" json:"revocation_policy,omitempty"`
+	Identity         string                 `protobuf:"bytes,8,opt,name=identity,proto3" json:"identity,omitempty"`
+	AaaIdentity      string                 `protobuf:"bytes,9,opt,name=aaa_identity,json=aaaIdentity,proto3" json:"aaa_identity,omitempty"`
+	EapIdentity      string                 `protobuf:"bytes,10,opt,name=eap_identity,json=eapIdentity,proto3" json:"eap_identity,omitempty"`
+	XauthIdentity    string                 `protobuf:"bytes,11,opt,name=xauth_identity,json=xauthIdentity,proto3" json:"xauth_identity,omitempty"`
+	Groups           []string               `protobuf:"bytes,12,rep,name=groups,proto3" json:"groups,omitempty"`
+	Certificates     []string               `protobuf:"bytes,13,rep,name=certificates,proto3" json:"certificates,omitempty"`
+	CaCertificates   []string               `protobuf:"bytes,14,rep,name=ca_certificates,json=caCertificates,proto3" json:"ca_certificates,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *ViciAuthConfig) Reset() {
+	*x = ViciAuthConfig{}
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ViciAuthConfig) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ViciAuthConfig) ProtoMessage() {}
+
+func (x *ViciAuthConfig) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ViciAuthConfig.ProtoReflect.Descriptor instead.
+func (*ViciAuthConfig) Descriptor() ([]byte, []int) {
+	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *ViciAuthConfig) GetSide() string {
+	if x != nil {
+		return x.Side
+	}
+	return ""
+}
+
+func (x *ViciAuthConfig) GetSectionName() string {
+	if x != nil {
+		return x.SectionName
+	}
+	return ""
+}
+
+func (x *ViciAuthConfig) GetAuthClass() string {
+	if x != nil {
+		return x.AuthClass
+	}
+	return ""
+}
+
+func (x *ViciAuthConfig) GetEapType() string {
+	if x != nil {
+		return x.EapType
+	}
+	return ""
+}
+
+func (x *ViciAuthConfig) GetEapVendor() string {
+	if x != nil {
+		return x.EapVendor
+	}
+	return ""
+}
+
+func (x *ViciAuthConfig) GetXauthBackend() string {
+	if x != nil {
+		return x.XauthBackend
+	}
+	return ""
+}
+
+func (x *ViciAuthConfig) GetRevocationPolicy() string {
+	if x != nil {
+		return x.RevocationPolicy
+	}
+	return ""
+}
+
+func (x *ViciAuthConfig) GetIdentity() string {
+	if x != nil {
+		return x.Identity
+	}
+	return ""
+}
+
+func (x *ViciAuthConfig) GetAaaIdentity() string {
+	if x != nil {
+		return x.AaaIdentity
+	}
+	return ""
+}
+
+func (x *ViciAuthConfig) GetEapIdentity() string {
+	if x != nil {
+		return x.EapIdentity
+	}
+	return ""
+}
+
+func (x *ViciAuthConfig) GetXauthIdentity() string {
+	if x != nil {
+		return x.XauthIdentity
+	}
+	return ""
+}
+
+func (x *ViciAuthConfig) GetGroups() []string {
+	if x != nil {
+		return x.Groups
+	}
+	return nil
+}
+
+func (x *ViciAuthConfig) GetCertificates() []string {
+	if x != nil {
+		return x.Certificates
+	}
+	return nil
+}
+
+func (x *ViciAuthConfig) GetCaCertificates() []string {
+	if x != nil {
+		return x.CaCertificates
+	}
+	return nil
+}
+
+type ViciChildConfig struct {
+	state                  protoimpl.MessageState `protogen:"open.v1"`
+	Name                   string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Mode                   string                 `protobuf:"bytes,2,opt,name=mode,proto3" json:"mode,omitempty"`
+	RekeyTime              uint64                 `protobuf:"varint,3,opt,name=rekey_time,json=rekeyTime,proto3" json:"rekey_time,omitempty"`
+	RekeyBytes             uint64                 `protobuf:"varint,4,opt,name=rekey_bytes,json=rekeyBytes,proto3" json:"rekey_bytes,omitempty"`
+	RekeyPackets           uint64                 `protobuf:"varint,5,opt,name=rekey_packets,json=rekeyPackets,proto3" json:"rekey_packets,omitempty"`
+	EspProposals           []*ViciProposal        `protobuf:"bytes,6,rep,name=esp_proposals,json=espProposals,proto3" json:"esp_proposals,omitempty"`
+	AhProposals            []*ViciProposal        `protobuf:"bytes,7,rep,name=ah_proposals,json=ahProposals,proto3" json:"ah_proposals,omitempty"`
+	LocalTrafficSelectors  []string               `protobuf:"bytes,8,rep,name=local_traffic_selectors,json=localTrafficSelectors,proto3" json:"local_traffic_selectors,omitempty"`
+	RemoteTrafficSelectors []string               `protobuf:"bytes,9,rep,name=remote_traffic_selectors,json=remoteTrafficSelectors,proto3" json:"remote_traffic_selectors,omitempty"`
+	ConfiguredPfsGroups    []string               `protobuf:"bytes,10,rep,name=configured_pfs_groups,json=configuredPfsGroups,proto3" json:"configured_pfs_groups,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *ViciChildConfig) Reset() {
+	*x = ViciChildConfig{}
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ViciChildConfig) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ViciChildConfig) ProtoMessage() {}
+
+func (x *ViciChildConfig) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ViciChildConfig.ProtoReflect.Descriptor instead.
+func (*ViciChildConfig) Descriptor() ([]byte, []int) {
+	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *ViciChildConfig) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *ViciChildConfig) GetMode() string {
+	if x != nil {
+		return x.Mode
+	}
+	return ""
+}
+
+func (x *ViciChildConfig) GetRekeyTime() uint64 {
+	if x != nil {
+		return x.RekeyTime
+	}
+	return 0
+}
+
+func (x *ViciChildConfig) GetRekeyBytes() uint64 {
+	if x != nil {
+		return x.RekeyBytes
+	}
+	return 0
+}
+
+func (x *ViciChildConfig) GetRekeyPackets() uint64 {
+	if x != nil {
+		return x.RekeyPackets
+	}
+	return 0
+}
+
+func (x *ViciChildConfig) GetEspProposals() []*ViciProposal {
+	if x != nil {
+		return x.EspProposals
+	}
+	return nil
+}
+
+func (x *ViciChildConfig) GetAhProposals() []*ViciProposal {
+	if x != nil {
+		return x.AhProposals
+	}
+	return nil
+}
+
+func (x *ViciChildConfig) GetLocalTrafficSelectors() []string {
+	if x != nil {
+		return x.LocalTrafficSelectors
+	}
+	return nil
+}
+
+func (x *ViciChildConfig) GetRemoteTrafficSelectors() []string {
+	if x != nil {
+		return x.RemoteTrafficSelectors
+	}
+	return nil
+}
+
+func (x *ViciChildConfig) GetConfiguredPfsGroups() []string {
+	if x != nil {
+		return x.ConfiguredPfsGroups
+	}
+	return nil
+}
+
 type StrongSwanConnection struct {
 	state                  protoimpl.MessageState `protogen:"open.v1"`
 	Name                   string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
@@ -1284,13 +1696,18 @@ type StrongSwanConnection struct {
 	RekeyTime              uint64                 `protobuf:"varint,9,opt,name=rekey_time,json=rekeyTime,proto3" json:"rekey_time,omitempty"`
 	PfsKeyExchange         string                 `protobuf:"bytes,10,opt,name=pfs_key_exchange,json=pfsKeyExchange,proto3" json:"pfs_key_exchange,omitempty"`
 	EvidenceStatus         v1.EvidenceStatus      `protobuf:"varint,11,opt,name=evidence_status,json=evidenceStatus,proto3,enum=ipsec.common.v1.EvidenceStatus" json:"evidence_status,omitempty"`
+	LocalAddresses         []string               `protobuf:"bytes,12,rep,name=local_addresses,json=localAddresses,proto3" json:"local_addresses,omitempty"`
+	RemoteAddresses        []string               `protobuf:"bytes,13,rep,name=remote_addresses,json=remoteAddresses,proto3" json:"remote_addresses,omitempty"`
+	ConfiguredIkeProposals []*ViciProposal        `protobuf:"bytes,14,rep,name=configured_ike_proposals,json=configuredIkeProposals,proto3" json:"configured_ike_proposals,omitempty"`
+	Authentication         []*ViciAuthConfig      `protobuf:"bytes,15,rep,name=authentication,proto3" json:"authentication,omitempty"`
+	ConfiguredChildren     []*ViciChildConfig     `protobuf:"bytes,16,rep,name=configured_children,json=configuredChildren,proto3" json:"configured_children,omitempty"`
 	unknownFields          protoimpl.UnknownFields
 	sizeCache              protoimpl.SizeCache
 }
 
 func (x *StrongSwanConnection) Reset() {
 	*x = StrongSwanConnection{}
-	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[14]
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1302,7 +1719,7 @@ func (x *StrongSwanConnection) String() string {
 func (*StrongSwanConnection) ProtoMessage() {}
 
 func (x *StrongSwanConnection) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[14]
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1315,7 +1732,7 @@ func (x *StrongSwanConnection) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StrongSwanConnection.ProtoReflect.Descriptor instead.
 func (*StrongSwanConnection) Descriptor() ([]byte, []int) {
-	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{14}
+	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *StrongSwanConnection) GetName() string {
@@ -1395,6 +1812,41 @@ func (x *StrongSwanConnection) GetEvidenceStatus() v1.EvidenceStatus {
 	return v1.EvidenceStatus(0)
 }
 
+func (x *StrongSwanConnection) GetLocalAddresses() []string {
+	if x != nil {
+		return x.LocalAddresses
+	}
+	return nil
+}
+
+func (x *StrongSwanConnection) GetRemoteAddresses() []string {
+	if x != nil {
+		return x.RemoteAddresses
+	}
+	return nil
+}
+
+func (x *StrongSwanConnection) GetConfiguredIkeProposals() []*ViciProposal {
+	if x != nil {
+		return x.ConfiguredIkeProposals
+	}
+	return nil
+}
+
+func (x *StrongSwanConnection) GetAuthentication() []*ViciAuthConfig {
+	if x != nil {
+		return x.Authentication
+	}
+	return nil
+}
+
+func (x *StrongSwanConnection) GetConfiguredChildren() []*ViciChildConfig {
+	if x != nil {
+		return x.ConfiguredChildren
+	}
+	return nil
+}
+
 type ListConnectionsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	SocketUri     string                 `protobuf:"bytes,1,opt,name=socket_uri,json=socketUri,proto3" json:"socket_uri,omitempty"`
@@ -1406,7 +1858,7 @@ type ListConnectionsRequest struct {
 
 func (x *ListConnectionsRequest) Reset() {
 	*x = ListConnectionsRequest{}
-	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[15]
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1418,7 +1870,7 @@ func (x *ListConnectionsRequest) String() string {
 func (*ListConnectionsRequest) ProtoMessage() {}
 
 func (x *ListConnectionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[15]
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1431,7 +1883,7 @@ func (x *ListConnectionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListConnectionsRequest.ProtoReflect.Descriptor instead.
 func (*ListConnectionsRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{15}
+	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *ListConnectionsRequest) GetSocketUri() string {
@@ -1465,7 +1917,7 @@ type ListConnectionsResponse struct {
 
 func (x *ListConnectionsResponse) Reset() {
 	*x = ListConnectionsResponse{}
-	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[16]
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1477,7 +1929,7 @@ func (x *ListConnectionsResponse) String() string {
 func (*ListConnectionsResponse) ProtoMessage() {}
 
 func (x *ListConnectionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[16]
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1490,7 +1942,7 @@ func (x *ListConnectionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListConnectionsResponse.ProtoReflect.Descriptor instead.
 func (*ListConnectionsResponse) Descriptor() ([]byte, []int) {
-	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{16}
+	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *ListConnectionsResponse) GetConnections() []*StrongSwanConnection {
@@ -1517,7 +1969,7 @@ type GetConnectionRequest struct {
 
 func (x *GetConnectionRequest) Reset() {
 	*x = GetConnectionRequest{}
-	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[17]
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1529,7 +1981,7 @@ func (x *GetConnectionRequest) String() string {
 func (*GetConnectionRequest) ProtoMessage() {}
 
 func (x *GetConnectionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[17]
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1542,7 +1994,7 @@ func (x *GetConnectionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetConnectionRequest.ProtoReflect.Descriptor instead.
 func (*GetConnectionRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{17}
+	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *GetConnectionRequest) GetSocketUri() string {
@@ -1560,20 +2012,25 @@ func (x *GetConnectionRequest) GetName() string {
 }
 
 type ViciPolicy struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Name           string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Direction      string                 `protobuf:"bytes,2,opt,name=direction,proto3" json:"direction,omitempty"`
-	Source         string                 `protobuf:"bytes,3,opt,name=source,proto3" json:"source,omitempty"`
-	Destination    string                 `protobuf:"bytes,4,opt,name=destination,proto3" json:"destination,omitempty"`
-	Protocol       string                 `protobuf:"bytes,5,opt,name=protocol,proto3" json:"protocol,omitempty"`
-	EvidenceStatus v1.EvidenceStatus      `protobuf:"varint,6,opt,name=evidence_status,json=evidenceStatus,proto3,enum=ipsec.common.v1.EvidenceStatus" json:"evidence_status,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state                  protoimpl.MessageState `protogen:"open.v1"`
+	Name                   string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Direction              string                 `protobuf:"bytes,2,opt,name=direction,proto3" json:"direction,omitempty"`
+	Source                 string                 `protobuf:"bytes,3,opt,name=source,proto3" json:"source,omitempty"`
+	Destination            string                 `protobuf:"bytes,4,opt,name=destination,proto3" json:"destination,omitempty"`
+	Protocol               string                 `protobuf:"bytes,5,opt,name=protocol,proto3" json:"protocol,omitempty"`
+	EvidenceStatus         v1.EvidenceStatus      `protobuf:"varint,6,opt,name=evidence_status,json=evidenceStatus,proto3,enum=ipsec.common.v1.EvidenceStatus" json:"evidence_status,omitempty"`
+	Mode                   string                 `protobuf:"bytes,7,opt,name=mode,proto3" json:"mode,omitempty"`
+	IkeName                string                 `protobuf:"bytes,8,opt,name=ike_name,json=ikeName,proto3" json:"ike_name,omitempty"`
+	ChildName              string                 `protobuf:"bytes,9,opt,name=child_name,json=childName,proto3" json:"child_name,omitempty"`
+	LocalTrafficSelectors  []string               `protobuf:"bytes,10,rep,name=local_traffic_selectors,json=localTrafficSelectors,proto3" json:"local_traffic_selectors,omitempty"`
+	RemoteTrafficSelectors []string               `protobuf:"bytes,11,rep,name=remote_traffic_selectors,json=remoteTrafficSelectors,proto3" json:"remote_traffic_selectors,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *ViciPolicy) Reset() {
 	*x = ViciPolicy{}
-	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[18]
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1585,7 +2042,7 @@ func (x *ViciPolicy) String() string {
 func (*ViciPolicy) ProtoMessage() {}
 
 func (x *ViciPolicy) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[18]
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1598,7 +2055,7 @@ func (x *ViciPolicy) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ViciPolicy.ProtoReflect.Descriptor instead.
 func (*ViciPolicy) Descriptor() ([]byte, []int) {
-	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{18}
+	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *ViciPolicy) GetName() string {
@@ -1643,6 +2100,41 @@ func (x *ViciPolicy) GetEvidenceStatus() v1.EvidenceStatus {
 	return v1.EvidenceStatus(0)
 }
 
+func (x *ViciPolicy) GetMode() string {
+	if x != nil {
+		return x.Mode
+	}
+	return ""
+}
+
+func (x *ViciPolicy) GetIkeName() string {
+	if x != nil {
+		return x.IkeName
+	}
+	return ""
+}
+
+func (x *ViciPolicy) GetChildName() string {
+	if x != nil {
+		return x.ChildName
+	}
+	return ""
+}
+
+func (x *ViciPolicy) GetLocalTrafficSelectors() []string {
+	if x != nil {
+		return x.LocalTrafficSelectors
+	}
+	return nil
+}
+
+func (x *ViciPolicy) GetRemoteTrafficSelectors() []string {
+	if x != nil {
+		return x.RemoteTrafficSelectors
+	}
+	return nil
+}
+
 type ListViciPoliciesRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	SocketUri     string                 `protobuf:"bytes,1,opt,name=socket_uri,json=socketUri,proto3" json:"socket_uri,omitempty"`
@@ -1654,7 +2146,7 @@ type ListViciPoliciesRequest struct {
 
 func (x *ListViciPoliciesRequest) Reset() {
 	*x = ListViciPoliciesRequest{}
-	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[19]
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1666,7 +2158,7 @@ func (x *ListViciPoliciesRequest) String() string {
 func (*ListViciPoliciesRequest) ProtoMessage() {}
 
 func (x *ListViciPoliciesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[19]
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1679,7 +2171,7 @@ func (x *ListViciPoliciesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListViciPoliciesRequest.ProtoReflect.Descriptor instead.
 func (*ListViciPoliciesRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{19}
+	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *ListViciPoliciesRequest) GetSocketUri() string {
@@ -1713,7 +2205,7 @@ type ListViciPoliciesResponse struct {
 
 func (x *ListViciPoliciesResponse) Reset() {
 	*x = ListViciPoliciesResponse{}
-	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[20]
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1725,7 +2217,7 @@ func (x *ListViciPoliciesResponse) String() string {
 func (*ListViciPoliciesResponse) ProtoMessage() {}
 
 func (x *ListViciPoliciesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[20]
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1738,7 +2230,7 @@ func (x *ListViciPoliciesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListViciPoliciesResponse.ProtoReflect.Descriptor instead.
 func (*ListViciPoliciesResponse) Descriptor() ([]byte, []int) {
-	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{20}
+	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *ListViciPoliciesResponse) GetPolicies() []*ViciPolicy {
@@ -1767,7 +2259,7 @@ type ViciAlgorithm struct {
 
 func (x *ViciAlgorithm) Reset() {
 	*x = ViciAlgorithm{}
-	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[21]
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1779,7 +2271,7 @@ func (x *ViciAlgorithm) String() string {
 func (*ViciAlgorithm) ProtoMessage() {}
 
 func (x *ViciAlgorithm) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[21]
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1792,7 +2284,7 @@ func (x *ViciAlgorithm) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ViciAlgorithm.ProtoReflect.Descriptor instead.
 func (*ViciAlgorithm) Descriptor() ([]byte, []int) {
-	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{21}
+	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *ViciAlgorithm) GetName() string {
@@ -1832,7 +2324,7 @@ type ListAlgorithmsRequest struct {
 
 func (x *ListAlgorithmsRequest) Reset() {
 	*x = ListAlgorithmsRequest{}
-	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[22]
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1844,7 +2336,7 @@ func (x *ListAlgorithmsRequest) String() string {
 func (*ListAlgorithmsRequest) ProtoMessage() {}
 
 func (x *ListAlgorithmsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[22]
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1857,7 +2349,7 @@ func (x *ListAlgorithmsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAlgorithmsRequest.ProtoReflect.Descriptor instead.
 func (*ListAlgorithmsRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{22}
+	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *ListAlgorithmsRequest) GetSocketUri() string {
@@ -1876,7 +2368,7 @@ type ListAlgorithmsResponse struct {
 
 func (x *ListAlgorithmsResponse) Reset() {
 	*x = ListAlgorithmsResponse{}
-	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[23]
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1888,7 +2380,7 @@ func (x *ListAlgorithmsResponse) String() string {
 func (*ListAlgorithmsResponse) ProtoMessage() {}
 
 func (x *ListAlgorithmsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[23]
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1901,7 +2393,7 @@ func (x *ListAlgorithmsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAlgorithmsResponse.ProtoReflect.Descriptor instead.
 func (*ListAlgorithmsResponse) Descriptor() ([]byte, []int) {
-	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{23}
+	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *ListAlgorithmsResponse) GetAlgorithms() []*ViciAlgorithm {
@@ -1922,7 +2414,7 @@ type GetCountersRequest struct {
 
 func (x *GetCountersRequest) Reset() {
 	*x = GetCountersRequest{}
-	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[24]
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1934,7 +2426,7 @@ func (x *GetCountersRequest) String() string {
 func (*GetCountersRequest) ProtoMessage() {}
 
 func (x *GetCountersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[24]
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1947,7 +2439,7 @@ func (x *GetCountersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCountersRequest.ProtoReflect.Descriptor instead.
 func (*GetCountersRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{24}
+	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *GetCountersRequest) GetSocketUri() string {
@@ -1981,7 +2473,7 @@ type ViciCounters struct {
 
 func (x *ViciCounters) Reset() {
 	*x = ViciCounters{}
-	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[25]
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1993,7 +2485,7 @@ func (x *ViciCounters) String() string {
 func (*ViciCounters) ProtoMessage() {}
 
 func (x *ViciCounters) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[25]
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2006,7 +2498,7 @@ func (x *ViciCounters) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ViciCounters.ProtoReflect.Descriptor instead.
 func (*ViciCounters) Descriptor() ([]byte, []int) {
-	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{25}
+	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *ViciCounters) GetValues() map[string]uint64 {
@@ -2039,7 +2531,7 @@ type Certificate struct {
 
 func (x *Certificate) Reset() {
 	*x = Certificate{}
-	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[26]
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2051,7 +2543,7 @@ func (x *Certificate) String() string {
 func (*Certificate) ProtoMessage() {}
 
 func (x *Certificate) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[26]
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2064,7 +2556,7 @@ func (x *Certificate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Certificate.ProtoReflect.Descriptor instead.
 func (*Certificate) Descriptor() ([]byte, []int) {
-	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{26}
+	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *Certificate) GetCertificateType() string {
@@ -2132,7 +2624,7 @@ type ListCertificatesRequest struct {
 
 func (x *ListCertificatesRequest) Reset() {
 	*x = ListCertificatesRequest{}
-	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[27]
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2144,7 +2636,7 @@ func (x *ListCertificatesRequest) String() string {
 func (*ListCertificatesRequest) ProtoMessage() {}
 
 func (x *ListCertificatesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[27]
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2157,7 +2649,7 @@ func (x *ListCertificatesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCertificatesRequest.ProtoReflect.Descriptor instead.
 func (*ListCertificatesRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{27}
+	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *ListCertificatesRequest) GetSocketUri() string {
@@ -2176,7 +2668,7 @@ type ListCertificatesResponse struct {
 
 func (x *ListCertificatesResponse) Reset() {
 	*x = ListCertificatesResponse{}
-	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[28]
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2188,7 +2680,7 @@ func (x *ListCertificatesResponse) String() string {
 func (*ListCertificatesResponse) ProtoMessage() {}
 
 func (x *ListCertificatesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[28]
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2201,7 +2693,7 @@ func (x *ListCertificatesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCertificatesResponse.ProtoReflect.Descriptor instead.
 func (*ListCertificatesResponse) Descriptor() ([]byte, []int) {
-	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{28}
+	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *ListCertificatesResponse) GetCertificates() []*Certificate {
@@ -2223,7 +2715,7 @@ type Authority struct {
 
 func (x *Authority) Reset() {
 	*x = Authority{}
-	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[29]
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2235,7 +2727,7 @@ func (x *Authority) String() string {
 func (*Authority) ProtoMessage() {}
 
 func (x *Authority) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[29]
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2248,7 +2740,7 @@ func (x *Authority) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Authority.ProtoReflect.Descriptor instead.
 func (*Authority) Descriptor() ([]byte, []int) {
-	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{29}
+	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *Authority) GetName() string {
@@ -2288,7 +2780,7 @@ type ListAuthoritiesRequest struct {
 
 func (x *ListAuthoritiesRequest) Reset() {
 	*x = ListAuthoritiesRequest{}
-	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[30]
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2300,7 +2792,7 @@ func (x *ListAuthoritiesRequest) String() string {
 func (*ListAuthoritiesRequest) ProtoMessage() {}
 
 func (x *ListAuthoritiesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[30]
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2313,7 +2805,7 @@ func (x *ListAuthoritiesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAuthoritiesRequest.ProtoReflect.Descriptor instead.
 func (*ListAuthoritiesRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{30}
+	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *ListAuthoritiesRequest) GetSocketUri() string {
@@ -2332,7 +2824,7 @@ type ListAuthoritiesResponse struct {
 
 func (x *ListAuthoritiesResponse) Reset() {
 	*x = ListAuthoritiesResponse{}
-	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[31]
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2344,7 +2836,7 @@ func (x *ListAuthoritiesResponse) String() string {
 func (*ListAuthoritiesResponse) ProtoMessage() {}
 
 func (x *ListAuthoritiesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[31]
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2357,7 +2849,7 @@ func (x *ListAuthoritiesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAuthoritiesResponse.ProtoReflect.Descriptor instead.
 func (*ListAuthoritiesResponse) Descriptor() ([]byte, []int) {
-	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{31}
+	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *ListAuthoritiesResponse) GetAuthorities() []*Authority {
@@ -2379,7 +2871,7 @@ type SourceAvailability struct {
 
 func (x *SourceAvailability) Reset() {
 	*x = SourceAvailability{}
-	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[32]
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2391,7 +2883,7 @@ func (x *SourceAvailability) String() string {
 func (*SourceAvailability) ProtoMessage() {}
 
 func (x *SourceAvailability) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[32]
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2404,7 +2896,7 @@ func (x *SourceAvailability) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SourceAvailability.ProtoReflect.Descriptor instead.
 func (*SourceAvailability) Descriptor() ([]byte, []int) {
-	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{32}
+	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *SourceAvailability) GetSource() string {
@@ -2444,7 +2936,7 @@ type GetGatewaySnapshotRequest struct {
 
 func (x *GetGatewaySnapshotRequest) Reset() {
 	*x = GetGatewaySnapshotRequest{}
-	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[33]
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2456,7 +2948,7 @@ func (x *GetGatewaySnapshotRequest) String() string {
 func (*GetGatewaySnapshotRequest) ProtoMessage() {}
 
 func (x *GetGatewaySnapshotRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[33]
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2469,7 +2961,7 @@ func (x *GetGatewaySnapshotRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetGatewaySnapshotRequest.ProtoReflect.Descriptor instead.
 func (*GetGatewaySnapshotRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{33}
+	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *GetGatewaySnapshotRequest) GetSocketUri() string {
@@ -2499,7 +2991,7 @@ type GatewaySnapshot struct {
 
 func (x *GatewaySnapshot) Reset() {
 	*x = GatewaySnapshot{}
-	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[34]
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2511,7 +3003,7 @@ func (x *GatewaySnapshot) String() string {
 func (*GatewaySnapshot) ProtoMessage() {}
 
 func (x *GatewaySnapshot) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[34]
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2524,7 +3016,7 @@ func (x *GatewaySnapshot) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GatewaySnapshot.ProtoReflect.Descriptor instead.
 func (*GatewaySnapshot) Descriptor() ([]byte, []int) {
-	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{34}
+	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *GatewaySnapshot) GetDaemonStats() *ViciDaemonStats {
@@ -2621,7 +3113,7 @@ type StreamViciEventsRequest struct {
 
 func (x *StreamViciEventsRequest) Reset() {
 	*x = StreamViciEventsRequest{}
-	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[35]
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2633,7 +3125,7 @@ func (x *StreamViciEventsRequest) String() string {
 func (*StreamViciEventsRequest) ProtoMessage() {}
 
 func (x *StreamViciEventsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[35]
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2646,7 +3138,7 @@ func (x *StreamViciEventsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StreamViciEventsRequest.ProtoReflect.Descriptor instead.
 func (*StreamViciEventsRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{35}
+	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *StreamViciEventsRequest) GetSocketUri() string {
@@ -2678,7 +3170,7 @@ type ViciEvent struct {
 
 func (x *ViciEvent) Reset() {
 	*x = ViciEvent{}
-	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[36]
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2690,7 +3182,7 @@ func (x *ViciEvent) String() string {
 func (*ViciEvent) ProtoMessage() {}
 
 func (x *ViciEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[36]
+	mi := &file_api_proto_sensor_v1_vici_vici_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2703,7 +3195,7 @@ func (x *ViciEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ViciEvent.ProtoReflect.Descriptor instead.
 func (*ViciEvent) Descriptor() ([]byte, []int) {
-	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{36}
+	return file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *ViciEvent) GetType() ViciEventType {
@@ -2791,7 +3283,7 @@ const file_api_proto_sensor_v1_vici_vici_proto_rawDesc = "" +
 	"\fike_sa_total\x18\x04 \x01(\rR\n" +
 	"ikeSaTotal\x12'\n" +
 	"\x10ike_sa_half_open\x18\x05 \x01(\rR\rikeSaHalfOpen\x12%\n" +
-	"\x0eloaded_plugins\x18\x06 \x03(\tR\rloadedPlugins\"\xf0\x06\n" +
+	"\x0eloaded_plugins\x18\x06 \x03(\tR\rloadedPlugins\"\xd8\a\n" +
 	"\x05IkeSa\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1b\n" +
 	"\tunique_id\x18\x02 \x01(\x04R\buniqueId\x12\x14\n" +
@@ -2823,7 +3315,9 @@ const file_api_proto_sensor_v1_vici_vici_proto_rawDesc = "" +
 	"\vreauth_time\x18\x15 \x01(\x04R\n" +
 	"reauthTime\x12I\n" +
 	"\x14associated_child_sas\x18\x16 \x03(\v2\x17.sensor.vici.v1.ChildSaR\x12associatedChildSas\x12H\n" +
-	"\x0fevidence_status\x18\x17 \x01(\x0e2\x1f.ipsec.common.v1.EvidenceStatusR\x0eevidenceStatus\"\xf8\x05\n" +
+	"\x0fevidence_status\x18\x17 \x01(\x0e2\x1f.ipsec.common.v1.EvidenceStatusR\x0eevidenceStatus\x12,\n" +
+	"\x12integrity_key_size\x18\x18 \x01(\rR\x10integrityKeySize\x128\n" +
+	"\x18additional_key_exchanges\x18\x19 \x03(\tR\x16additionalKeyExchanges\"\xf4\a\n" +
 	"\aChildSa\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1b\n" +
 	"\tunique_id\x18\x02 \x01(\x04R\buniqueId\x12\x14\n" +
@@ -2850,7 +3344,13 @@ const file_api_proto_sensor_v1_vici_vici_proto_rawDesc = "" +
 	"\tlife_time\x18\x12 \x01(\x04R\blifeTime\x126\n" +
 	"\x17local_traffic_selectors\x18\x13 \x03(\tR\x15localTrafficSelectors\x128\n" +
 	"\x18remote_traffic_selectors\x18\x14 \x03(\tR\x16remoteTrafficSelectors\x12H\n" +
-	"\x0fevidence_status\x18\x15 \x01(\x0e2\x1f.ipsec.common.v1.EvidenceStatusR\x0eevidenceStatus\"\xc3\x01\n" +
+	"\x0fevidence_status\x18\x15 \x01(\x0e2\x1f.ipsec.common.v1.EvidenceStatusR\x0eevidenceStatus\x12,\n" +
+	"\x12integrity_key_size\x18\x16 \x01(\rR\x10integrityKeySize\x12\x10\n" +
+	"\x03prf\x18\x17 \x01(\tR\x03prf\x12\x19\n" +
+	"\bdh_group\x18\x18 \x01(\tR\adhGroup\x128\n" +
+	"\x18additional_key_exchanges\x18\x19 \x03(\tR\x16additionalKeyExchanges\x12:\n" +
+	"\x19extended_sequence_numbers\x18\x1a \x01(\bR\x17extendedSequenceNumbers\x12)\n" +
+	"\x10install_duration\x18\x1b \x01(\x04R\x0finstallDuration\"\xc3\x01\n" +
 	"\x11ListIkeSasRequest\x12\x1d\n" +
 	"\n" +
 	"socket_uri\x18\x01 \x01(\tR\tsocketUri\x12\x19\n" +
@@ -2882,7 +3382,48 @@ const file_api_proto_sensor_v1_vici_vici_proto_rawDesc = "" +
 	"\x11GetChildSaRequest\x12\x1d\n" +
 	"\n" +
 	"socket_uri\x18\x01 \x01(\tR\tsocketUri\x12&\n" +
-	"\x0fchild_unique_id\x18\x02 \x01(\x04R\rchildUniqueId\"\xf6\x03\n" +
+	"\x0fchild_unique_id\x18\x02 \x01(\x04R\rchildUniqueId\"\xe2\x01\n" +
+	"\fViciProposal\x12\x1e\n" +
+	"\n" +
+	"encryption\x18\x01 \x03(\tR\n" +
+	"encryption\x12\x1c\n" +
+	"\tintegrity\x18\x02 \x03(\tR\tintegrity\x12\x10\n" +
+	"\x03prf\x18\x03 \x03(\tR\x03prf\x12!\n" +
+	"\fkey_exchange\x18\x04 \x03(\tR\vkeyExchange\x126\n" +
+	"\x17additional_key_exchange\x18\x05 \x03(\tR\x15additionalKeyExchange\x12'\n" +
+	"\x0fsequence_number\x18\x06 \x03(\tR\x0esequenceNumber\"\xe0\x03\n" +
+	"\x0eViciAuthConfig\x12\x12\n" +
+	"\x04side\x18\x01 \x01(\tR\x04side\x12!\n" +
+	"\fsection_name\x18\x02 \x01(\tR\vsectionName\x12\x1d\n" +
+	"\n" +
+	"auth_class\x18\x03 \x01(\tR\tauthClass\x12\x19\n" +
+	"\beap_type\x18\x04 \x01(\tR\aeapType\x12\x1d\n" +
+	"\n" +
+	"eap_vendor\x18\x05 \x01(\tR\teapVendor\x12#\n" +
+	"\rxauth_backend\x18\x06 \x01(\tR\fxauthBackend\x12+\n" +
+	"\x11revocation_policy\x18\a \x01(\tR\x10revocationPolicy\x12\x1a\n" +
+	"\bidentity\x18\b \x01(\tR\bidentity\x12!\n" +
+	"\faaa_identity\x18\t \x01(\tR\vaaaIdentity\x12!\n" +
+	"\feap_identity\x18\n" +
+	" \x01(\tR\veapIdentity\x12%\n" +
+	"\x0exauth_identity\x18\v \x01(\tR\rxauthIdentity\x12\x16\n" +
+	"\x06groups\x18\f \x03(\tR\x06groups\x12\"\n" +
+	"\fcertificates\x18\r \x03(\tR\fcertificates\x12'\n" +
+	"\x0fca_certificates\x18\x0e \x03(\tR\x0ecaCertificates\"\xc8\x03\n" +
+	"\x0fViciChildConfig\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
+	"\x04mode\x18\x02 \x01(\tR\x04mode\x12\x1d\n" +
+	"\n" +
+	"rekey_time\x18\x03 \x01(\x04R\trekeyTime\x12\x1f\n" +
+	"\vrekey_bytes\x18\x04 \x01(\x04R\n" +
+	"rekeyBytes\x12#\n" +
+	"\rrekey_packets\x18\x05 \x01(\x04R\frekeyPackets\x12A\n" +
+	"\resp_proposals\x18\x06 \x03(\v2\x1c.sensor.vici.v1.ViciProposalR\fespProposals\x12?\n" +
+	"\fah_proposals\x18\a \x03(\v2\x1c.sensor.vici.v1.ViciProposalR\vahProposals\x126\n" +
+	"\x17local_traffic_selectors\x18\b \x03(\tR\x15localTrafficSelectors\x128\n" +
+	"\x18remote_traffic_selectors\x18\t \x03(\tR\x16remoteTrafficSelectors\x122\n" +
+	"\x15configured_pfs_groups\x18\n" +
+	" \x03(\tR\x13configuredPfsGroups\"\xbc\x06\n" +
 	"\x14StrongSwanConnection\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1f\n" +
 	"\vike_version\x18\x02 \x01(\tR\n" +
@@ -2897,7 +3438,12 @@ const file_api_proto_sensor_v1_vici_vici_proto_rawDesc = "" +
 	"rekey_time\x18\t \x01(\x04R\trekeyTime\x12(\n" +
 	"\x10pfs_key_exchange\x18\n" +
 	" \x01(\tR\x0epfsKeyExchange\x12H\n" +
-	"\x0fevidence_status\x18\v \x01(\x0e2\x1f.ipsec.common.v1.EvidenceStatusR\x0eevidenceStatus\"s\n" +
+	"\x0fevidence_status\x18\v \x01(\x0e2\x1f.ipsec.common.v1.EvidenceStatusR\x0eevidenceStatus\x12'\n" +
+	"\x0flocal_addresses\x18\f \x03(\tR\x0elocalAddresses\x12)\n" +
+	"\x10remote_addresses\x18\r \x03(\tR\x0fremoteAddresses\x12V\n" +
+	"\x18configured_ike_proposals\x18\x0e \x03(\v2\x1c.sensor.vici.v1.ViciProposalR\x16configuredIkeProposals\x12F\n" +
+	"\x0eauthentication\x18\x0f \x03(\v2\x1e.sensor.vici.v1.ViciAuthConfigR\x0eauthentication\x12P\n" +
+	"\x13configured_children\x18\x10 \x03(\v2\x1f.sensor.vici.v1.ViciChildConfigR\x12configuredChildren\"s\n" +
 	"\x16ListConnectionsRequest\x12\x1d\n" +
 	"\n" +
 	"socket_uri\x18\x01 \x01(\tR\tsocketUri\x12\x1b\n" +
@@ -2910,7 +3456,7 @@ const file_api_proto_sensor_v1_vici_vici_proto_rawDesc = "" +
 	"\x14GetConnectionRequest\x12\x1d\n" +
 	"\n" +
 	"socket_uri\x18\x01 \x01(\tR\tsocketUri\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\"\xde\x01\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\"\x9e\x03\n" +
 	"\n" +
 	"ViciPolicy\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1c\n" +
@@ -2918,7 +3464,14 @@ const file_api_proto_sensor_v1_vici_vici_proto_rawDesc = "" +
 	"\x06source\x18\x03 \x01(\tR\x06source\x12 \n" +
 	"\vdestination\x18\x04 \x01(\tR\vdestination\x12\x1a\n" +
 	"\bprotocol\x18\x05 \x01(\tR\bprotocol\x12H\n" +
-	"\x0fevidence_status\x18\x06 \x01(\x0e2\x1f.ipsec.common.v1.EvidenceStatusR\x0eevidenceStatus\"t\n" +
+	"\x0fevidence_status\x18\x06 \x01(\x0e2\x1f.ipsec.common.v1.EvidenceStatusR\x0eevidenceStatus\x12\x12\n" +
+	"\x04mode\x18\a \x01(\tR\x04mode\x12\x19\n" +
+	"\bike_name\x18\b \x01(\tR\aikeName\x12\x1d\n" +
+	"\n" +
+	"child_name\x18\t \x01(\tR\tchildName\x126\n" +
+	"\x17local_traffic_selectors\x18\n" +
+	" \x03(\tR\x15localTrafficSelectors\x128\n" +
+	"\x18remote_traffic_selectors\x18\v \x03(\tR\x16remoteTrafficSelectors\"t\n" +
 	"\x17ListViciPoliciesRequest\x12\x1d\n" +
 	"\n" +
 	"socket_uri\x18\x01 \x01(\tR\tsocketUri\x12\x1b\n" +
@@ -3058,7 +3611,7 @@ func file_api_proto_sensor_v1_vici_vici_proto_rawDescGZIP() []byte {
 }
 
 var file_api_proto_sensor_v1_vici_vici_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_api_proto_sensor_v1_vici_vici_proto_msgTypes = make([]protoimpl.MessageInfo, 38)
+var file_api_proto_sensor_v1_vici_vici_proto_msgTypes = make([]protoimpl.MessageInfo, 41)
 var file_api_proto_sensor_v1_vici_vici_proto_goTypes = []any{
 	(ViciEventType)(0),                 // 0: sensor.vici.v1.ViciEventType
 	(*ProbeViciRequest)(nil),           // 1: sensor.vici.v1.ProbeViciRequest
@@ -3075,105 +3628,113 @@ var file_api_proto_sensor_v1_vici_vici_proto_goTypes = []any{
 	(*ListChildSasRequest)(nil),        // 12: sensor.vici.v1.ListChildSasRequest
 	(*ListChildSasResponse)(nil),       // 13: sensor.vici.v1.ListChildSasResponse
 	(*GetChildSaRequest)(nil),          // 14: sensor.vici.v1.GetChildSaRequest
-	(*StrongSwanConnection)(nil),       // 15: sensor.vici.v1.StrongSwanConnection
-	(*ListConnectionsRequest)(nil),     // 16: sensor.vici.v1.ListConnectionsRequest
-	(*ListConnectionsResponse)(nil),    // 17: sensor.vici.v1.ListConnectionsResponse
-	(*GetConnectionRequest)(nil),       // 18: sensor.vici.v1.GetConnectionRequest
-	(*ViciPolicy)(nil),                 // 19: sensor.vici.v1.ViciPolicy
-	(*ListViciPoliciesRequest)(nil),    // 20: sensor.vici.v1.ListViciPoliciesRequest
-	(*ListViciPoliciesResponse)(nil),   // 21: sensor.vici.v1.ListViciPoliciesResponse
-	(*ViciAlgorithm)(nil),              // 22: sensor.vici.v1.ViciAlgorithm
-	(*ListAlgorithmsRequest)(nil),      // 23: sensor.vici.v1.ListAlgorithmsRequest
-	(*ListAlgorithmsResponse)(nil),     // 24: sensor.vici.v1.ListAlgorithmsResponse
-	(*GetCountersRequest)(nil),         // 25: sensor.vici.v1.GetCountersRequest
-	(*ViciCounters)(nil),               // 26: sensor.vici.v1.ViciCounters
-	(*Certificate)(nil),                // 27: sensor.vici.v1.Certificate
-	(*ListCertificatesRequest)(nil),    // 28: sensor.vici.v1.ListCertificatesRequest
-	(*ListCertificatesResponse)(nil),   // 29: sensor.vici.v1.ListCertificatesResponse
-	(*Authority)(nil),                  // 30: sensor.vici.v1.Authority
-	(*ListAuthoritiesRequest)(nil),     // 31: sensor.vici.v1.ListAuthoritiesRequest
-	(*ListAuthoritiesResponse)(nil),    // 32: sensor.vici.v1.ListAuthoritiesResponse
-	(*SourceAvailability)(nil),         // 33: sensor.vici.v1.SourceAvailability
-	(*GetGatewaySnapshotRequest)(nil),  // 34: sensor.vici.v1.GetGatewaySnapshotRequest
-	(*GatewaySnapshot)(nil),            // 35: sensor.vici.v1.GatewaySnapshot
-	(*StreamViciEventsRequest)(nil),    // 36: sensor.vici.v1.StreamViciEventsRequest
-	(*ViciEvent)(nil),                  // 37: sensor.vici.v1.ViciEvent
-	nil,                                // 38: sensor.vici.v1.ViciCounters.ValuesEntry
-	(v1.EvidenceStatus)(0),             // 39: ipsec.common.v1.EvidenceStatus
-	(*timestamppb.Timestamp)(nil),      // 40: google.protobuf.Timestamp
+	(*ViciProposal)(nil),               // 15: sensor.vici.v1.ViciProposal
+	(*ViciAuthConfig)(nil),             // 16: sensor.vici.v1.ViciAuthConfig
+	(*ViciChildConfig)(nil),            // 17: sensor.vici.v1.ViciChildConfig
+	(*StrongSwanConnection)(nil),       // 18: sensor.vici.v1.StrongSwanConnection
+	(*ListConnectionsRequest)(nil),     // 19: sensor.vici.v1.ListConnectionsRequest
+	(*ListConnectionsResponse)(nil),    // 20: sensor.vici.v1.ListConnectionsResponse
+	(*GetConnectionRequest)(nil),       // 21: sensor.vici.v1.GetConnectionRequest
+	(*ViciPolicy)(nil),                 // 22: sensor.vici.v1.ViciPolicy
+	(*ListViciPoliciesRequest)(nil),    // 23: sensor.vici.v1.ListViciPoliciesRequest
+	(*ListViciPoliciesResponse)(nil),   // 24: sensor.vici.v1.ListViciPoliciesResponse
+	(*ViciAlgorithm)(nil),              // 25: sensor.vici.v1.ViciAlgorithm
+	(*ListAlgorithmsRequest)(nil),      // 26: sensor.vici.v1.ListAlgorithmsRequest
+	(*ListAlgorithmsResponse)(nil),     // 27: sensor.vici.v1.ListAlgorithmsResponse
+	(*GetCountersRequest)(nil),         // 28: sensor.vici.v1.GetCountersRequest
+	(*ViciCounters)(nil),               // 29: sensor.vici.v1.ViciCounters
+	(*Certificate)(nil),                // 30: sensor.vici.v1.Certificate
+	(*ListCertificatesRequest)(nil),    // 31: sensor.vici.v1.ListCertificatesRequest
+	(*ListCertificatesResponse)(nil),   // 32: sensor.vici.v1.ListCertificatesResponse
+	(*Authority)(nil),                  // 33: sensor.vici.v1.Authority
+	(*ListAuthoritiesRequest)(nil),     // 34: sensor.vici.v1.ListAuthoritiesRequest
+	(*ListAuthoritiesResponse)(nil),    // 35: sensor.vici.v1.ListAuthoritiesResponse
+	(*SourceAvailability)(nil),         // 36: sensor.vici.v1.SourceAvailability
+	(*GetGatewaySnapshotRequest)(nil),  // 37: sensor.vici.v1.GetGatewaySnapshotRequest
+	(*GatewaySnapshot)(nil),            // 38: sensor.vici.v1.GatewaySnapshot
+	(*StreamViciEventsRequest)(nil),    // 39: sensor.vici.v1.StreamViciEventsRequest
+	(*ViciEvent)(nil),                  // 40: sensor.vici.v1.ViciEvent
+	nil,                                // 41: sensor.vici.v1.ViciCounters.ValuesEntry
+	(v1.EvidenceStatus)(0),             // 42: ipsec.common.v1.EvidenceStatus
+	(*timestamppb.Timestamp)(nil),      // 43: google.protobuf.Timestamp
 }
 var file_api_proto_sensor_v1_vici_vici_proto_depIdxs = []int32{
 	8,  // 0: sensor.vici.v1.IkeSa.associated_child_sas:type_name -> sensor.vici.v1.ChildSa
-	39, // 1: sensor.vici.v1.IkeSa.evidence_status:type_name -> ipsec.common.v1.EvidenceStatus
-	40, // 2: sensor.vici.v1.ChildSa.install_time:type_name -> google.protobuf.Timestamp
-	39, // 3: sensor.vici.v1.ChildSa.evidence_status:type_name -> ipsec.common.v1.EvidenceStatus
+	42, // 1: sensor.vici.v1.IkeSa.evidence_status:type_name -> ipsec.common.v1.EvidenceStatus
+	43, // 2: sensor.vici.v1.ChildSa.install_time:type_name -> google.protobuf.Timestamp
+	42, // 3: sensor.vici.v1.ChildSa.evidence_status:type_name -> ipsec.common.v1.EvidenceStatus
 	7,  // 4: sensor.vici.v1.ListIkeSasResponse.ike_sas:type_name -> sensor.vici.v1.IkeSa
 	8,  // 5: sensor.vici.v1.ListChildSasResponse.child_sas:type_name -> sensor.vici.v1.ChildSa
-	39, // 6: sensor.vici.v1.StrongSwanConnection.evidence_status:type_name -> ipsec.common.v1.EvidenceStatus
-	15, // 7: sensor.vici.v1.ListConnectionsResponse.connections:type_name -> sensor.vici.v1.StrongSwanConnection
-	39, // 8: sensor.vici.v1.ViciPolicy.evidence_status:type_name -> ipsec.common.v1.EvidenceStatus
-	19, // 9: sensor.vici.v1.ListViciPoliciesResponse.policies:type_name -> sensor.vici.v1.ViciPolicy
-	39, // 10: sensor.vici.v1.ViciAlgorithm.evidence_status:type_name -> ipsec.common.v1.EvidenceStatus
-	22, // 11: sensor.vici.v1.ListAlgorithmsResponse.algorithms:type_name -> sensor.vici.v1.ViciAlgorithm
-	38, // 12: sensor.vici.v1.ViciCounters.values:type_name -> sensor.vici.v1.ViciCounters.ValuesEntry
-	39, // 13: sensor.vici.v1.ViciCounters.evidence_status:type_name -> ipsec.common.v1.EvidenceStatus
-	40, // 14: sensor.vici.v1.Certificate.valid_from:type_name -> google.protobuf.Timestamp
-	40, // 15: sensor.vici.v1.Certificate.valid_until:type_name -> google.protobuf.Timestamp
-	39, // 16: sensor.vici.v1.Certificate.evidence_status:type_name -> ipsec.common.v1.EvidenceStatus
-	27, // 17: sensor.vici.v1.ListCertificatesResponse.certificates:type_name -> sensor.vici.v1.Certificate
-	39, // 18: sensor.vici.v1.Authority.evidence_status:type_name -> ipsec.common.v1.EvidenceStatus
-	30, // 19: sensor.vici.v1.ListAuthoritiesResponse.authorities:type_name -> sensor.vici.v1.Authority
-	6,  // 20: sensor.vici.v1.GatewaySnapshot.daemon_stats:type_name -> sensor.vici.v1.ViciDaemonStats
-	7,  // 21: sensor.vici.v1.GatewaySnapshot.ike_sas:type_name -> sensor.vici.v1.IkeSa
-	8,  // 22: sensor.vici.v1.GatewaySnapshot.child_sas:type_name -> sensor.vici.v1.ChildSa
-	15, // 23: sensor.vici.v1.GatewaySnapshot.connections:type_name -> sensor.vici.v1.StrongSwanConnection
-	19, // 24: sensor.vici.v1.GatewaySnapshot.policies:type_name -> sensor.vici.v1.ViciPolicy
-	22, // 25: sensor.vici.v1.GatewaySnapshot.algorithms:type_name -> sensor.vici.v1.ViciAlgorithm
-	26, // 26: sensor.vici.v1.GatewaySnapshot.counters:type_name -> sensor.vici.v1.ViciCounters
-	27, // 27: sensor.vici.v1.GatewaySnapshot.certificates:type_name -> sensor.vici.v1.Certificate
-	30, // 28: sensor.vici.v1.GatewaySnapshot.authorities:type_name -> sensor.vici.v1.Authority
-	40, // 29: sensor.vici.v1.GatewaySnapshot.snapshot_timestamp:type_name -> google.protobuf.Timestamp
-	33, // 30: sensor.vici.v1.GatewaySnapshot.per_source_availability:type_name -> sensor.vici.v1.SourceAvailability
-	0,  // 31: sensor.vici.v1.ViciEvent.type:type_name -> sensor.vici.v1.ViciEventType
-	40, // 32: sensor.vici.v1.ViciEvent.timestamp:type_name -> google.protobuf.Timestamp
-	39, // 33: sensor.vici.v1.ViciEvent.evidence_status:type_name -> ipsec.common.v1.EvidenceStatus
-	1,  // 34: sensor.vici.v1.StrongSwanViciService.Probe:input_type -> sensor.vici.v1.ProbeViciRequest
-	3,  // 35: sensor.vici.v1.StrongSwanViciService.GetCapabilities:input_type -> sensor.vici.v1.GetViciCapabilitiesRequest
-	5,  // 36: sensor.vici.v1.StrongSwanViciService.GetDaemonStats:input_type -> sensor.vici.v1.GetDaemonStatsRequest
-	9,  // 37: sensor.vici.v1.StrongSwanViciService.ListIkeSas:input_type -> sensor.vici.v1.ListIkeSasRequest
-	11, // 38: sensor.vici.v1.StrongSwanViciService.GetIkeSa:input_type -> sensor.vici.v1.GetIkeSaRequest
-	12, // 39: sensor.vici.v1.StrongSwanViciService.ListChildSas:input_type -> sensor.vici.v1.ListChildSasRequest
-	14, // 40: sensor.vici.v1.StrongSwanViciService.GetChildSa:input_type -> sensor.vici.v1.GetChildSaRequest
-	16, // 41: sensor.vici.v1.StrongSwanViciService.ListConnections:input_type -> sensor.vici.v1.ListConnectionsRequest
-	18, // 42: sensor.vici.v1.StrongSwanViciService.GetConnection:input_type -> sensor.vici.v1.GetConnectionRequest
-	20, // 43: sensor.vici.v1.StrongSwanViciService.ListPolicies:input_type -> sensor.vici.v1.ListViciPoliciesRequest
-	23, // 44: sensor.vici.v1.StrongSwanViciService.ListAlgorithms:input_type -> sensor.vici.v1.ListAlgorithmsRequest
-	25, // 45: sensor.vici.v1.StrongSwanViciService.GetCounters:input_type -> sensor.vici.v1.GetCountersRequest
-	28, // 46: sensor.vici.v1.StrongSwanViciService.ListCertificates:input_type -> sensor.vici.v1.ListCertificatesRequest
-	31, // 47: sensor.vici.v1.StrongSwanViciService.ListAuthorities:input_type -> sensor.vici.v1.ListAuthoritiesRequest
-	34, // 48: sensor.vici.v1.StrongSwanViciService.GetGatewaySnapshot:input_type -> sensor.vici.v1.GetGatewaySnapshotRequest
-	36, // 49: sensor.vici.v1.StrongSwanViciService.StreamEvents:input_type -> sensor.vici.v1.StreamViciEventsRequest
-	2,  // 50: sensor.vici.v1.StrongSwanViciService.Probe:output_type -> sensor.vici.v1.ProbeViciResponse
-	4,  // 51: sensor.vici.v1.StrongSwanViciService.GetCapabilities:output_type -> sensor.vici.v1.ViciCapabilities
-	6,  // 52: sensor.vici.v1.StrongSwanViciService.GetDaemonStats:output_type -> sensor.vici.v1.ViciDaemonStats
-	10, // 53: sensor.vici.v1.StrongSwanViciService.ListIkeSas:output_type -> sensor.vici.v1.ListIkeSasResponse
-	7,  // 54: sensor.vici.v1.StrongSwanViciService.GetIkeSa:output_type -> sensor.vici.v1.IkeSa
-	13, // 55: sensor.vici.v1.StrongSwanViciService.ListChildSas:output_type -> sensor.vici.v1.ListChildSasResponse
-	8,  // 56: sensor.vici.v1.StrongSwanViciService.GetChildSa:output_type -> sensor.vici.v1.ChildSa
-	17, // 57: sensor.vici.v1.StrongSwanViciService.ListConnections:output_type -> sensor.vici.v1.ListConnectionsResponse
-	15, // 58: sensor.vici.v1.StrongSwanViciService.GetConnection:output_type -> sensor.vici.v1.StrongSwanConnection
-	21, // 59: sensor.vici.v1.StrongSwanViciService.ListPolicies:output_type -> sensor.vici.v1.ListViciPoliciesResponse
-	24, // 60: sensor.vici.v1.StrongSwanViciService.ListAlgorithms:output_type -> sensor.vici.v1.ListAlgorithmsResponse
-	26, // 61: sensor.vici.v1.StrongSwanViciService.GetCounters:output_type -> sensor.vici.v1.ViciCounters
-	29, // 62: sensor.vici.v1.StrongSwanViciService.ListCertificates:output_type -> sensor.vici.v1.ListCertificatesResponse
-	32, // 63: sensor.vici.v1.StrongSwanViciService.ListAuthorities:output_type -> sensor.vici.v1.ListAuthoritiesResponse
-	35, // 64: sensor.vici.v1.StrongSwanViciService.GetGatewaySnapshot:output_type -> sensor.vici.v1.GatewaySnapshot
-	37, // 65: sensor.vici.v1.StrongSwanViciService.StreamEvents:output_type -> sensor.vici.v1.ViciEvent
-	50, // [50:66] is the sub-list for method output_type
-	34, // [34:50] is the sub-list for method input_type
-	34, // [34:34] is the sub-list for extension type_name
-	34, // [34:34] is the sub-list for extension extendee
-	0,  // [0:34] is the sub-list for field type_name
+	15, // 6: sensor.vici.v1.ViciChildConfig.esp_proposals:type_name -> sensor.vici.v1.ViciProposal
+	15, // 7: sensor.vici.v1.ViciChildConfig.ah_proposals:type_name -> sensor.vici.v1.ViciProposal
+	42, // 8: sensor.vici.v1.StrongSwanConnection.evidence_status:type_name -> ipsec.common.v1.EvidenceStatus
+	15, // 9: sensor.vici.v1.StrongSwanConnection.configured_ike_proposals:type_name -> sensor.vici.v1.ViciProposal
+	16, // 10: sensor.vici.v1.StrongSwanConnection.authentication:type_name -> sensor.vici.v1.ViciAuthConfig
+	17, // 11: sensor.vici.v1.StrongSwanConnection.configured_children:type_name -> sensor.vici.v1.ViciChildConfig
+	18, // 12: sensor.vici.v1.ListConnectionsResponse.connections:type_name -> sensor.vici.v1.StrongSwanConnection
+	42, // 13: sensor.vici.v1.ViciPolicy.evidence_status:type_name -> ipsec.common.v1.EvidenceStatus
+	22, // 14: sensor.vici.v1.ListViciPoliciesResponse.policies:type_name -> sensor.vici.v1.ViciPolicy
+	42, // 15: sensor.vici.v1.ViciAlgorithm.evidence_status:type_name -> ipsec.common.v1.EvidenceStatus
+	25, // 16: sensor.vici.v1.ListAlgorithmsResponse.algorithms:type_name -> sensor.vici.v1.ViciAlgorithm
+	41, // 17: sensor.vici.v1.ViciCounters.values:type_name -> sensor.vici.v1.ViciCounters.ValuesEntry
+	42, // 18: sensor.vici.v1.ViciCounters.evidence_status:type_name -> ipsec.common.v1.EvidenceStatus
+	43, // 19: sensor.vici.v1.Certificate.valid_from:type_name -> google.protobuf.Timestamp
+	43, // 20: sensor.vici.v1.Certificate.valid_until:type_name -> google.protobuf.Timestamp
+	42, // 21: sensor.vici.v1.Certificate.evidence_status:type_name -> ipsec.common.v1.EvidenceStatus
+	30, // 22: sensor.vici.v1.ListCertificatesResponse.certificates:type_name -> sensor.vici.v1.Certificate
+	42, // 23: sensor.vici.v1.Authority.evidence_status:type_name -> ipsec.common.v1.EvidenceStatus
+	33, // 24: sensor.vici.v1.ListAuthoritiesResponse.authorities:type_name -> sensor.vici.v1.Authority
+	6,  // 25: sensor.vici.v1.GatewaySnapshot.daemon_stats:type_name -> sensor.vici.v1.ViciDaemonStats
+	7,  // 26: sensor.vici.v1.GatewaySnapshot.ike_sas:type_name -> sensor.vici.v1.IkeSa
+	8,  // 27: sensor.vici.v1.GatewaySnapshot.child_sas:type_name -> sensor.vici.v1.ChildSa
+	18, // 28: sensor.vici.v1.GatewaySnapshot.connections:type_name -> sensor.vici.v1.StrongSwanConnection
+	22, // 29: sensor.vici.v1.GatewaySnapshot.policies:type_name -> sensor.vici.v1.ViciPolicy
+	25, // 30: sensor.vici.v1.GatewaySnapshot.algorithms:type_name -> sensor.vici.v1.ViciAlgorithm
+	29, // 31: sensor.vici.v1.GatewaySnapshot.counters:type_name -> sensor.vici.v1.ViciCounters
+	30, // 32: sensor.vici.v1.GatewaySnapshot.certificates:type_name -> sensor.vici.v1.Certificate
+	33, // 33: sensor.vici.v1.GatewaySnapshot.authorities:type_name -> sensor.vici.v1.Authority
+	43, // 34: sensor.vici.v1.GatewaySnapshot.snapshot_timestamp:type_name -> google.protobuf.Timestamp
+	36, // 35: sensor.vici.v1.GatewaySnapshot.per_source_availability:type_name -> sensor.vici.v1.SourceAvailability
+	0,  // 36: sensor.vici.v1.ViciEvent.type:type_name -> sensor.vici.v1.ViciEventType
+	43, // 37: sensor.vici.v1.ViciEvent.timestamp:type_name -> google.protobuf.Timestamp
+	42, // 38: sensor.vici.v1.ViciEvent.evidence_status:type_name -> ipsec.common.v1.EvidenceStatus
+	1,  // 39: sensor.vici.v1.StrongSwanViciService.Probe:input_type -> sensor.vici.v1.ProbeViciRequest
+	3,  // 40: sensor.vici.v1.StrongSwanViciService.GetCapabilities:input_type -> sensor.vici.v1.GetViciCapabilitiesRequest
+	5,  // 41: sensor.vici.v1.StrongSwanViciService.GetDaemonStats:input_type -> sensor.vici.v1.GetDaemonStatsRequest
+	9,  // 42: sensor.vici.v1.StrongSwanViciService.ListIkeSas:input_type -> sensor.vici.v1.ListIkeSasRequest
+	11, // 43: sensor.vici.v1.StrongSwanViciService.GetIkeSa:input_type -> sensor.vici.v1.GetIkeSaRequest
+	12, // 44: sensor.vici.v1.StrongSwanViciService.ListChildSas:input_type -> sensor.vici.v1.ListChildSasRequest
+	14, // 45: sensor.vici.v1.StrongSwanViciService.GetChildSa:input_type -> sensor.vici.v1.GetChildSaRequest
+	19, // 46: sensor.vici.v1.StrongSwanViciService.ListConnections:input_type -> sensor.vici.v1.ListConnectionsRequest
+	21, // 47: sensor.vici.v1.StrongSwanViciService.GetConnection:input_type -> sensor.vici.v1.GetConnectionRequest
+	23, // 48: sensor.vici.v1.StrongSwanViciService.ListPolicies:input_type -> sensor.vici.v1.ListViciPoliciesRequest
+	26, // 49: sensor.vici.v1.StrongSwanViciService.ListAlgorithms:input_type -> sensor.vici.v1.ListAlgorithmsRequest
+	28, // 50: sensor.vici.v1.StrongSwanViciService.GetCounters:input_type -> sensor.vici.v1.GetCountersRequest
+	31, // 51: sensor.vici.v1.StrongSwanViciService.ListCertificates:input_type -> sensor.vici.v1.ListCertificatesRequest
+	34, // 52: sensor.vici.v1.StrongSwanViciService.ListAuthorities:input_type -> sensor.vici.v1.ListAuthoritiesRequest
+	37, // 53: sensor.vici.v1.StrongSwanViciService.GetGatewaySnapshot:input_type -> sensor.vici.v1.GetGatewaySnapshotRequest
+	39, // 54: sensor.vici.v1.StrongSwanViciService.StreamEvents:input_type -> sensor.vici.v1.StreamViciEventsRequest
+	2,  // 55: sensor.vici.v1.StrongSwanViciService.Probe:output_type -> sensor.vici.v1.ProbeViciResponse
+	4,  // 56: sensor.vici.v1.StrongSwanViciService.GetCapabilities:output_type -> sensor.vici.v1.ViciCapabilities
+	6,  // 57: sensor.vici.v1.StrongSwanViciService.GetDaemonStats:output_type -> sensor.vici.v1.ViciDaemonStats
+	10, // 58: sensor.vici.v1.StrongSwanViciService.ListIkeSas:output_type -> sensor.vici.v1.ListIkeSasResponse
+	7,  // 59: sensor.vici.v1.StrongSwanViciService.GetIkeSa:output_type -> sensor.vici.v1.IkeSa
+	13, // 60: sensor.vici.v1.StrongSwanViciService.ListChildSas:output_type -> sensor.vici.v1.ListChildSasResponse
+	8,  // 61: sensor.vici.v1.StrongSwanViciService.GetChildSa:output_type -> sensor.vici.v1.ChildSa
+	20, // 62: sensor.vici.v1.StrongSwanViciService.ListConnections:output_type -> sensor.vici.v1.ListConnectionsResponse
+	18, // 63: sensor.vici.v1.StrongSwanViciService.GetConnection:output_type -> sensor.vici.v1.StrongSwanConnection
+	24, // 64: sensor.vici.v1.StrongSwanViciService.ListPolicies:output_type -> sensor.vici.v1.ListViciPoliciesResponse
+	27, // 65: sensor.vici.v1.StrongSwanViciService.ListAlgorithms:output_type -> sensor.vici.v1.ListAlgorithmsResponse
+	29, // 66: sensor.vici.v1.StrongSwanViciService.GetCounters:output_type -> sensor.vici.v1.ViciCounters
+	32, // 67: sensor.vici.v1.StrongSwanViciService.ListCertificates:output_type -> sensor.vici.v1.ListCertificatesResponse
+	35, // 68: sensor.vici.v1.StrongSwanViciService.ListAuthorities:output_type -> sensor.vici.v1.ListAuthoritiesResponse
+	38, // 69: sensor.vici.v1.StrongSwanViciService.GetGatewaySnapshot:output_type -> sensor.vici.v1.GatewaySnapshot
+	40, // 70: sensor.vici.v1.StrongSwanViciService.StreamEvents:output_type -> sensor.vici.v1.ViciEvent
+	55, // [55:71] is the sub-list for method output_type
+	39, // [39:55] is the sub-list for method input_type
+	39, // [39:39] is the sub-list for extension type_name
+	39, // [39:39] is the sub-list for extension extendee
+	0,  // [0:39] is the sub-list for field type_name
 }
 
 func init() { file_api_proto_sensor_v1_vici_vici_proto_init() }
@@ -3187,7 +3748,7 @@ func file_api_proto_sensor_v1_vici_vici_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_proto_sensor_v1_vici_vici_proto_rawDesc), len(file_api_proto_sensor_v1_vici_vici_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   38,
+			NumMessages:   41,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

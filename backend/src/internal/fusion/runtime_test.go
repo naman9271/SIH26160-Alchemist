@@ -66,8 +66,8 @@ func TestRuntimeEvidenceCorrelationAndFinalizationWorkflow(t *testing.T) {
 	}
 	observedAt := time.Now().UTC()
 	batch, err := runtime.Ingest.AddBatch(context.Background(), ingest.AddBatchRequest{FusionRunID: run.ID, Evidence: []ingest.EvidenceInput{
-		{PropertyKey: "ike.version", Value: structpb.NewStringValue("IKEv2"), Source: model.SourcePacketParser, Status: commonv1.EvidenceStatus_OBSERVED, Confidence: 1, ObservedAt: observedAt, ResourceType: "IKE_SA", ResourceID: "passive-1", Metadata: map[string]string{"ike_initiator_spi": "abc"}},
-		{PropertyKey: "ike.encryption", Value: structpb.NewStringValue("AES_GCM"), Source: model.SourceVICI, Status: commonv1.EvidenceStatus_VERIFIED_GATEWAY, Confidence: 1, ObservedAt: observedAt, ResourceType: "VICI_IKE_SA", ResourceID: "vici-1", Metadata: map[string]string{"ike_initiator_spi": "abc"}},
+		{PropertyKey: "ike.version", Value: structpb.NewStringValue("IKEv2"), Source: model.SourcePacketParser, Status: commonv1.EvidenceStatus_OBSERVED, Confidence: 1, ObservedAt: observedAt, ResourceType: "IKE_SA", ResourceID: "passive-1", Metadata: map[string]string{"ike_initiator_spi": "abc", "endpoint_pair": "192.0.2.1<>198.51.100.1"}},
+		{PropertyKey: "ike.encryption", Value: structpb.NewStringValue("AES_GCM"), Source: model.SourceVICI, Status: commonv1.EvidenceStatus_VERIFIED_GATEWAY, Confidence: 1, ObservedAt: observedAt, ResourceType: "VICI_IKE_SA", ResourceID: "vici-1", Metadata: map[string]string{"ike_initiator_spi": "abc", "endpoint_pair": "192.0.2.1<>198.51.100.1"}},
 	}})
 	if err != nil || batch.AcceptedCount != 2 || !batch.RecomputeScheduled {
 		t.Fatalf("AddBatch() = %+v, %v", batch, err)

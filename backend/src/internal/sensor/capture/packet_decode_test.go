@@ -90,6 +90,7 @@ func TestIPv6ExtensionHeaderIsTraversedForESP(t *testing.T) {
 	ip := frame[14:]
 	ip[0] = 0x60
 	ip[6] = 0 // Hop-by-Hop Options.
+	binary.BigEndian.PutUint16(ip[4:6], 16)
 	copy(ip[8:24], []byte{0x20, 1, 0xdb, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1})
 	copy(ip[24:40], []byte{0x20, 1, 0xdb, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2})
 	ip[40] = 50 // ESP follows the eight-byte options header.
@@ -98,6 +99,68 @@ func TestIPv6ExtensionHeaderIsTraversedForESP(t *testing.T) {
 	metadata, ok := decodePacketMetadata(frame, uint64(len(frame)), time.Now())
 	if !ok || metadata.Protocol != 50 || metadata.SPI != 0x01020304 {
 		t.Fatalf("IPv6 ESP metadata = %+v, ok=%v", metadata, ok)
+	}
+}
+
+func TestProtocolIdentificationRequiresStructuralValidation(t *testing.T) {
+	random := ipv4UDPFrame(500, 500, make([]byte, 28))
+	metadata, ok := decodePacketMetadata(random, uint64(len(random)), time.Now())
+	if !ok || metadata.IKE || metadata.IKEVersion != "" {
+		t.Fatalf("random UDP was identified as IKE: %+v, ok=%v", metadata, ok)
+	}
+
+	ike := make([]byte, 32)
+	binary.BigEndian.PutUint64(ike[:8], 1)
+	ike[16], ike[17], ike[18] = 33, 0x20, 34
+	binary.BigEndian.PutUint32(ike[24:28], uint32(len(ike)))
+	binary.BigEndian.PutUint16(ike[30:32], 64) // impossible generic payload length
+	frame := ipv4UDPFrame(500, 500, ike)
+	metadata, ok = decodePacketMetadata(frame, uint64(len(frame)), time.Now())
+	if !ok || !metadata.IKE || !metadata.ProtocolIncomplete || len(metadata.IKEProposals) != 0 || len(metadata.IKEEncryptionAlgorithms) != 0 {
+		t.Fatalf("malformed IKE manufactured configuration: %+v, ok=%v", metadata, ok)
+	}
+}
+
+func TestESPSequenceAndFragmentSafety(t *testing.T) {
+	esp := []byte{0x12, 0x34, 0x56, 0x78, 0, 0, 0, 9}
+	frame := ipv4UDPFrame(4500, 4500, esp)
+	metadata, ok := decodePacketMetadata(frame, uint64(len(frame)), time.Now())
+	if !ok || !metadata.EncapsulatedESP || metadata.SPI != 0x12345678 || metadata.ESPSequence != 9 {
+		t.Fatalf("ESP header = %+v, ok=%v", metadata, ok)
+	}
+
+	fragment := ipv4UDPFrame(500, 500, make([]byte, 28))
+	binary.BigEndian.PutUint16(fragment[20:22], 0x2000) // IPv4 More Fragments
+	metadata, ok = decodePacketMetadata(fragment, uint64(len(fragment)), time.Now())
+	if !ok || !metadata.Fragmented || !metadata.ProtocolIncomplete || metadata.IKE {
+		t.Fatalf("fragmented negotiation was parsed: %+v, ok=%v", metadata, ok)
+	}
+}
+
+func TestVLANAndIPv6FragmentHandling(t *testing.T) {
+	plain := ipv4UDPFrame(4500, 4500, []byte{0x12, 0x34, 0x56, 0x78, 0, 0, 0, 1})
+	vlan := make([]byte, len(plain)+4)
+	copy(vlan[:12], plain[:12])
+	binary.BigEndian.PutUint16(vlan[12:14], 0x8100)
+	binary.BigEndian.PutUint16(vlan[16:18], 0x0800)
+	copy(vlan[18:], plain[14:])
+	metadata, ok := decodePacketMetadata(vlan, uint64(len(vlan)), time.Now())
+	if !ok || !metadata.EncapsulatedESP || metadata.SPI != 0x12345678 {
+		t.Fatalf("VLAN packet = %+v, ok=%v", metadata, ok)
+	}
+
+	frame := make([]byte, 14+40+8+16)
+	binary.BigEndian.PutUint16(frame[12:14], 0x86dd)
+	ip := frame[14:]
+	ip[0], ip[6] = 0x60, 44
+	binary.BigEndian.PutUint16(ip[4:6], 24)
+	copy(ip[8:24], []byte{0x20, 1, 0xdb, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1})
+	copy(ip[24:40], []byte{0x20, 1, 0xdb, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2})
+	ip[40] = 17
+	binary.BigEndian.PutUint16(ip[42:44], 1) // first fragment with more flag
+	metadata, ok = decodePacketMetadata(frame, uint64(len(frame)), time.Now())
+	if !ok || !metadata.Fragmented || !metadata.ProtocolIncomplete || metadata.IKE {
+		t.Fatalf("IPv6 fragment = %+v, ok=%v", metadata, ok)
 	}
 }
 
@@ -116,7 +179,7 @@ func TestIPv6NATTAndSelectedIKEProposal(t *testing.T) {
 	ike = append(ike, sa...)
 	frame := ipv6UDPFrame(4500, 4500, append([]byte{0, 0, 0, 0}, ike...))
 	metadata, ok := decodePacketMetadata(frame, uint64(len(frame)), time.Now())
-	if !ok || !metadata.NATT || !metadata.IKE || len(metadata.IKEProposals) != 1 || !metadata.IKEProposals[0].Selected || metadata.IKEProposals[0].Transforms[0].Name != "AES-GCM-16" {
+	if !ok || !metadata.NATT || !metadata.IKE || !metadata.IKEIsResponse || metadata.IKEOriginalInitiator || len(metadata.IKEProposals) != 1 || !metadata.IKEProposals[0].Selected || metadata.IKEProposals[0].Transforms[0].Name != "AES-GCM-16" {
 		t.Fatalf("IPv6 NAT-T selected proposal = %+v, ok=%v", metadata, ok)
 	}
 }
@@ -215,6 +278,10 @@ func TestIKETransformKeyLengthsAndIKEv1AttributeMappings(t *testing.T) {
 	transform := proposalTransform(keyLength, 1, 12)
 	if transform.Name != "AES-CBC-256" || transform.KeyLengthBits != 256 {
 		t.Fatalf("IKEv2 transform = %+v", transform)
+	}
+	gcm := proposalTransform(keyLength, 1, 20)
+	if gcm.Name != "AES-GCM-16-256" || gcm.KeyLengthBits != 256 {
+		t.Fatalf("IKEv2 AES-GCM transform = %+v", gcm)
 	}
 
 	attributes := []byte{

@@ -690,24 +690,79 @@ func (x *GetPredictionRequest) GetPredictionId() string {
 	return ""
 }
 
+type RankedClassPrediction struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TrafficClass  string                 `protobuf:"bytes,1,opt,name=traffic_class,json=trafficClass,proto3" json:"traffic_class,omitempty"`
+	Confidence    float64                `protobuf:"fixed64,2,opt,name=confidence,proto3" json:"confidence,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RankedClassPrediction) Reset() {
+	*x = RankedClassPrediction{}
+	mi := &file_api_proto_core_v1_ml_ml_orchestration_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RankedClassPrediction) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RankedClassPrediction) ProtoMessage() {}
+
+func (x *RankedClassPrediction) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_core_v1_ml_ml_orchestration_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RankedClassPrediction.ProtoReflect.Descriptor instead.
+func (*RankedClassPrediction) Descriptor() ([]byte, []int) {
+	return file_api_proto_core_v1_ml_ml_orchestration_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *RankedClassPrediction) GetTrafficClass() string {
+	if x != nil {
+		return x.TrafficClass
+	}
+	return ""
+}
+
+func (x *RankedClassPrediction) GetConfidence() float64 {
+	if x != nil {
+		return x.Confidence
+	}
+	return 0
+}
+
 type TrafficPrediction struct {
-	state                protoimpl.MessageState `protogen:"open.v1"`
-	PredictionId         string                 `protobuf:"bytes,1,opt,name=prediction_id,json=predictionId,proto3" json:"prediction_id,omitempty"`
-	FlowId               string                 `protobuf:"bytes,2,opt,name=flow_id,json=flowId,proto3" json:"flow_id,omitempty"`
-	TrafficClass         string                 `protobuf:"bytes,3,opt,name=traffic_class,json=trafficClass,proto3" json:"traffic_class,omitempty"`
-	Confidence           float64                `protobuf:"fixed64,4,opt,name=confidence,proto3" json:"confidence,omitempty"`
-	ClassProbabilities   map[string]float64     `protobuf:"bytes,5,rep,name=class_probabilities,json=classProbabilities,proto3" json:"class_probabilities,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"fixed64,2,opt,name=value"`
-	IsUnknown            bool                   `protobuf:"varint,6,opt,name=is_unknown,json=isUnknown,proto3" json:"is_unknown,omitempty"`
-	ModelVersion         string                 `protobuf:"bytes,7,opt,name=model_version,json=modelVersion,proto3" json:"model_version,omitempty"`
-	FeatureSchemaVersion string                 `protobuf:"bytes,8,opt,name=feature_schema_version,json=featureSchemaVersion,proto3" json:"feature_schema_version,omitempty"`
-	InferenceTimeMs      float64                `protobuf:"fixed64,9,opt,name=inference_time_ms,json=inferenceTimeMs,proto3" json:"inference_time_ms,omitempty"`
+	state                protoimpl.MessageState   `protogen:"open.v1"`
+	PredictionId         string                   `protobuf:"bytes,1,opt,name=prediction_id,json=predictionId,proto3" json:"prediction_id,omitempty"`
+	FlowId               string                   `protobuf:"bytes,2,opt,name=flow_id,json=flowId,proto3" json:"flow_id,omitempty"`
+	TrafficClass         string                   `protobuf:"bytes,3,opt,name=traffic_class,json=trafficClass,proto3" json:"traffic_class,omitempty"`
+	Confidence           float64                  `protobuf:"fixed64,4,opt,name=confidence,proto3" json:"confidence,omitempty"`
+	ClassProbabilities   map[string]float64       `protobuf:"bytes,5,rep,name=class_probabilities,json=classProbabilities,proto3" json:"class_probabilities,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"fixed64,2,opt,name=value"`
+	IsUnknown            bool                     `protobuf:"varint,6,opt,name=is_unknown,json=isUnknown,proto3" json:"is_unknown,omitempty"`
+	ModelVersion         string                   `protobuf:"bytes,7,opt,name=model_version,json=modelVersion,proto3" json:"model_version,omitempty"`
+	FeatureSchemaVersion string                   `protobuf:"bytes,8,opt,name=feature_schema_version,json=featureSchemaVersion,proto3" json:"feature_schema_version,omitempty"`
+	InferenceTimeMs      float64                  `protobuf:"fixed64,9,opt,name=inference_time_ms,json=inferenceTimeMs,proto3" json:"inference_time_ms,omitempty"`
+	WindowId             string                   `protobuf:"bytes,10,opt,name=window_id,json=windowId,proto3" json:"window_id,omitempty"`
+	AggregationScope     string                   `protobuf:"bytes,11,opt,name=aggregation_scope,json=aggregationScope,proto3" json:"aggregation_scope,omitempty"`
+	TopPredictions       []*RankedClassPrediction `protobuf:"bytes,12,rep,name=top_predictions,json=topPredictions,proto3" json:"top_predictions,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
 
 func (x *TrafficPrediction) Reset() {
 	*x = TrafficPrediction{}
-	mi := &file_api_proto_core_v1_ml_ml_orchestration_proto_msgTypes[11]
+	mi := &file_api_proto_core_v1_ml_ml_orchestration_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -719,7 +774,7 @@ func (x *TrafficPrediction) String() string {
 func (*TrafficPrediction) ProtoMessage() {}
 
 func (x *TrafficPrediction) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_core_v1_ml_ml_orchestration_proto_msgTypes[11]
+	mi := &file_api_proto_core_v1_ml_ml_orchestration_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -732,7 +787,7 @@ func (x *TrafficPrediction) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TrafficPrediction.ProtoReflect.Descriptor instead.
 func (*TrafficPrediction) Descriptor() ([]byte, []int) {
-	return file_api_proto_core_v1_ml_ml_orchestration_proto_rawDescGZIP(), []int{11}
+	return file_api_proto_core_v1_ml_ml_orchestration_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *TrafficPrediction) GetPredictionId() string {
@@ -798,6 +853,27 @@ func (x *TrafficPrediction) GetInferenceTimeMs() float64 {
 	return 0
 }
 
+func (x *TrafficPrediction) GetWindowId() string {
+	if x != nil {
+		return x.WindowId
+	}
+	return ""
+}
+
+func (x *TrafficPrediction) GetAggregationScope() string {
+	if x != nil {
+		return x.AggregationScope
+	}
+	return ""
+}
+
+func (x *TrafficPrediction) GetTopPredictions() []*RankedClassPrediction {
+	if x != nil {
+		return x.TopPredictions
+	}
+	return nil
+}
+
 type GetPredictionExplanationRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	InferenceId   string                 `protobuf:"bytes,1,opt,name=inference_id,json=inferenceId,proto3" json:"inference_id,omitempty"`
@@ -808,7 +884,7 @@ type GetPredictionExplanationRequest struct {
 
 func (x *GetPredictionExplanationRequest) Reset() {
 	*x = GetPredictionExplanationRequest{}
-	mi := &file_api_proto_core_v1_ml_ml_orchestration_proto_msgTypes[12]
+	mi := &file_api_proto_core_v1_ml_ml_orchestration_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -820,7 +896,7 @@ func (x *GetPredictionExplanationRequest) String() string {
 func (*GetPredictionExplanationRequest) ProtoMessage() {}
 
 func (x *GetPredictionExplanationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_core_v1_ml_ml_orchestration_proto_msgTypes[12]
+	mi := &file_api_proto_core_v1_ml_ml_orchestration_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -833,7 +909,7 @@ func (x *GetPredictionExplanationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPredictionExplanationRequest.ProtoReflect.Descriptor instead.
 func (*GetPredictionExplanationRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_core_v1_ml_ml_orchestration_proto_rawDescGZIP(), []int{12}
+	return file_api_proto_core_v1_ml_ml_orchestration_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *GetPredictionExplanationRequest) GetInferenceId() string {
@@ -862,7 +938,7 @@ type PredictionExplanation struct {
 
 func (x *PredictionExplanation) Reset() {
 	*x = PredictionExplanation{}
-	mi := &file_api_proto_core_v1_ml_ml_orchestration_proto_msgTypes[13]
+	mi := &file_api_proto_core_v1_ml_ml_orchestration_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -874,7 +950,7 @@ func (x *PredictionExplanation) String() string {
 func (*PredictionExplanation) ProtoMessage() {}
 
 func (x *PredictionExplanation) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_core_v1_ml_ml_orchestration_proto_msgTypes[13]
+	mi := &file_api_proto_core_v1_ml_ml_orchestration_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -887,7 +963,7 @@ func (x *PredictionExplanation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PredictionExplanation.ProtoReflect.Descriptor instead.
 func (*PredictionExplanation) Descriptor() ([]byte, []int) {
-	return file_api_proto_core_v1_ml_ml_orchestration_proto_rawDescGZIP(), []int{13}
+	return file_api_proto_core_v1_ml_ml_orchestration_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *PredictionExplanation) GetPredictionId() string {
@@ -929,7 +1005,7 @@ type FeatureAttribution struct {
 
 func (x *FeatureAttribution) Reset() {
 	*x = FeatureAttribution{}
-	mi := &file_api_proto_core_v1_ml_ml_orchestration_proto_msgTypes[14]
+	mi := &file_api_proto_core_v1_ml_ml_orchestration_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -941,7 +1017,7 @@ func (x *FeatureAttribution) String() string {
 func (*FeatureAttribution) ProtoMessage() {}
 
 func (x *FeatureAttribution) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_core_v1_ml_ml_orchestration_proto_msgTypes[14]
+	mi := &file_api_proto_core_v1_ml_ml_orchestration_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -954,7 +1030,7 @@ func (x *FeatureAttribution) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FeatureAttribution.ProtoReflect.Descriptor instead.
 func (*FeatureAttribution) Descriptor() ([]byte, []int) {
-	return file_api_proto_core_v1_ml_ml_orchestration_proto_rawDescGZIP(), []int{14}
+	return file_api_proto_core_v1_ml_ml_orchestration_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *FeatureAttribution) GetFeatureName() string {
@@ -987,7 +1063,7 @@ type CancelInferenceRequest struct {
 
 func (x *CancelInferenceRequest) Reset() {
 	*x = CancelInferenceRequest{}
-	mi := &file_api_proto_core_v1_ml_ml_orchestration_proto_msgTypes[15]
+	mi := &file_api_proto_core_v1_ml_ml_orchestration_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -999,7 +1075,7 @@ func (x *CancelInferenceRequest) String() string {
 func (*CancelInferenceRequest) ProtoMessage() {}
 
 func (x *CancelInferenceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_core_v1_ml_ml_orchestration_proto_msgTypes[15]
+	mi := &file_api_proto_core_v1_ml_ml_orchestration_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1012,7 +1088,7 @@ func (x *CancelInferenceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelInferenceRequest.ProtoReflect.Descriptor instead.
 func (*CancelInferenceRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_core_v1_ml_ml_orchestration_proto_rawDescGZIP(), []int{15}
+	return file_api_proto_core_v1_ml_ml_orchestration_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *CancelInferenceRequest) GetInferenceId() string {
@@ -1032,7 +1108,7 @@ type CancelInferenceResponse struct {
 
 func (x *CancelInferenceResponse) Reset() {
 	*x = CancelInferenceResponse{}
-	mi := &file_api_proto_core_v1_ml_ml_orchestration_proto_msgTypes[16]
+	mi := &file_api_proto_core_v1_ml_ml_orchestration_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1044,7 +1120,7 @@ func (x *CancelInferenceResponse) String() string {
 func (*CancelInferenceResponse) ProtoMessage() {}
 
 func (x *CancelInferenceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_core_v1_ml_ml_orchestration_proto_msgTypes[16]
+	mi := &file_api_proto_core_v1_ml_ml_orchestration_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1057,7 +1133,7 @@ func (x *CancelInferenceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelInferenceResponse.ProtoReflect.Descriptor instead.
 func (*CancelInferenceResponse) Descriptor() ([]byte, []int) {
-	return file_api_proto_core_v1_ml_ml_orchestration_proto_rawDescGZIP(), []int{16}
+	return file_api_proto_core_v1_ml_ml_orchestration_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *CancelInferenceResponse) GetInferenceId() string {
@@ -1131,7 +1207,12 @@ const file_api_proto_core_v1_ml_ml_orchestration_proto_rawDesc = "" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"^\n" +
 	"\x14GetPredictionRequest\x12!\n" +
 	"\finference_id\x18\x01 \x01(\tR\vinferenceId\x12#\n" +
-	"\rprediction_id\x18\x02 \x01(\tR\fpredictionId\"\xeb\x03\n" +
+	"\rprediction_id\x18\x02 \x01(\tR\fpredictionId\"\\\n" +
+	"\x15RankedClassPrediction\x12#\n" +
+	"\rtraffic_class\x18\x01 \x01(\tR\ftrafficClass\x12\x1e\n" +
+	"\n" +
+	"confidence\x18\x02 \x01(\x01R\n" +
+	"confidence\"\x81\x05\n" +
 	"\x11TrafficPrediction\x12#\n" +
 	"\rprediction_id\x18\x01 \x01(\tR\fpredictionId\x12\x17\n" +
 	"\aflow_id\x18\x02 \x01(\tR\x06flowId\x12#\n" +
@@ -1144,7 +1225,11 @@ const file_api_proto_core_v1_ml_ml_orchestration_proto_rawDesc = "" +
 	"is_unknown\x18\x06 \x01(\bR\tisUnknown\x12#\n" +
 	"\rmodel_version\x18\a \x01(\tR\fmodelVersion\x124\n" +
 	"\x16feature_schema_version\x18\b \x01(\tR\x14featureSchemaVersion\x12*\n" +
-	"\x11inference_time_ms\x18\t \x01(\x01R\x0finferenceTimeMs\x1aE\n" +
+	"\x11inference_time_ms\x18\t \x01(\x01R\x0finferenceTimeMs\x12\x1b\n" +
+	"\twindow_id\x18\n" +
+	" \x01(\tR\bwindowId\x12+\n" +
+	"\x11aggregation_scope\x18\v \x01(\tR\x10aggregationScope\x12J\n" +
+	"\x0ftop_predictions\x18\f \x03(\v2!.core.ml.v1.RankedClassPredictionR\x0etopPredictions\x1aE\n" +
 	"\x17ClassProbabilitiesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\"i\n" +
@@ -1187,7 +1272,7 @@ func file_api_proto_core_v1_ml_ml_orchestration_proto_rawDescGZIP() []byte {
 	return file_api_proto_core_v1_ml_ml_orchestration_proto_rawDescData
 }
 
-var file_api_proto_core_v1_ml_ml_orchestration_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
+var file_api_proto_core_v1_ml_ml_orchestration_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
 var file_api_proto_core_v1_ml_ml_orchestration_proto_goTypes = []any{
 	(*GetMLWorkerStatusRequest)(nil),        // 0: core.ml.v1.GetMLWorkerStatusRequest
 	(*MLWorkerStatus)(nil),                  // 1: core.ml.v1.MLWorkerStatus
@@ -1200,41 +1285,43 @@ var file_api_proto_core_v1_ml_ml_orchestration_proto_goTypes = []any{
 	(*ListPredictionsRequest)(nil),          // 8: core.ml.v1.ListPredictionsRequest
 	(*ListPredictionsResponse)(nil),         // 9: core.ml.v1.ListPredictionsResponse
 	(*GetPredictionRequest)(nil),            // 10: core.ml.v1.GetPredictionRequest
-	(*TrafficPrediction)(nil),               // 11: core.ml.v1.TrafficPrediction
-	(*GetPredictionExplanationRequest)(nil), // 12: core.ml.v1.GetPredictionExplanationRequest
-	(*PredictionExplanation)(nil),           // 13: core.ml.v1.PredictionExplanation
-	(*FeatureAttribution)(nil),              // 14: core.ml.v1.FeatureAttribution
-	(*CancelInferenceRequest)(nil),          // 15: core.ml.v1.CancelInferenceRequest
-	(*CancelInferenceResponse)(nil),         // 16: core.ml.v1.CancelInferenceResponse
-	nil,                                     // 17: core.ml.v1.TrafficPrediction.ClassProbabilitiesEntry
-	(*timestamppb.Timestamp)(nil),           // 18: google.protobuf.Timestamp
+	(*RankedClassPrediction)(nil),           // 11: core.ml.v1.RankedClassPrediction
+	(*TrafficPrediction)(nil),               // 12: core.ml.v1.TrafficPrediction
+	(*GetPredictionExplanationRequest)(nil), // 13: core.ml.v1.GetPredictionExplanationRequest
+	(*PredictionExplanation)(nil),           // 14: core.ml.v1.PredictionExplanation
+	(*FeatureAttribution)(nil),              // 15: core.ml.v1.FeatureAttribution
+	(*CancelInferenceRequest)(nil),          // 16: core.ml.v1.CancelInferenceRequest
+	(*CancelInferenceResponse)(nil),         // 17: core.ml.v1.CancelInferenceResponse
+	nil,                                     // 18: core.ml.v1.TrafficPrediction.ClassProbabilitiesEntry
+	(*timestamppb.Timestamp)(nil),           // 19: google.protobuf.Timestamp
 }
 var file_api_proto_core_v1_ml_ml_orchestration_proto_depIdxs = []int32{
-	18, // 0: core.ml.v1.ModelInfo.trained_at:type_name -> google.protobuf.Timestamp
-	11, // 1: core.ml.v1.ListPredictionsResponse.predictions:type_name -> core.ml.v1.TrafficPrediction
-	17, // 2: core.ml.v1.TrafficPrediction.class_probabilities:type_name -> core.ml.v1.TrafficPrediction.ClassProbabilitiesEntry
-	14, // 3: core.ml.v1.PredictionExplanation.features:type_name -> core.ml.v1.FeatureAttribution
-	0,  // 4: core.ml.v1.MLOrchestrationService.GetWorkerStatus:input_type -> core.ml.v1.GetMLWorkerStatusRequest
-	2,  // 5: core.ml.v1.MLOrchestrationService.GetModelInfo:input_type -> core.ml.v1.GetModelInfoRequest
-	4,  // 6: core.ml.v1.MLOrchestrationService.RunInference:input_type -> core.ml.v1.RunInferenceRequest
-	6,  // 7: core.ml.v1.MLOrchestrationService.GetInferenceStatus:input_type -> core.ml.v1.GetInferenceStatusRequest
-	8,  // 8: core.ml.v1.MLOrchestrationService.ListPredictions:input_type -> core.ml.v1.ListPredictionsRequest
-	10, // 9: core.ml.v1.MLOrchestrationService.GetPrediction:input_type -> core.ml.v1.GetPredictionRequest
-	12, // 10: core.ml.v1.MLOrchestrationService.GetExplanation:input_type -> core.ml.v1.GetPredictionExplanationRequest
-	15, // 11: core.ml.v1.MLOrchestrationService.CancelInference:input_type -> core.ml.v1.CancelInferenceRequest
-	1,  // 12: core.ml.v1.MLOrchestrationService.GetWorkerStatus:output_type -> core.ml.v1.MLWorkerStatus
-	3,  // 13: core.ml.v1.MLOrchestrationService.GetModelInfo:output_type -> core.ml.v1.ModelInfo
-	5,  // 14: core.ml.v1.MLOrchestrationService.RunInference:output_type -> core.ml.v1.RunInferenceResponse
-	7,  // 15: core.ml.v1.MLOrchestrationService.GetInferenceStatus:output_type -> core.ml.v1.InferenceStatus
-	9,  // 16: core.ml.v1.MLOrchestrationService.ListPredictions:output_type -> core.ml.v1.ListPredictionsResponse
-	11, // 17: core.ml.v1.MLOrchestrationService.GetPrediction:output_type -> core.ml.v1.TrafficPrediction
-	13, // 18: core.ml.v1.MLOrchestrationService.GetExplanation:output_type -> core.ml.v1.PredictionExplanation
-	16, // 19: core.ml.v1.MLOrchestrationService.CancelInference:output_type -> core.ml.v1.CancelInferenceResponse
-	12, // [12:20] is the sub-list for method output_type
-	4,  // [4:12] is the sub-list for method input_type
-	4,  // [4:4] is the sub-list for extension type_name
-	4,  // [4:4] is the sub-list for extension extendee
-	0,  // [0:4] is the sub-list for field type_name
+	19, // 0: core.ml.v1.ModelInfo.trained_at:type_name -> google.protobuf.Timestamp
+	12, // 1: core.ml.v1.ListPredictionsResponse.predictions:type_name -> core.ml.v1.TrafficPrediction
+	18, // 2: core.ml.v1.TrafficPrediction.class_probabilities:type_name -> core.ml.v1.TrafficPrediction.ClassProbabilitiesEntry
+	11, // 3: core.ml.v1.TrafficPrediction.top_predictions:type_name -> core.ml.v1.RankedClassPrediction
+	15, // 4: core.ml.v1.PredictionExplanation.features:type_name -> core.ml.v1.FeatureAttribution
+	0,  // 5: core.ml.v1.MLOrchestrationService.GetWorkerStatus:input_type -> core.ml.v1.GetMLWorkerStatusRequest
+	2,  // 6: core.ml.v1.MLOrchestrationService.GetModelInfo:input_type -> core.ml.v1.GetModelInfoRequest
+	4,  // 7: core.ml.v1.MLOrchestrationService.RunInference:input_type -> core.ml.v1.RunInferenceRequest
+	6,  // 8: core.ml.v1.MLOrchestrationService.GetInferenceStatus:input_type -> core.ml.v1.GetInferenceStatusRequest
+	8,  // 9: core.ml.v1.MLOrchestrationService.ListPredictions:input_type -> core.ml.v1.ListPredictionsRequest
+	10, // 10: core.ml.v1.MLOrchestrationService.GetPrediction:input_type -> core.ml.v1.GetPredictionRequest
+	13, // 11: core.ml.v1.MLOrchestrationService.GetExplanation:input_type -> core.ml.v1.GetPredictionExplanationRequest
+	16, // 12: core.ml.v1.MLOrchestrationService.CancelInference:input_type -> core.ml.v1.CancelInferenceRequest
+	1,  // 13: core.ml.v1.MLOrchestrationService.GetWorkerStatus:output_type -> core.ml.v1.MLWorkerStatus
+	3,  // 14: core.ml.v1.MLOrchestrationService.GetModelInfo:output_type -> core.ml.v1.ModelInfo
+	5,  // 15: core.ml.v1.MLOrchestrationService.RunInference:output_type -> core.ml.v1.RunInferenceResponse
+	7,  // 16: core.ml.v1.MLOrchestrationService.GetInferenceStatus:output_type -> core.ml.v1.InferenceStatus
+	9,  // 17: core.ml.v1.MLOrchestrationService.ListPredictions:output_type -> core.ml.v1.ListPredictionsResponse
+	12, // 18: core.ml.v1.MLOrchestrationService.GetPrediction:output_type -> core.ml.v1.TrafficPrediction
+	14, // 19: core.ml.v1.MLOrchestrationService.GetExplanation:output_type -> core.ml.v1.PredictionExplanation
+	17, // 20: core.ml.v1.MLOrchestrationService.CancelInference:output_type -> core.ml.v1.CancelInferenceResponse
+	13, // [13:21] is the sub-list for method output_type
+	5,  // [5:13] is the sub-list for method input_type
+	5,  // [5:5] is the sub-list for extension type_name
+	5,  // [5:5] is the sub-list for extension extendee
+	0,  // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_api_proto_core_v1_ml_ml_orchestration_proto_init() }
@@ -1248,7 +1335,7 @@ func file_api_proto_core_v1_ml_ml_orchestration_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_proto_core_v1_ml_ml_orchestration_proto_rawDesc), len(file_api_proto_core_v1_ml_ml_orchestration_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   18,
+			NumMessages:   19,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

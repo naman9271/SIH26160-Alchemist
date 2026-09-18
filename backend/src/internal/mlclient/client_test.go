@@ -29,7 +29,7 @@ func (f *fakeClient) HealthCheck(context.Context, *emptypb.Empty, ...grpc.CallOp
 
 func validWindow() *flowv1.FeatureWindow {
 	values := []float64{1, 4, 400, 4, 400, 100, 1, 99, 101, 99, 100, 100, 101, .25, .1, 2, 2, 200, 200, 1, 2, 2, 0}
-	return &flowv1.FeatureWindow{FlowId: "flow-1", Finalized: true, FeatureSchemaVersion: flow.FeatureSchemaVersion, FeatureNames: append([]string(nil), flow.FeatureNames...), FeatureValues: values}
+	return &flowv1.FeatureWindow{FlowId: "flow-1", WindowId: "window-1", AggregationScope: "aggregate_endpoint_channel_estimate", Finalized: true, FeatureSchemaVersion: flow.FeatureSchemaVersion, FeatureNames: append([]string(nil), flow.FeatureNames...), FeatureValues: values}
 }
 
 func TestRequestFromWindowMapsOnlyValidatedFeatures(t *testing.T) {
@@ -57,7 +57,7 @@ func TestRequestFromWindowRejectsSchemaDriftAndInvalidRelationships(t *testing.T
 }
 
 func TestPredictValidatesServiceResponse(t *testing.T) {
-	client := &fakeClient{response: &mlv1.PredictionResult{FlowId: "flow-1", ModelVersion: "model-v1", Confidence: .8, PredictedClass: mlv1.TrafficClass_TRAFFIC_CLASS_WEB}}
+	client := &fakeClient{response: &mlv1.PredictionResult{FlowId: "flow-1", WindowId: "window-1", AggregationScope: "aggregate_endpoint_channel_estimate", ModelVersion: "model-v1", Confidence: .8, PredictedClass: mlv1.TrafficClass_TRAFFIC_CLASS_WEB, TopPredictions: []*mlv1.ClassPrediction{{TrafficClass: mlv1.TrafficClass_TRAFFIC_CLASS_WEB, Confidence: .8}, {TrafficClass: mlv1.TrafficClass_TRAFFIC_CLASS_VIDEO, Confidence: .1}, {TrafficClass: mlv1.TrafficClass_TRAFFIC_CLASS_VOIP, Confidence: .1}}}}
 	adapter, err := New(client, time.Second)
 	if err != nil {
 		t.Fatal(err)

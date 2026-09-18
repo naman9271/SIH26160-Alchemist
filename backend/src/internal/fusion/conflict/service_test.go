@@ -42,7 +42,10 @@ func evidence(value string, source model.Source, status commonv1.EvidenceStatus,
 	return ingest.EvidenceInput{
 		PropertyKey: "child.mode", Value: structpb.NewStringValue(value), Source: source, Status: status,
 		Confidence: confidence, ObservedAt: time.Now().UTC().Add(-time.Minute), ResourceType: "CHILD_SA",
-		ResourceID: string(source), Metadata: map[string]string{"reqid": "42"},
+		ResourceID: string(source), Metadata: map[string]string{
+			"reqid":                "42",
+			"esp_directional_wire": "esp|198.51.100.1|0x0000002a",
+		},
 	}
 }
 

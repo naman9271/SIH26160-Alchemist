@@ -35,6 +35,9 @@ type Backend interface {
 	Authorities(context.Context, string) ([]*viciv1.Authority, error)
 	Events(context.Context, string, uint32) (<-chan *viciv1.ViciEvent, error)
 }
+type combinedSABackend interface {
+	SAs(context.Context, string) ([]*viciv1.IkeSa, []*viciv1.ChildSa, error)
+}
 type Service struct {
 	backend Backend
 	dial    func(context.Context, string) (net.Conn, error)
@@ -118,8 +121,6 @@ func (s *Service) Snapshot(ctx context.Context, uri string) (*viciv1.GatewaySnap
 	}
 	collections := []collection{
 		{"daemon_stats", func() error { out.DaemonStats, err = backend.DaemonStats(ctx, resolved); return err }},
-		{"ike_sas", func() error { out.IkeSas, err = backend.IkeSas(ctx, resolved); return err }},
-		{"child_sas", func() error { out.ChildSas, err = backend.ChildSas(ctx, resolved); return err }},
 		{"connections", func() error { out.Connections, err = backend.Connections(ctx, resolved); return err }},
 		{"policies", func() error { out.Policies, err = backend.Policies(ctx, resolved); return err }},
 		{"algorithms", func() error { out.Algorithms, err = backend.Algorithms(ctx, resolved); return err }},
@@ -127,17 +128,35 @@ func (s *Service) Snapshot(ctx context.Context, uri string) (*viciv1.GatewaySnap
 		{"certificates", func() error { out.Certificates, err = backend.Certificates(ctx, resolved); return err }},
 		{"authorities", func() error { out.Authorities, err = backend.Authorities(ctx, resolved); return err }},
 	}
+	if combined, ok := backend.(combinedSABackend); ok {
+		collections = append([]collection{{"security_associations", func() error {
+			out.IkeSas, out.ChildSas, err = combined.SAs(ctx, resolved)
+			return err
+		}}}, collections...)
+	} else {
+		collections = append([]collection{
+			{"ike_sas", func() error { out.IkeSas, err = backend.IkeSas(ctx, resolved); return err }},
+			{"child_sas", func() error { out.ChildSas, err = backend.ChildSas(ctx, resolved); return err }},
+		}, collections...)
+	}
 	available := 0
 	for _, item := range collections {
 		itemErr := item.run()
 		status := &viciv1.SourceAvailability{Source: item.name, Available: itemErr == nil}
 		if itemErr != nil {
-			status.Message = itemErr.Error()
+			if errors.Is(itemErr, errUnsupportedVICIView) {
+				status.ErrorCode = "UNSUPPORTED"
+				status.Message = "view is unsupported by the collector"
+			} else {
+				status.ErrorCode = "UNAVAILABLE"
+				status.Message = "view could not be collected"
+			}
 		} else {
 			available++
 		}
 		out.PerSourceAvailability = append(out.PerSourceAvailability, status)
 	}
+	out.SnapshotTimestamp = timestamppb.New(time.Now().UTC())
 	if available == 0 {
 		return nil, shared.NewError(shared.Unavailable, shared.VICIUnavailable, "VICI returned no usable telemetry")
 	}

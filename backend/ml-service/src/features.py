@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import csv
 import hashlib
+import json
 import logging
 import socket
 import statistics
@@ -22,11 +23,13 @@ import dpkt
 
 LOGGER = logging.getLogger(__name__)
 
-DEFAULT_WINDOW_DURATION_SECONDS = 10.0
-DEFAULT_BURST_GAP_SECONDS = 0.1
-DEFAULT_IDLE_GAP_SECONDS = 1.0
-CSV_FIELDNAMES = (
-    "flow_id",
+FEATURE_SPEC_PATH = Path(__file__).resolve().parents[2] / "src/internal/featurespec/flow_v2.json"
+FEATURE_SPEC = json.loads(FEATURE_SPEC_PATH.read_text(encoding="utf-8"))
+DEFAULT_WINDOW_DURATION_SECONDS = float(FEATURE_SPEC["window_seconds"])
+DEFAULT_BURST_GAP_SECONDS = float(FEATURE_SPEC["burst_gap_seconds"])
+DEFAULT_IDLE_GAP_SECONDS = float(FEATURE_SPEC["idle_gap_seconds"])
+CSV_FIELDNAMES = ("flow_id", *FEATURE_SPEC["features"])
+_EXPECTED_FEATURES = (
     "duration",
     "packet_count",
     "total_bytes",
@@ -51,6 +54,8 @@ CSV_FIELDNAMES = (
     "mean_burst_size",
     "idle_time_ratio",
 )
+if tuple(FEATURE_SPEC["features"]) != _EXPECTED_FEATURES:
+    raise RuntimeError("flow.v2 feature specification does not match the extractor")
 
 
 @dataclass(frozen=True)

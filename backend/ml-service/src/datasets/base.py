@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from abc import ABC, abstractmethod
 from collections import Counter
@@ -20,31 +21,9 @@ CANONICAL_LABELS = frozenset(
     {"web", "video", "voip", "email", "file_transfer", "messaging", "icmp"}
 )
 
-NUMERIC_FEATURE_COLUMNS = (
-    "duration",
-    "packet_count",
-    "total_bytes",
-    "packets_per_second",
-    "bytes_per_second",
-    "mean_packet_size",
-    "std_packet_size",
-    "min_packet_size",
-    "max_packet_size",
-    "p25_packet_size",
-    "median_packet_size",
-    "p75_packet_size",
-    "p95_packet_size",
-    "mean_interarrival_time",
-    "std_interarrival_time",
-    "upload_packets",
-    "download_packets",
-    "upload_bytes",
-    "download_bytes",
-    "upload_download_ratio",
-    "burst_count",
-    "mean_burst_size",
-    "idle_time_ratio",
-)
+_FEATURE_SPEC_PATH = Path(__file__).resolve().parents[3] / "src/internal/featurespec/flow_v2.json"
+_FEATURE_SPEC = json.loads(_FEATURE_SPEC_PATH.read_text(encoding="utf-8"))
+NUMERIC_FEATURE_COLUMNS = tuple(_FEATURE_SPEC["features"])
 
 MODEL_FEATURE_COLUMNS = NUMERIC_FEATURE_COLUMNS
 

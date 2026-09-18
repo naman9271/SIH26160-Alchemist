@@ -1,0 +1,34 @@
+{
+  "capture_id": "golden-parity",
+  "packets": [
+    {"time_seconds": 0.0, "size_bytes": 100, "forward": true},
+    {"time_seconds": 0.05, "size_bytes": 300, "forward": false},
+    {"time_seconds": 0.2, "size_bytes": 200, "forward": true},
+    {"time_seconds": 1.5, "size_bytes": 400, "forward": false}
+  ],
+  "expected": {
+    "duration": 1.5,
+    "packet_count": 4.0,
+    "total_bytes": 1000.0,
+    "packets_per_second": 2.6666666666666665,
+    "bytes_per_second": 666.6666666666666,
+    "mean_packet_size": 250.0,
+    "std_packet_size": 111.80339887498948,
+    "min_packet_size": 100.0,
+    "max_packet_size": 400.0,
+    "p25_packet_size": 175.0,
+    "median_packet_size": 250.0,
+    "p75_packet_size": 325.0,
+    "p95_packet_size": 385.0,
+    "mean_interarrival_time": 0.5,
+    "std_interarrival_time": 0.5671566509057853,
+    "upload_packets": 2.0,
+    "download_packets": 2.0,
+    "upload_bytes": 300.0,
+    "download_bytes": 700.0,
+    "upload_download_ratio": 0.42857142857142855,
+    "burst_count": 3.0,
+    "mean_burst_size": 1.3333333333333333,
+    "idle_time_ratio": 0.8666666666666667
+  }
+}

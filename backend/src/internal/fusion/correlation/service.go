@@ -7,7 +7,6 @@ import (
 	"maps"
 	"slices"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -260,7 +259,11 @@ func (s *Service) buildGroups(run model.Run, candidates []candidate) ([]model.Co
 	firstByToken := make(map[string]int)
 	for index, item := range candidates {
 		for key, value := range item.keys {
-			token := item.resourceType + "\x00" + key + "\x00" + value
+			matchKey := key
+			if strings.HasPrefix(key, "esp_directional_wire") {
+				matchKey = "esp_directional_wire"
+			}
+			token := item.resourceType + "\x00" + matchKey + "\x00" + value
 			if first, exists := firstByToken[token]; exists {
 				union(parents, index, first)
 			} else {
@@ -302,6 +305,8 @@ func (s *Service) buildGroups(run model.Run, candidates []candidate) ([]model.Co
 		}
 		group.Keys = commonKeys(component)
 		group.ResourceID = logicalResourceID(component, group.ID)
+		group.FirstObservedAt, group.LastObservedAt = observationBounds(component)
+		group.UncertaintyReasons = uncertaintyReasons(component)
 		group.UpdatedAt = now
 		groups = append(groups, group)
 	}
@@ -321,12 +326,10 @@ func normalizedResourceType(item model.EvidenceItem) string {
 	}
 	value := strings.ToUpper(strings.TrimSpace(item.ResourceType))
 	switch value {
-	case "IKE_SA", "VICI_IKE_SA":
+	case "IKE_SA", "IKE_PROPOSAL", "VICI_IKE_SA":
 		return "IKE_SA"
-	case "CHILD_SA", "VICI_CHILD_SA":
+	case "CHILD_SA", "VICI_CHILD_SA", "ESP_STREAM":
 		return "CHILD_SA"
-	case "ESP_STREAM":
-		return "ESP_STREAM"
 	case "VPN_SESSION":
 		return "VPN_SESSION"
 	case "FLOW":
@@ -347,21 +350,32 @@ func correlationKeys(item model.EvidenceItem, resourceType string) map[string]st
 	for key, value := range item.Metadata {
 		metadata[strings.ToLower(strings.TrimSpace(key))] = strings.TrimSpace(value)
 	}
-	for _, key := range []string{
-		"ike_initiator_spi", "ike_responder_spi", "esp_spi", "ah_spi", "reqid",
-		"endpoint_tuple", "traffic_selectors", "strongswan_unique_id", "xfrm_state_identity",
-	} {
-		if value := metadata[key]; value != "" {
-			keys[key] = normalizeKeyValue(value)
+	switch resourceType {
+	case "IKE_SA":
+		initiator, responder, endpoints := normalizeKeyValue(metadata["ike_initiator_spi"]), normalizeKeyValue(metadata["ike_responder_spi"]), normalizeKeyValue(metadata["endpoint_pair"])
+		if initiator != "" && endpoints != "" {
+			keys["ike_initiator_endpoints"] = initiator + "|" + endpoints
 		}
-	}
-	propertyKeys := map[string]string{
-		"ike.initiator_spi": "ike_initiator_spi", "ike.responder_spi": "ike_responder_spi",
-		"esp.spi": "esp_spi", "ah.spi": "ah_spi", "sa.reqid": "reqid",
-	}
-	if key := propertyKeys[item.PropertyKey]; key != "" {
-		if value := scalarValue(item); value != "" {
-			keys[key] = normalizeKeyValue(value)
+		if initiator != "" && responder != "" && responder != "0x0000000000000000" && endpoints != "" {
+			keys["ike_spi_pair_endpoints"] = initiator + "|" + responder + "|" + endpoints
+		}
+	case "CHILD_SA":
+		for _, key := range []string{"esp_directional_wire", "esp_directional_wire_in", "esp_directional_wire_out"} {
+			if value := normalizeKeyValue(metadata[key]); value != "" {
+				keys[key] = value
+			}
+		}
+		if parent := normalizeKeyValue(metadata["parent_ike_resource_id"]); parent != "" {
+			keys["parent_ike_child"] = parent + "|" + normalizeKeyValue(metadata["child_unique_id"])
+			if reqid, in, out, endpoints := normalizeKeyValue(metadata["reqid"]), normalizeKeyValue(metadata["spi_in"]), normalizeKeyValue(metadata["spi_out"]), normalizeKeyValue(metadata["endpoint_pair"]); reqid != "" && in != "" && out != "" && endpoints != "" {
+				// reqid is reusable across replacements, so it only participates
+				// together with the parent, both directional SPIs and endpoints.
+				keys["parent_reqid_spi_pair"] = parent + "|" + reqid + "|" + in + "|" + out + "|" + endpoints
+			}
+		}
+	case "FLOW":
+		if endpoints := normalizeKeyValue(metadata["endpoint_tuple"]); endpoints != "" {
+			keys["endpoint_tuple"] = endpoints
 		}
 	}
 	for key, value := range keys {
@@ -375,20 +389,33 @@ func correlationKeys(item model.EvidenceItem, resourceType string) map[string]st
 	return keys
 }
 
-func scalarValue(item model.EvidenceItem) string {
-	if item.Value == nil {
-		return ""
+func observationBounds(component []candidate) (time.Time, time.Time) {
+	var first, last time.Time
+	for _, candidate := range component {
+		observed := candidate.item.ObservedAt
+		if first.IsZero() || observed.Before(first) {
+			first = observed
+		}
+		if last.IsZero() || observed.After(last) {
+			last = observed
+		}
 	}
-	switch value := item.Value.AsInterface().(type) {
-	case string:
-		return value
-	case float64:
-		return strconv.FormatFloat(value, 'f', -1, 64)
-	case bool:
-		return strconv.FormatBool(value)
-	default:
-		return ""
+	return first, last
+}
+
+func uncertaintyReasons(component []candidate) []string {
+	set := make(map[string]struct{})
+	for _, candidate := range component {
+		if reason := strings.TrimSpace(candidate.item.Metadata["uncertainty_reason"]); reason != "" && reason != "DIRECT_WIRE_OBSERVATION" && reason != "GATEWAY_VERIFIED" {
+			set[reason] = struct{}{}
+		}
 	}
+	result := make([]string, 0, len(set))
+	for reason := range set {
+		result = append(result, reason)
+	}
+	sort.Strings(result)
+	return result
 }
 
 func normalizeKeyValue(value string) string { return strings.ToLower(strings.TrimSpace(value)) }
