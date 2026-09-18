@@ -431,7 +431,7 @@ func getAnalysisInsights(w http.ResponseWriter, r *http.Request, input *coreinpu
 				evaluated = 0
 			}
 			coverage := assessment.Result.Coverage
-			section["assessment"] = map[string]any{"assessment_id": assessment.ID, "policy_id": assessment.PolicyID, "state": assessment.State.String(), "score": assessment.Result.Score, "grade": assessment.Result.Grade, "findings": findings, "threat_matrix": assessment.Result.ThreatMatrix, "rules_evaluated": assessment.Result.EvaluatedRule, "unknown_evidence_count": assessment.UnknownEvidence, "configuration_facts": configurationFacts, "configuration_facts_evaluated": evaluated, "coverage_percent": coverage, "metadata_exposure": assessment.MetadataExposure, "recommendations": recommendations}
+			section["assessment"] = map[string]any{"assessment_id": assessment.ID, "policy_id": assessment.PolicyID, "policy_label": assessment.Result.PolicyLabel, "policy_reference": assessment.Result.PolicyReference, "state": assessment.State.String(), "score": assessment.Result.Score, "grade": assessment.Result.Grade, "findings": findings, "controls": assessment.Result.Controls, "threat_matrix": assessment.Result.ThreatMatrix, "rules_evaluated": assessment.Result.EvaluatedRule, "rules_unknown": assessment.Result.UnknownRule, "rules_not_applicable": assessment.Result.NotApplicableRule, "unknown_evidence_count": assessment.UnknownEvidence, "configuration_facts": configurationFacts, "configuration_facts_evaluated": evaluated, "coverage_percent": coverage, "metadata_exposure": assessment.MetadataExposure, "recommendations": recommendations}
 			if risk != nil {
 				if value, scoreErr := risk.Score(r.Context(), assessment.ID); scoreErr == nil {
 					section["risk_score"] = value

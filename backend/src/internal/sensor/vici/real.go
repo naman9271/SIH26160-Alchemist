@@ -352,7 +352,7 @@ func decodeProposals(parent *govici.Message, key string) []*viciv1.ViciProposal 
 }
 
 func decodeConnection(name string, m *govici.Message) *viciv1.StrongSwanConnection {
-	connection := &viciv1.StrongSwanConnection{Name: name, IkeVersion: normalizeIKEVersion(stringValue(m, "version")), LocalAddresses: listValue(m, "local_addrs"), RemoteAddresses: listValue(m, "remote_addrs"), RekeyTime: uint64Value(m, "rekey_time"), ConfiguredIkeProposals: decodeProposals(m, "proposals"), EvidenceStatus: commonv1.EvidenceStatus_VERIFIED_GATEWAY}
+	connection := &viciv1.StrongSwanConnection{Name: name, IkeVersion: normalizeIKEVersion(stringValue(m, "version")), LocalAddresses: listValue(m, "local_addrs"), RemoteAddresses: listValue(m, "remote_addrs"), LifeTime: uint64Value(m, "life_time"), RekeyTime: uint64Value(m, "rekey_time"), ConfiguredIkeProposals: decodeProposals(m, "proposals"), EvidenceStatus: commonv1.EvidenceStatus_VERIFIED_GATEWAY}
 	for _, key := range m.Keys() {
 		section := sectionValue(m, key)
 		if section == nil {

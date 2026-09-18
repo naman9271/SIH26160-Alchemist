@@ -8,6 +8,7 @@ import (
 	corerisk "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/risk"
 	coresecurity "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/core/security"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/fusion/model"
+	rules "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/security"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
@@ -23,7 +24,7 @@ func TestAssessmentAndRiskReuseDeterministicRules(t *testing.T) {
 		{ID: "c2", PropertyKey: "child.encryption_algorithm", Value: structpb.NewStringValue("3DES"), Status: commonv1.EvidenceStatus_VERIFIED_GATEWAY, Confidence: 1},
 		{ID: "c3", PropertyKey: "metadata.exposure", Value: structpb.NewStringValue("observed"), Status: commonv1.EvidenceStatus_DERIVED, Confidence: .8},
 	})
-	record, err := service.Run(context.Background(), "analysis", "policy")
+	record, err := service.Run(context.Background(), "analysis", rules.SIHBaselinePolicyID)
 	if err != nil || record.Result.Score >= 100 || len(record.Result.Findings) < 2 {
 		t.Fatalf("record=%+v err=%v", record, err)
 	}
@@ -49,7 +50,7 @@ func TestIKECipherIsNotSubstitutedForMissingChildCipher(t *testing.T) {
 		{ID: "c3", PropertyKey: "ike.dh_group", Value: structpb.NewStringValue("DH_19"), Status: commonv1.EvidenceStatus_OBSERVED, Confidence: .95},
 	})
 
-	record, err := service.Run(context.Background(), "analysis-aead", "policy")
+	record, err := service.Run(context.Background(), "analysis-aead", rules.SIHBaselinePolicyID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,7 +73,7 @@ func TestIKECipherIsNotSubstitutedForMissingChildCipher(t *testing.T) {
 
 func TestUnavailableConfigurationNeverBecomesAPass(t *testing.T) {
 	service := coresecurity.New(conclusionFixture{{ID: "ike", PropertyKey: model.PropertyIKEVersion, Value: structpb.NewStringValue("IKEv2"), Status: commonv1.EvidenceStatus_OBSERVED, Confidence: 1}})
-	record, err := service.Run(context.Background(), "analysis-unknown", "policy")
+	record, err := service.Run(context.Background(), "analysis-unknown", rules.SIHBaselinePolicyID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -90,7 +91,7 @@ func TestUnavailableConfigurationNeverBecomesAPass(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if breakdown.Cryptography.Score != 0 || breakdown.Authentication.Score != 0 || breakdown.KeyExchange.Score != 15 {
+	if breakdown.Cryptography.Score != 0 || breakdown.Authentication.Score != 0 || breakdown.KeyExchange.Score != 8 {
 		t.Fatalf("unknown category controls received credit: %+v", breakdown)
 	}
 }
@@ -100,7 +101,7 @@ func TestAssessmentKeepsSecurityAssociationsSeparate(t *testing.T) {
 		{ID: "a", ResourceType: "CHILD_SA", ResourceID: "strong", PropertyKey: model.PropertyChildEncryption, Value: structpb.NewStringValue("AES-GCM-16"), Status: commonv1.EvidenceStatus_VERIFIED_GATEWAY, Confidence: 1},
 		{ID: "b", ResourceType: "CHILD_SA", ResourceID: "weak", PropertyKey: model.PropertyChildEncryption, Value: structpb.NewStringValue("3DES-CBC"), Status: commonv1.EvidenceStatus_VERIFIED_GATEWAY, Confidence: 1},
 	})
-	record, err := service.Run(context.Background(), "analysis-scoped", "policy")
+	record, err := service.Run(context.Background(), "analysis-scoped", rules.SIHBaselinePolicyID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,5 +115,29 @@ func TestAssessmentKeepsSecurityAssociationsSeparate(t *testing.T) {
 	total := breakdown.Cryptography.Maximum + breakdown.Authentication.Maximum + breakdown.KeyExchange.Maximum + breakdown.Pfs.Maximum + breakdown.Replay.Maximum + breakdown.Lifecycle.Maximum + breakdown.Metadata.Maximum
 	if total != 100 {
 		t.Fatalf("risk category maxima total %d, want 100", total)
+	}
+}
+
+func TestAssessmentDefaultsToSeparateBaselineAndRetainsProvenance(t *testing.T) {
+	service := coresecurity.New(conclusionFixture{{ID: "conclusion-1", PropertyKey: model.PropertyIKEDHGroup, ResourceType: "VICI_IKE_SA", ResourceID: "ike-7", Value: structpb.NewStringValue("DH_2"), Status: commonv1.EvidenceStatus_VERIFIED_GATEWAY, Confidence: 1, EvidenceIDs: []string{"evidence-9"}, WinningSources: []model.Source{model.SourceVICI}}})
+	record, err := service.Run(context.Background(), "analysis-policy", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if record.PolicyID != rules.SIHBaselinePolicyID || record.Result.PolicyLabel != "SIH baseline compliance" {
+		t.Fatalf("assessment reused the fusion policy: %+v", record)
+	}
+	var matched bool
+	for _, control := range record.Result.Controls {
+		if control.ControlID != "SIH_DH_001" || control.ResourceID != "ike-7" {
+			continue
+		}
+		matched = true
+		if control.Status != rules.ControlFail || len(control.Evidence) != 1 || control.Evidence[0].Value != "DH_2" || len(control.Evidence[0].EvidenceIDs) != 1 {
+			t.Fatalf("control lost status or provenance: %+v", control)
+		}
+	}
+	if !matched {
+		t.Fatal("missing SA-scoped DH control")
 	}
 }

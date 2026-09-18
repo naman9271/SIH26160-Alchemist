@@ -49,7 +49,10 @@ func (s *Service) Run(ctx context.Context, analysisID, policyID string) (Record,
 		return Record{}, shared.NewError(shared.InvalidArgument, "", "analysis_id is required")
 	}
 	if strings.TrimSpace(policyID) == "" {
-		policyID = model.DefaultPolicyID
+		policyID = rules.SIHBaselinePolicyID
+	}
+	if policyID != rules.SIHBaselinePolicyID {
+		return Record{}, shared.NewError(shared.InvalidArgument, "", "unsupported security assessment policy; use "+rules.SIHBaselinePolicyID)
 	}
 	id, err := uuid.NewV7()
 	if err != nil {
@@ -105,6 +108,9 @@ func (s *Service) Reevaluate(ctx context.Context, id, policyID string) (Record, 
 		return Record{}, err
 	}
 	if policyID != "" {
+		if policyID != rules.SIHBaselinePolicyID {
+			return Record{}, shared.NewError(shared.InvalidArgument, "", "unsupported security assessment policy; use "+rules.SIHBaselinePolicyID)
+		}
 		s.mu.Lock()
 		if record := s.records[id]; record != nil {
 			record.PolicyID = policyID
@@ -132,6 +138,10 @@ func (s *Service) evaluate(ctx context.Context, id string) (Record, error) {
 		for index := range result.Findings {
 			result.Findings[index].ResourceType = scope.ResourceType
 			result.Findings[index].ResourceID = scope.ResourceID
+		}
+		for index := range result.Controls {
+			result.Controls[index].ResourceType = scope.ResourceType
+			result.Controls[index].ResourceID = scope.ResourceID
 		}
 		results = append(results, result)
 	}
@@ -223,6 +233,7 @@ func facts(items []model.FusedConclusion) ([]scopedFacts, uint64, bool) {
 	winners := map[resource]map[string]model.FusedConclusion{}
 	knownConfiguration := map[string]bool{}
 	metadataKnown, metadataExposure := false, false
+	var metadataEvidence rules.EvidenceReference
 	for _, item := range items {
 		if item.Status == commonv1.EvidenceStatus_UNKNOWN {
 			continue
@@ -230,6 +241,11 @@ func facts(items []model.FusedConclusion) ([]scopedFacts, uint64, bool) {
 		if item.PropertyKey == model.PropertyMetadataExposure {
 			metadataKnown = true
 			metadataExposure = metadataExposure || scalar(item) != ""
+			sources := make([]string, 0, len(item.WinningSources))
+			for _, source := range item.WinningSources {
+				sources = append(sources, string(source))
+			}
+			metadataEvidence = rules.EvidenceReference{PropertyKey: item.PropertyKey, Value: scalar(item), EvidenceIDs: append([]string(nil), item.EvidenceIDs...), Sources: sources}
 			continue
 		}
 		if !securityProperty(item.PropertyKey) {
@@ -256,7 +272,11 @@ func facts(items []model.FusedConclusion) ([]scopedFacts, uint64, bool) {
 	}
 	scopes := make([]scopedFacts, 0, len(winners))
 	childAEAD := false
+	hasAnalysisScope := false
 	for scope, values := range winners {
+		if scope.typ == "ANALYSIS" {
+			hasAnalysisScope = true
+		}
 		get := func(name string) string {
 			if item, ok := values[name]; ok {
 				return scalar(item)
@@ -270,18 +290,52 @@ func facts(items []model.FusedConclusion) ([]scopedFacts, uint64, bool) {
 			}
 			return nil
 		}
-		f := rules.Facts{IKEVersion: get(model.PropertyIKEVersion), EncryptionAlgorithm: get(model.PropertyChildEncryption), IntegrityAlgorithm: get(model.PropertyChildIntegrity), DHGroup: get(model.PropertyIKEDHGroup), PFS: parseBool(model.PropertyChildPFS), ReplayProtection: parseBool(model.PropertyReplayEnabled), MetadataExposure: metadataExposure, MetadataKnown: metadataKnown}
+		parseNumber := func(name string) (uint64, bool) {
+			value := get(name)
+			if value == "" {
+				return 0, false
+			}
+			var number uint64
+			_, err := fmt.Sscan(value, &number)
+			return number, err == nil
+		}
+		evidence := make(map[string]rules.EvidenceReference, len(values))
+		for property, item := range values {
+			sources := make([]string, 0, len(item.WinningSources))
+			for _, source := range item.WinningSources {
+				sources = append(sources, string(source))
+			}
+			evidence[property] = rules.EvidenceReference{PropertyKey: property, Value: scalar(item), EvidenceIDs: append([]string(nil), item.EvidenceIDs...), Sources: sources}
+		}
+		if scope.typ == "ANALYSIS" && metadataKnown {
+			evidence[model.PropertyMetadataExposure] = metadataEvidence
+		}
+		ikeKey, ikeKeyKnown := parseNumber(model.PropertyIKEEncryptionKeyBits)
+		ikeTag, ikeTagKnown := parseNumber(model.PropertyIKEAEADTagBits)
+		childKey, childKeyKnown := parseNumber(model.PropertyChildEncryptionKeyBits)
+		childTag, childTagKnown := parseNumber(model.PropertyChildAEADTagBits)
+		ikeLifetime, ikeLifetimeKnown := parseNumber(model.PropertyIKELifetimeSeconds)
+		childLifetime, childLifetimeKnown := parseNumber(model.PropertyChildLifetimeSeconds)
+		installAge, installAgeKnown := parseNumber(model.PropertyChildInstallAgeSeconds)
+		remaining, remainingKnown := parseNumber(model.PropertyChildRemainingLifetimeSeconds)
+		replayWindow, replayWindowKnown := parseNumber(model.PropertyReplayWindow)
+		selectorsKnown := get(model.PropertyChildLocalSelectors) != "" && get(model.PropertyChildRemoteSelectors) != ""
+		f := rules.Facts{ResourceType: scope.typ, IKEVersion: get(model.PropertyIKEVersion), IKEEncryption: get(model.PropertyIKEEncryption), IKEIntegrity: get(model.PropertyIKEIntegrity), IKEAuthentication: get(model.PropertyIKEAuthentication), DHGroup: get(model.PropertyIKEDHGroup), IKEEncryptionKeyBits: ikeKey, IKEEncryptionKeyKnown: ikeKeyKnown, IKEAEADTagBits: ikeTag, IKEAEADTagKnown: ikeTagKnown, IKELifetimeSeconds: ikeLifetime, IKELifetimeKnown: ikeLifetimeKnown, EncryptionAlgorithm: get(model.PropertyChildEncryption), IntegrityAlgorithm: get(model.PropertyChildIntegrity), EncryptionKeyBits: childKey, EncryptionKeyKnown: childKeyKnown, AEADTagBits: childTag, AEADTagKnown: childTagKnown, Mode: get(model.PropertyChildMode), Protocol: get(model.PropertyChildProtocol), State: get(model.PropertyChildState), Direction: get(model.PropertyChildDirection), SelectorsKnown: selectorsKnown, PFS: parseBool(model.PropertyChildPFS), FreshExchangeObserved: parseBool(model.PropertyChildFreshExchange), ReplayProtection: parseBool(model.PropertyReplayEnabled), ReplayESN: parseBool(model.PropertyReplayESN), ReplayWindow: replayWindow, ReplayWindowKnown: replayWindowKnown, SALifetimeSeconds: childLifetime, SALifetimeKnown: childLifetimeKnown, InstallAgeSeconds: installAge, InstallAgeKnown: installAgeKnown, RemainingExpirySeconds: remaining, RemainingExpiryKnown: remainingKnown, MetadataExposure: metadataExposure, MetadataKnown: metadataKnown && scope.typ == "ANALYSIS", Evidence: evidence}
+		f.ConfiguredIKEProposals = get(model.PropertyConfiguredIKEProposals)
+		f.ConfiguredChildProposals = get(model.PropertyConfiguredChildProposals)
+		if consistency := parseBool(model.PropertySAConfigurationRuntimeConsistent); consistency != nil {
+			f.ConfigurationRuntimeKnown, f.ConfigurationRuntimeConsistent = true, *consistency
+		}
 		// Only a CHILD-SA AEAD transform can supply CHILD-SA integrity. Never
 		// substitute the cipher or integrity algorithm protecting the IKE SA.
 		if f.IntegrityAlgorithm == "" && isAEAD(f.EncryptionAlgorithm) {
 			f.IntegrityAlgorithm = "AEAD"
 			childAEAD = true
 		}
-		if value := get(model.PropertyChildLifetimeSeconds); value != "" {
-			f.SALifetimeKnown = true
-			_, _ = fmt.Sscan(value, &f.SALifetimeSeconds)
-		}
 		scopes = append(scopes, scopedFacts{ResourceType: scope.typ, ResourceID: scope.id, Facts: f})
+	}
+	if metadataKnown && !hasAnalysisScope {
+		scopes = append(scopes, scopedFacts{ResourceType: "METADATA", ResourceID: "analysis", Facts: rules.Facts{ResourceType: "METADATA", MetadataExposure: metadataExposure, MetadataKnown: true, Evidence: map[string]rules.EvidenceReference{model.PropertyMetadataExposure: metadataEvidence}}})
 	}
 	if childAEAD {
 		knownConfiguration[model.PropertyChildIntegrity] = true
@@ -300,9 +354,14 @@ func facts(items []model.FusedConclusion) ([]scopedFacts, uint64, bool) {
 
 func securityProperty(key string) bool {
 	switch key {
-	case model.PropertyIKEVersion, model.PropertyIKEEncryption, model.PropertyIKEIntegrity, model.PropertyIKEDHGroup,
-		model.PropertyChildEncryption, model.PropertyChildIntegrity, model.PropertyChildPFS,
-		model.PropertyReplayEnabled, model.PropertyChildLifetimeSeconds:
+	case model.PropertyIKEVersion, model.PropertyIKEEncryption, model.PropertyIKEIntegrity, model.PropertyIKEAuthentication, model.PropertyConfiguredIKEProposals, model.PropertyConfiguredChildProposals,
+		model.PropertyIKEEncryptionKeyBits, model.PropertyIKEAEADTagBits, model.PropertyIKEDHGroup, model.PropertyIKELifetimeSeconds,
+		model.PropertyChildMode, model.PropertyChildProtocol, model.PropertyChildState, model.PropertyChildDirection,
+		model.PropertyChildLocalSelectors, model.PropertyChildRemoteSelectors, model.PropertyChildEncryption,
+		model.PropertyChildIntegrity, model.PropertyChildEncryptionKeyBits, model.PropertyChildAEADTagBits,
+		model.PropertyChildPFS, model.PropertyChildFreshExchange, model.PropertyReplayEnabled, model.PropertyReplayWindow,
+		model.PropertyReplayESN, model.PropertyReplaySequence, model.PropertyChildLifetimeSeconds,
+		model.PropertyChildInstallAgeSeconds, model.PropertyChildRemainingLifetimeSeconds, model.PropertySAConfigurationRuntimeConsistent:
 		return true
 	default:
 		return false
@@ -313,21 +372,27 @@ func mergeAssessments(items []rules.Assessment) rules.Assessment {
 	if len(items) == 0 {
 		return rules.Assess(rules.Facts{})
 	}
-	out := rules.Assessment{ThreatMatrix: map[rules.Severity]int{}, RuleResults: map[string]rules.RuleResult{}}
+	out := rules.Assessment{PolicyID: rules.SIHBaselinePolicyID, PolicyLabel: rules.SIHBaselinePolicyLabel, PolicyReference: rules.SIHBaselineReference, ThreatMatrix: map[rules.Severity]int{}, RuleResults: map[string]rules.RuleResult{}}
 	for _, item := range items {
 		for id, result := range item.RuleResults {
-			combined := out.RuleResults[id]
-			combined.Weight = result.Weight
-			combined.Known = combined.Known || result.Known
-			combined.Failed = combined.Failed || result.Failed
+			combined, exists := out.RuleResults[id]
+			if !exists || controlRank(result.Status) > controlRank(combined.Status) {
+				combined.Status = result.Status
+			}
+			combined.Weight, combined.Known, combined.Failed = result.Weight, combined.Known || result.Known, combined.Failed || result.Failed
 			out.RuleResults[id] = combined
 		}
+		out.Controls = append(out.Controls, item.Controls...)
 		out.Findings = append(out.Findings, item.Findings...)
 		for severity, count := range item.ThreatMatrix {
 			out.ThreatMatrix[severity] += count
 		}
 	}
 	for _, result := range out.RuleResults {
+		if result.Status == rules.ControlNotApplicable {
+			out.NotApplicableRule++
+			continue
+		}
 		if !result.Known {
 			out.UnknownRule++
 			continue
@@ -348,6 +413,21 @@ func mergeAssessments(items []rules.Assessment) rules.Assessment {
 		return out.Findings[i].ResourceType+out.Findings[i].ResourceID+out.Findings[i].RuleID < out.Findings[j].ResourceType+out.Findings[j].ResourceID+out.Findings[j].RuleID
 	})
 	return out
+}
+
+func controlRank(status rules.ControlStatus) int {
+	switch status {
+	case rules.ControlFail:
+		return 4
+	case rules.ControlPass:
+		return 3
+	case rules.ControlUnknown:
+		return 2
+	case rules.ControlNotApplicable:
+		return 1
+	default:
+		return 0
+	}
 }
 
 func assessmentGrade(score int) string {

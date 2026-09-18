@@ -38,6 +38,9 @@ func Generate(input Input) Output {
 	fmt.Fprintf(&executive, "- Analysis: `%s`\n", markdown(input.AnalysisID))
 	fmt.Fprintf(&executive, "- Generated: `%s`\n", generatedAt.Format(time.RFC3339))
 	fmt.Fprintf(&executive, "- Security score: **%d/100 (%s)**\n", input.Assessment.Score, input.Assessment.Grade)
+	if input.Assessment.PolicyID != "" {
+		fmt.Fprintf(&executive, "- Assessment policy: **%s** (%s)\n", markdown(input.Assessment.PolicyLabel), markdown(input.Assessment.PolicyID))
+	}
 	fmt.Fprintf(&executive, "- Findings: **%d**\n\n", len(findings))
 	if len(findings) == 0 {
 		executive.WriteString("No deterministic rule finding was produced from the available evidence. Missing evidence is not treated as a pass.\n")
@@ -51,6 +54,9 @@ func Generate(input Input) Output {
 	var technical strings.Builder
 	fmt.Fprintf(&technical, "# IPsec VPN Technical Assessment\n\n")
 	fmt.Fprintf(&technical, "Analysis `%s`, generated `%s`.\n\n", markdown(input.AnalysisID), generatedAt.Format(time.RFC3339))
+	if input.Assessment.PolicyID != "" {
+		fmt.Fprintf(&technical, "Policy: **%s** (%s). Reference: %s. This is project-baseline compliance, not formal certification.\n\n", markdown(input.Assessment.PolicyLabel), markdown(input.Assessment.PolicyID), markdown(input.Assessment.PolicyReference))
+	}
 	technical.WriteString("## Fused conclusions\n\n")
 	technical.WriteString("| Property | Value | Evidence status | Confidence | Source |\n|---|---|---|---:|---|\n")
 	for _, conclusion := range conclusions {
@@ -61,6 +67,17 @@ func Generate(input Input) Output {
 		fmt.Fprintf(&technical, "### %s — %s\n\n", finding.RuleID, markdown(finding.Title))
 		fmt.Fprintf(&technical, "- Severity: `%s`\n- Description: %s\n- Recommendation: %s\n- Evidence properties: `%s`\n\n", finding.Severity, markdown(finding.Description), markdown(finding.Recommendation), markdown(strings.Join(finding.EvidenceProperties, "`, `")))
 	}
+	technical.WriteString("## Policy controls\n\n")
+	technical.WriteString("| Control | Area | Status | Affected resource | Supporting evidence |\n|---|---|---|---|---|\n")
+	for _, control := range input.Assessment.Controls {
+		refs := make([]string, 0, len(control.Evidence))
+		for _, evidence := range control.Evidence {
+			refs = append(refs, evidence.PropertyKey+"="+evidence.Value)
+		}
+		resource := strings.Trim(strings.TrimSpace(control.ResourceType+"/"+control.ResourceID), "/")
+		fmt.Fprintf(&technical, "| %s | %s | %s | %s | %s |\n", markdown(control.ControlID), markdown(control.Area), control.Status, markdown(resource), markdown(strings.Join(refs, ", ")))
+	}
+	technical.WriteString("\n")
 	technical.WriteString("## Interpretation limits\n\n")
 	technical.WriteString("ESP payloads were not decrypted. UNKNOWN means the classifier abstained; it does not mean the flow is anomalous. ANOMALY is a separate experimental signal. Missing gateway evidence is reported as unavailable, not guessed.\n")
 

@@ -49,13 +49,13 @@ func (s *Service) Breakdown(ctx context.Context, assessmentID string) (*riskv1.R
 	}
 	penaltyValue := 1 - float64(record.Result.Coverage)/100
 	return &riskv1.RiskBreakdown{
-		Cryptography:         makeCategory("IPSEC_CIPHER_001"),
-		Authentication:       makeCategory("IPSEC_INTEGRITY_001"),
-		KeyExchange:          makeCategory("IPSEC_IKE_001", "IPSEC_DH_001"),
-		Pfs:                  makeCategory("IPSEC_PFS_001"),
-		Replay:               makeCategory("IPSEC_REPLAY_001"),
-		Lifecycle:            makeCategory("IPSEC_LIFETIME_001"),
-		Metadata:             makeCategory("IPSEC_METADATA_001"),
+		Cryptography:         makeCategory("SIH_IKE_SUITE_001", "SIH_CHILD_SUITE_001", "SIH_IKE_POLICY_001", "SIH_CHILD_POLICY_001", "SIH_SA_PARAMETERS_001"),
+		Authentication:       makeCategory("SIH_AUTH_001"),
+		KeyExchange:          makeCategory("SIH_IKE_VERSION_001", "SIH_DH_001"),
+		Pfs:                  makeCategory("SIH_PFS_CONFIG_001", "SIH_PFS_EXCHANGE_001"),
+		Replay:               makeCategory("SIH_REPLAY_001"),
+		Lifecycle:            makeCategory("SIH_IKE_LIFETIME_001", "SIH_CHILD_LIFETIME_001"),
+		Metadata:             makeCategory("SIH_METADATA_001"),
 		UnknownEvidenceCount: record.UnknownEvidence,
 		ConfidencePenalty:    penaltyValue,
 	}, nil

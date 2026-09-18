@@ -117,7 +117,15 @@ func VICIEvidence(snapshot *viciv1.GatewaySnapshot) []ingest.EvidenceInput {
 		metadata := map[string]string{"connection_name": connection.GetName()}
 		items = appendString(items, model.SourceVICI, "ike.authentication_methods", strings.Join(connection.GetAuthenticationMethods(), ","), "VICI_CONNECTION", id, at, metadata, "vici:connection/"+connection.GetName())
 		items = appendString(items, model.SourceVICI, "ike.proposals", strings.Join(connection.GetIkeProposals(), ","), "VICI_CONNECTION", id, at, metadata, "vici:connection/"+connection.GetName())
+		items = appendString(items, model.SourceVICI, model.PropertyConfiguredIKEProposals, proposalFacts(connection.GetConfiguredIkeProposals()), "VICI_CONNECTION", id, at, metadata, "vici:connection/"+connection.GetName())
 		items = appendString(items, model.SourceVICI, "child.pfs_group", connection.GetPfsKeyExchange(), "VICI_CONNECTION", id, at, metadata, "vici:connection/"+connection.GetName())
+		ikeLifetime := connection.GetLifeTime()
+		if ikeLifetime == 0 {
+			ikeLifetime = connection.GetRekeyTime()
+		}
+		if ikeLifetime > 0 {
+			items = appendNumber(items, model.SourceVICI, model.PropertyIKELifetimeSeconds, float64(ikeLifetime), "VICI_CONNECTION", id, at, metadata)
+		}
 		if connection.GetPfsKeyExchange() != "" {
 			items = appendBool(items, model.SourceVICI, "child.pfs", true, "VICI_CONNECTION", id, at, metadata)
 		}
@@ -133,8 +141,13 @@ func VICIEvidence(snapshot *viciv1.GatewaySnapshot) []ingest.EvidenceInput {
 			groups := uniqueStrings(child.GetConfiguredPfsGroups())
 			items = appendString(items, model.SourceVICI, "config.child.mode", child.GetMode(), "VICI_CONNECTION", id, at, childMeta, "vici:connection/"+connection.GetName())
 			items = appendBool(items, model.SourceVICI, "config.child.pfs_enabled", len(groups) > 0, "VICI_CONNECTION", id, at, childMeta)
+			items = appendBool(items, model.SourceVICI, model.PropertyChildPFS, len(groups) > 0, "VICI_CONNECTION", id, at, childMeta)
 			items = appendString(items, model.SourceVICI, "config.child.pfs_groups", strings.Join(groups, ","), "VICI_CONNECTION", id, at, childMeta, "vici:connection/"+connection.GetName())
+			items = appendString(items, model.SourceVICI, model.PropertyConfiguredChildProposals, proposalFacts(append(append([]*viciv1.ViciProposal{}, child.GetEspProposals()...), child.GetAhProposals()...)), "VICI_CONNECTION", id, at, childMeta, "vici:connection/"+connection.GetName())
 			items = appendNumber(items, model.SourceVICI, "config.child.rekey_seconds", float64(child.GetRekeyTime()), "VICI_CONNECTION", id, at, childMeta)
+			if child.GetRekeyTime() > 0 {
+				items = appendNumber(items, model.SourceVICI, model.PropertyChildLifetimeSeconds, float64(child.GetRekeyTime()), "VICI_CONNECTION", id, at, childMeta)
+			}
 		}
 	}
 	for index, certificate := range snapshot.GetCertificates() {
@@ -171,7 +184,7 @@ func XFRMEvidence(snapshot *xfrmv1.KernelSnapshot) []ingest.EvidenceInput {
 		}
 		items = appendBool(items, model.SourceXFRM, "sa.runtime_verified", true, "XFRM_STATE", id, at, metadata)
 		items = appendString(items, model.SourceXFRM, "sa.lifecycle_state", "INSTALLED", "XFRM_STATE", id, at, metadata, "netlink:xfrm-state/"+id)
-		for key, value := range map[string]uint64{"replay.window": uint64(state.GetReplayWindow()), "replay.sequence": state.GetSequence(), "replay.outbound_sequence": state.GetOutboundSequence(), "child.encryption_key_length_bits": uint64(state.GetEncryptionKeyLength()), "child.aead_salt_length_bits": uint64(state.GetAeadSaltLength()), "child.authentication_key_length_bits": uint64(state.GetAuthenticationKeyLength()), "traffic.bytes": state.GetBytes(), "traffic.packet_count": state.GetPackets(), "sa.byte_soft_limit": state.GetByteSoftLimit(), "sa.byte_limit": state.GetByteLimit(), "sa.packet_soft_limit": state.GetPacketSoftLimit(), "sa.packet_limit": state.GetPacketLimit()} {
+		for key, value := range map[string]uint64{"replay.window": uint64(state.GetReplayWindow()), "replay.sequence": state.GetSequence(), "replay.outbound_sequence": state.GetOutboundSequence(), "child.encryption_key_length_bits": uint64(state.GetEncryptionKeyLength()), "child.aead_tag_length_bits": uint64(state.GetAeadIcvLength()), "child.aead_salt_length_bits": uint64(state.GetAeadSaltLength()), "child.authentication_key_length_bits": uint64(state.GetAuthenticationKeyLength()), "traffic.bytes": state.GetBytes(), "traffic.packet_count": state.GetPackets(), "sa.byte_soft_limit": state.GetByteSoftLimit(), "sa.byte_limit": state.GetByteLimit(), "sa.packet_soft_limit": state.GetPacketSoftLimit(), "sa.packet_limit": state.GetPacketLimit()} {
 			items = appendNumber(items, model.SourceXFRM, key, float64(value), "XFRM_STATE", id, at, metadata)
 		}
 		if state.GetInstallTimeEpochSeconds() > 0 {
@@ -254,4 +267,16 @@ func uniqueStrings(values []string) []string {
 	}
 	sort.Strings(result)
 	return result
+}
+
+func proposalFacts(proposals []*viciv1.ViciProposal) string {
+	rows := make([]string, 0, len(proposals))
+	for _, proposal := range proposals {
+		if proposal == nil {
+			continue
+		}
+		fields := []string{"encr=" + strings.Join(uniqueStrings(proposal.GetEncryption()), ","), "integ=" + strings.Join(uniqueStrings(proposal.GetIntegrity()), ","), "prf=" + strings.Join(uniqueStrings(proposal.GetPrf()), ","), "ke=" + strings.Join(uniqueStrings(append(append([]string(nil), proposal.GetKeyExchange()...), proposal.GetAdditionalKeyExchange()...)), ",")}
+		rows = append(rows, strings.Join(fields, "|"))
+	}
+	return strings.Join(rows, ";")
 }

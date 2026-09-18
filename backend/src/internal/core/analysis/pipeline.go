@@ -24,6 +24,7 @@ import (
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/fusion/engine"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/fusion/ingest"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/fusion/model"
+	rules "github.com/naman9271/SIH26160---Team-Alchemist/src/internal/security"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/sensor/acquisition"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/sensor/capture"
 	"github.com/naman9271/SIH26160---Team-Alchemist/src/internal/sensor/flow"
@@ -111,7 +112,7 @@ func (p *Pipeline) Run(ctx context.Context, record Record, advance func(analysis
 	p.publish(ctx, record.ID, eventv1.CoreEventCategory_FUSION_COMPLETED)
 	if record.Options.GetEnableSecurity() && p.Security != nil {
 		advance(analysisv1.AnalysisStage_SECURITY_ANALYSIS)
-		assessment, err := p.Security.Run(ctx, record.ID, record.PolicyID)
+		assessment, err := p.Security.Run(ctx, record.ID, rules.SIHBaselinePolicyID)
 		if err != nil {
 			return err
 		}
@@ -499,7 +500,7 @@ func (p *Pipeline) refreshLiveAssessment(ctx context.Context, record Record, adv
 		return nil
 	}
 	advance(analysisv1.AnalysisStage_SECURITY_ANALYSIS)
-	assessment, err := p.Security.Run(ctx, record.ID, record.PolicyID)
+	assessment, err := p.Security.Run(ctx, record.ID, rules.SIHBaselinePolicyID)
 	if err != nil {
 		return err
 	}

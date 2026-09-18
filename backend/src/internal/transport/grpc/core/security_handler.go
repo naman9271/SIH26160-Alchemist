@@ -108,7 +108,7 @@ func (h *SecurityHandler) GetCompliance(ctx context.Context, r *securityv1.GetCo
 	if e != nil {
 		return nil, shared.ToGRPC(e)
 	}
-	return &securityv1.ComplianceSummary{PolicyId: v.PolicyID, RulesEvaluated: uint64(v.Result.EvaluatedRule), RulesFailed: uint64(len(v.Result.Findings)), RulesUnknown: v.UnknownEvidence}, nil
+	return &securityv1.ComplianceSummary{PolicyId: v.PolicyID, Label: v.Result.PolicyLabel, PolicyReference: v.Result.PolicyReference, RulesEvaluated: uint64(v.Result.EvaluatedRule), RulesFailed: uint64(len(v.Result.Findings)), RulesUnknown: uint64(v.Result.UnknownRule), RulesNotApplicable: uint64(v.Result.NotApplicableRule)}, nil
 }
 func (h *SecurityHandler) GetMetadataExposure(ctx context.Context, r *securityv1.GetMetadataExposureRequest) (*securityv1.MetadataExposureAssessment, error) {
 	if e := h.valid(); e != nil {
@@ -134,12 +134,40 @@ func (h *SecurityHandler) Reevaluate(ctx context.Context, r *securityv1.Reevalua
 	return &securityv1.ReevaluateSecurityResponse{AssessmentId: v.ID, State: v.State}, shared.ToGRPC(e)
 }
 func assessment(v coresecurity.Record) *securityv1.SecurityAssessment {
-	out := &securityv1.SecurityAssessment{AssessmentId: v.ID, AnalysisId: v.AnalysisID, PolicyId: v.PolicyID, State: v.State, Score: uint32(v.Result.Score), Grade: v.Result.Grade, EvaluatedAt: timestamppb.New(v.UpdatedAt), FailureReason: v.Failure}
+	out := &securityv1.SecurityAssessment{AssessmentId: v.ID, AnalysisId: v.AnalysisID, PolicyId: v.PolicyID, PolicyLabel: v.Result.PolicyLabel, PolicyReference: v.Result.PolicyReference, State: v.State, Score: uint32(v.Result.Score), Grade: v.Result.Grade, EvaluatedAt: timestamppb.New(v.UpdatedAt), FailureReason: v.Failure}
 	for i, f := range v.Result.Findings {
 		out.Findings = append(out.Findings, finding(v.ID, i, f))
+	}
+	for _, control := range v.Result.Controls {
+		out.Controls = append(out.Controls, controlResult(control))
 	}
 	return out
 }
 func finding(id string, index int, f rules.Finding) *securityv1.SecurityFinding {
-	return &securityv1.SecurityFinding{FindingId: fmt.Sprintf("%s:%d", id, index), RuleId: f.RuleID, Title: f.Title, Severity: string(f.Severity), Category: "IPSEC_CONFIGURATION", Description: f.Description, Recommendation: f.Recommendation, EvidenceProperties: f.EvidenceProperties}
+	out := &securityv1.SecurityFinding{FindingId: fmt.Sprintf("%s:%d", id, index), RuleId: f.RuleID, Title: f.Title, Severity: string(f.Severity), Category: "SIH_BASELINE_COMPLIANCE", Description: f.Description, Recommendation: f.Recommendation, EvidenceProperties: f.EvidenceProperties, AffectedResourceType: f.ResourceType, AffectedResourceId: f.ResourceID, PolicyId: f.PolicyID, PolicyReference: f.PolicyReference}
+	for _, evidence := range f.Evidence {
+		out.Evidence = append(out.Evidence, supportingEvidence(evidence))
+	}
+	return out
+}
+
+func controlResult(value rules.ControlResult) *securityv1.SecurityControlResult {
+	status := securityv1.ControlStatus_UNKNOWN
+	switch value.Status {
+	case rules.ControlPass:
+		status = securityv1.ControlStatus_PASS
+	case rules.ControlFail:
+		status = securityv1.ControlStatus_FAIL
+	case rules.ControlNotApplicable:
+		status = securityv1.ControlStatus_NOT_APPLICABLE
+	}
+	out := &securityv1.SecurityControlResult{ControlId: value.ControlID, Area: value.Area, Title: value.Title, Status: status, Severity: string(value.Severity), Explanation: value.Explanation, Remediation: value.Remediation, AffectedResourceType: value.ResourceType, AffectedResourceId: value.ResourceID, PolicyId: value.PolicyID, PolicyReference: value.PolicyReference, Weight: uint32(value.Weight)}
+	for _, evidence := range value.Evidence {
+		out.Evidence = append(out.Evidence, supportingEvidence(evidence))
+	}
+	return out
+}
+
+func supportingEvidence(value rules.EvidenceReference) *securityv1.SupportingEvidence {
+	return &securityv1.SupportingEvidence{PropertyKey: value.PropertyKey, NormalizedValue: value.Value, EvidenceIds: value.EvidenceIDs, Sources: value.Sources}
 }
