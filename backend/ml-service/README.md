@@ -34,7 +34,7 @@ python -m src.anomaly.train
 
 The group cap keeps one representative window per capture so long captures cannot dominate. The resulting table has 25 captures per class and excludes duration plus all identifiers, labels, addresses, timestamps, filenames, dataset identity, and IPsec configuration fields from model inputs.
 
-The current selected Random Forest scored 1.00 macro F1 on the 35-capture lab test. This is internal prototype evidence from one generator environment. Because that test generation predates the present threshold-selection process, `src.evaluate` marks it as non-final until a new disjoint test corpus carries `locked_test_generation=post-threshold-v2`. UNKNOWN calibration now divides OOD capture groups into separate calibration and final-evaluation partitions. The experimental Isolation Forest reached 0.918 anomaly F1 on its 65-capture lab evaluation. Exact generated results live under `artifacts/`.
+The current selected Random Forest scored 1.00 macro F1 on the 35-capture lab test. This is internal prototype evidence from one generator environment. Because that test generation predates the present threshold-selection process, `src.evaluate` marks it as non-final until a new disjoint test corpus carries `locked_test_generation=post-threshold-v2` in the capture manifest. The preprocessing and dataset builders preserve this marker as audit metadata without exposing it to the model. UNKNOWN calibration now divides OOD capture groups into separate calibration and final-evaluation partitions. The experimental Isolation Forest reached 0.918 anomaly F1 on its 65-capture lab evaluation. Exact generated results live under `artifacts/`.
 
 ## UNKNOWN calibration
 

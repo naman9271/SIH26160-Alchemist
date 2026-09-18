@@ -213,6 +213,7 @@ def _candidate_from_row(
         "excluded_leakage_columns": row.get("excluded_leakage_columns") or [],
         "input_file": input_file,
         "declared_split": row.get("declared_split"),
+        "locked_test_generation": row.get("locked_test_generation"),
     }
     declared_split = row.get("declared_split")
     if declared_split not in {None, "train", "validation", "locked_test"}:
@@ -246,6 +247,7 @@ def iter_candidates(
         "split_group_id",
         "excluded_leakage_columns",
         "declared_split",
+        "locked_test_generation",
         *safe_features,
     }
     for path in paths:
@@ -297,6 +299,7 @@ def training_arrow_schema(safe_features: Sequence[str]) -> pa.Schema:
                         pa.field("excluded_leakage_columns", pa.list_(pa.string())),
                         pa.field("input_file", pa.string(), nullable=False),
                         pa.field("declared_split", pa.string()),
+                        pa.field("locked_test_generation", pa.string()),
                     ]
                 ),
                 nullable=False,

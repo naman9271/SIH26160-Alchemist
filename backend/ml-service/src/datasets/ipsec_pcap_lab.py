@@ -71,6 +71,9 @@ class IpsecPcapLabAdapter(DatasetAdapter):
                     )
                     continue
                 declared_split = (row.get("split") or "").strip() or None
+                locked_test_generation = (
+                    row.get("locked_test_generation") or ""
+                ).strip() or None
                 if declared_split not in {None, "train", "validation", "locked_test"}:
                     self.total_source_records += 1
                     self.skip(
@@ -114,6 +117,7 @@ class IpsecPcapLabAdapter(DatasetAdapter):
                             "canonical_label": canonical_label,
                             "split_group_id": f"{self.cli_name}:{row.get('sample_id') or capture_id}",
                             "declared_split": declared_split,
+                            "locked_test_generation": locked_test_generation,
                             "excluded_leakage_columns": [
                                 "sample_id and capture filename",
                                 "traffic_class label",

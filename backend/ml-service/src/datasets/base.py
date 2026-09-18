@@ -44,6 +44,7 @@ class PreprocessedRecord(BaseModel):
     canonical_label: str = Field(min_length=1)
     split_group_id: str = Field(min_length=1)
     declared_split: str | None = None
+    locked_test_generation: str | None = None
     excluded_leakage_columns: list[str] = Field(default_factory=list)
     flow_id: str | None = None
 
@@ -86,6 +87,8 @@ class PreprocessedRecord(BaseModel):
             raise ValueError("canonical_label must be a supported application class")
         if self.declared_split not in {None, "train", "validation", "locked_test"}:
             raise ValueError("declared_split must be train, validation, or locked_test")
+        if self.locked_test_generation and self.declared_split != "locked_test":
+            raise ValueError("locked_test_generation is valid only for locked_test records")
 
         if all(
             value is not None
