@@ -28,9 +28,11 @@ var defaultBurstGap = time.Duration(featureSpec.BurstGapSeconds * float64(time.S
 var defaultIdleGap = time.Duration(featureSpec.IdleGapSeconds * float64(time.Second))
 
 type Config struct {
-	WindowDuration time.Duration
-	BurstGap       time.Duration
-	IdleGap        time.Duration
+	WindowDuration     time.Duration
+	BurstGap           time.Duration
+	IdleGap            time.Duration
+	MaxRetainedWindows int
+	MaxWarnings        int
 }
 
 type Packet struct {
@@ -100,10 +102,20 @@ type Service struct {
 	windows        map[string]*window
 	subscribers    map[*subscriber]struct{}
 	warnings       []Warning
+	windowOrder    []string
+	droppedWindows map[string]uint64
+	droppedStreams map[string]uint64
+	maxWindows     int
+	maxWarnings    int
 	windowDuration time.Duration
 	burstGap       time.Duration
 	idleGap        time.Duration
 }
+
+const (
+	defaultMaxRetainedWindows = 2_048
+	defaultMaxWarnings        = 1_024
+)
 
 func New(config Config) *Service {
 	if config.WindowDuration <= 0 {
@@ -121,7 +133,13 @@ func New(config Config) *Service {
 			config.IdleGap = config.WindowDuration
 		}
 	}
-	return &Service{flows: map[string]*record{}, byKey: map[string]string{}, windows: map[string]*window{}, subscribers: map[*subscriber]struct{}{}, windowDuration: config.WindowDuration, burstGap: config.BurstGap, idleGap: config.IdleGap}
+	if config.MaxRetainedWindows <= 0 {
+		config.MaxRetainedWindows = defaultMaxRetainedWindows
+	}
+	if config.MaxWarnings <= 0 {
+		config.MaxWarnings = defaultMaxWarnings
+	}
+	return &Service{flows: map[string]*record{}, byKey: map[string]string{}, windows: map[string]*window{}, subscribers: map[*subscriber]struct{}{}, droppedWindows: map[string]uint64{}, droppedStreams: map[string]uint64{}, maxWindows: config.MaxRetainedWindows, maxWarnings: config.MaxWarnings, windowDuration: config.WindowDuration, burstGap: config.BurstGap, idleGap: config.IdleGap}
 }
 func (s *Service) ObservePacket(ctx context.Context, p Packet) (string, error) {
 	if err := ctx.Err(); err != nil {
@@ -257,9 +275,33 @@ func (s *Service) finalizeLocked(r *record, reason string) *window {
 	}
 	w := &window{id: string(id), flowID: r.id, sessionID: r.session, reason: reason, aggregationScope: scope, start: p[0].at, end: p[len(p)-1].at, burstGap: s.burstGap, idleGap: s.idleGap, finalized: true, packets: p}
 	s.windows[w.id] = w
+	s.windowOrder = append(s.windowOrder, w.id)
 	r.windows = append(r.windows, w.id)
+	s.enforceWindowLimitLocked()
 	r.pending = nil
 	return w
+}
+
+func (s *Service) enforceWindowLimitLocked() {
+	for len(s.windowOrder) > s.maxWindows {
+		id := s.windowOrder[0]
+		s.windowOrder = s.windowOrder[1:]
+		w := s.windows[id]
+		if w == nil {
+			continue
+		}
+		delete(s.windows, id)
+		if owner := s.flows[w.flowID]; owner != nil {
+			for index, windowID := range owner.windows {
+				if windowID == id {
+					owner.windows = append(owner.windows[:index], owner.windows[index+1:]...)
+					break
+				}
+			}
+		}
+		s.droppedWindows[w.sessionID]++
+		s.addWarningLocked(Warning{SessionID: w.sessionID, Reason: "RETAINED_WINDOW_LIMIT", Count: 1, At: time.Now().UTC()})
+	}
 }
 func (s *Service) FinalizeFlow(ctx context.Context, id, reason string) error {
 	if err := ctx.Err(); err != nil {
@@ -304,23 +346,36 @@ func (s *Service) closeSession(ctx context.Context, sessionID, reason string, re
 			delete(s.flows, id)
 		}
 	}
-	for sub := range s.subscribers {
-		if sub.session == sessionID {
-			sub.once.Do(func() { close(sub.done); close(sub.ch) })
-			delete(s.subscribers, sub)
-		}
-	}
 	if remove {
 		for id, w := range s.windows {
 			if w.sessionID == sessionID {
 				delete(s.windows, id)
 			}
 		}
+		kept := s.windowOrder[:0]
+		for _, id := range s.windowOrder {
+			if w := s.windows[id]; w != nil && w.sessionID != sessionID {
+				kept = append(kept, id)
+			}
+		}
+		s.windowOrder = kept
+		delete(s.droppedWindows, sessionID)
+		delete(s.droppedStreams, sessionID)
 	}
 	s.mu.Unlock()
 	for _, w := range out {
 		s.publish(w)
 	}
+	// Deliver final partial windows before closing subscribers. This is what
+	// lets live analysis classify the final usable ten-second window on stop.
+	s.mu.Lock()
+	for sub := range s.subscribers {
+		if sub.session == sessionID {
+			sub.once.Do(func() { close(sub.done); close(sub.ch) })
+			delete(s.subscribers, sub)
+		}
+	}
+	s.mu.Unlock()
 	return nil
 }
 func (s *Service) List(ctx context.Context, req *flowv1.ListFlowsRequest) ([]*record, string, error) {
@@ -473,7 +528,7 @@ func (s *Service) publish(w *window) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if !w.IsMLReady() {
-		s.warnings = append(s.warnings, Warning{SessionID: w.sessionID, Reason: "INSUFFICIENT_WINDOW_DATA", Count: 1, At: time.Now().UTC()})
+		s.addWarningLocked(Warning{SessionID: w.sessionID, Reason: "INSUFFICIENT_WINDOW_DATA", Count: 1, At: time.Now().UTC()})
 		return
 	}
 	for sub := range s.subscribers {
@@ -483,13 +538,23 @@ func (s *Service) publish(w *window) {
 		select {
 		case sub.ch <- w.id:
 		default:
-			s.warnings = append(s.warnings, Warning{SessionID: w.sessionID, Reason: "FEATURE_STREAM_BACKPRESSURE", Count: 1, At: time.Now().UTC()})
+			s.droppedStreams[w.sessionID]++
+			s.addWarningLocked(Warning{SessionID: w.sessionID, Reason: "FEATURE_STREAM_BACKPRESSURE", Count: 1, At: time.Now().UTC()})
 			if sub.policy == flowv1.FeatureBackpressurePolicy_CANCEL_SESSION {
 				sub.once.Do(func() { close(sub.done); close(sub.ch) })
 				delete(s.subscribers, sub)
 			}
 		}
 	}
+}
+
+func (s *Service) addWarningLocked(value Warning) {
+	if len(s.warnings) >= s.maxWarnings {
+		copy(s.warnings, s.warnings[1:])
+		s.warnings[len(s.warnings)-1] = value
+		return
+	}
+	s.warnings = append(s.warnings, value)
 }
 func (s *Service) Warnings() []Warning {
 	s.mu.RLock()
@@ -507,6 +572,36 @@ func (s *Service) RuntimeCounts() (activeFlows, pendingPackets, subscribers uint
 		pendingPackets += uint64(len(record.pending))
 	}
 	return activeFlows, pendingPackets, uint64(len(s.subscribers))
+}
+
+// StreamStats exposes bounded-retention and non-blocking stream loss to Core
+// and the dashboard without exposing packet contents.
+type StreamStats struct {
+	SessionID              string `json:"session_id"`
+	RetainedWindows        uint64 `json:"retained_windows"`
+	DroppedRetainedWindows uint64 `json:"dropped_retained_windows"`
+	DroppedFeatureWindows  uint64 `json:"dropped_feature_windows"`
+	ActiveSubscribers      uint64 `json:"active_subscribers"`
+}
+
+func (s *Service) StreamStats(sessionID string) StreamStats {
+	if s == nil {
+		return StreamStats{SessionID: sessionID}
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	stats := StreamStats{SessionID: sessionID, DroppedRetainedWindows: s.droppedWindows[sessionID], DroppedFeatureWindows: s.droppedStreams[sessionID]}
+	for _, item := range s.windows {
+		if item.sessionID == sessionID {
+			stats.RetainedWindows++
+		}
+	}
+	for subscriber := range s.subscribers {
+		if subscriber.session == sessionID {
+			stats.ActiveSubscribers++
+		}
+	}
+	return stats
 }
 func ToProto(r *record) *flowv1.Flow {
 	return &flowv1.Flow{FlowId: r.id, SessionId: r.session, Protocol: r.protocol, SourceAddress: r.src, DestinationAddress: r.dst, SourcePort: r.sport, DestinationPort: r.dport, Spi: r.spi, FirstSeen: shared.Timestamp(r.stats.first), LastSeen: shared.Timestamp(r.stats.last), PacketCount: r.stats.count, ByteCount: r.stats.bytes, Active: r.active}

@@ -118,6 +118,37 @@ func TestSinglePacketWindowIsNotPublishedForML(t *testing.T) {
 	}
 }
 
+func TestStopForSessionDeliversFinalUsableWindowBeforeClosingStream(t *testing.T) {
+	service := New(Config{})
+	ctx := context.Background()
+	stream, cancel, err := service.Subscribe(ctx, "session", flowv1.FeatureBackpressurePolicy_DROP_FEATURE_WINDOW, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cancel()
+	start := time.Now().UTC()
+	observe(t, service, Packet{SessionID: "session", Protocol: flowv1.FlowProtocol_ESP, SourceAddress: "192.0.2.1", DestinationAddress: "198.51.100.1", Size: 128, SeenAt: start})
+	observe(t, service, Packet{SessionID: "session", Protocol: flowv1.FlowProtocol_ESP, SourceAddress: "192.0.2.1", DestinationAddress: "198.51.100.1", Size: 128, SeenAt: start.Add(time.Second)})
+	if err := service.StopForSession(ctx, "session"); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case id, ok := <-stream:
+		if !ok || id == "" {
+			t.Fatalf("final window was not delivered: id=%q ok=%v", id, ok)
+		}
+		window, err := service.Window(ctx, id)
+		if err != nil || !window.IsMLReady() {
+			t.Fatalf("final window readiness = %v, err=%v", window != nil && window.IsMLReady(), err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for final feature window")
+	}
+	if _, ok := <-stream; ok {
+		t.Fatal("stream remained open after session stop")
+	}
+}
+
 func observe(t *testing.T, service *Service, packet Packet) string {
 	t.Helper()
 	id, err := service.ObservePacket(context.Background(), packet)

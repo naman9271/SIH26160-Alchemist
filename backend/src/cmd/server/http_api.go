@@ -44,10 +44,10 @@ func registerWorkflowAPI(mux *http.ServeMux, input *coreinput.Service, analysis 
 	mux.HandleFunc("GET /api/v1/system/overview", func(w http.ResponseWriter, r *http.Request) { getSystemOverview(w, r, system, localSensor) })
 	mux.HandleFunc("GET /api/v1/live-capture/interfaces", func(w http.ResponseWriter, r *http.Request) { listCaptureInterfaces(w, r, interfaces) })
 	mux.HandleFunc("POST /api/v1/live-captures", func(w http.ResponseWriter, r *http.Request) {
-		startLiveCapture(w, r, input, sessions, captures, viciService, xfrmService, workspace)
+		startLiveCapture(w, r, input, analysis, sessions, captures, flows, viciService, xfrmService, workspace)
 	})
 	mux.HandleFunc("GET /api/v1/live-captures/{sourceID}", func(w http.ResponseWriter, r *http.Request) {
-		getLiveCapture(w, r, input, sessions, captures, viciService, xfrmService)
+		getLiveCapture(w, r, input, analysis, sessions, captures, flows, viciService, xfrmService)
 	})
 	mux.HandleFunc("POST /api/v1/live-captures/{sourceID}/stop", func(w http.ResponseWriter, r *http.Request) { stopLiveCapture(w, r, input, analysis) })
 	mux.HandleFunc("POST /api/v1/pcap", func(w http.ResponseWriter, r *http.Request) { uploadPCAP(w, r, input, workspace) })
@@ -163,7 +163,7 @@ func listCaptureInterfaces(w http.ResponseWriter, r *http.Request, interfaces *n
 	writeJSON(w, http.StatusOK, map[string]any{"interfaces": result})
 }
 
-func startLiveCapture(w http.ResponseWriter, r *http.Request, input *coreinput.Service, sessions *session.Service, captures *capture.Service, viciService *vici.Service, xfrmService *xfrm.Service, workspace *coreworkspace.Service) {
+func startLiveCapture(w http.ResponseWriter, r *http.Request, input *coreinput.Service, analysis *coreanalysis.Service, sessions *session.Service, captures *capture.Service, flows *flow.Service, viciService *vici.Service, xfrmService *xfrm.Service, workspace *coreworkspace.Service) {
 	if sessions == nil || captures == nil {
 		writeWorkflowError(w, shared.NewError(shared.Unavailable, "", "live capture service is unavailable"))
 		return
@@ -176,6 +176,7 @@ func startLiveCapture(w http.ResponseWriter, r *http.Request, input *coreinput.S
 		EnableXFRM    bool   `json:"enable_xfrm"`
 		SavePCAP      bool   `json:"save_pcap"`
 		Consent       bool   `json:"consent"`
+		EnableML      *bool  `json:"enable_ml"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		writeWorkflowError(w, shared.NewError(shared.InvalidArgument, "", "invalid JSON request"))
@@ -221,10 +222,24 @@ func startLiveCapture(w http.ResponseWriter, r *http.Request, input *coreinput.S
 		writeWorkflowError(w, err)
 		return
 	}
-	writeLiveCapture(w, r, record, source.ID, sessions, captures, viciService, xfrmService)
+	analysisMode := workspacev1.AnalysisMode_PASSIVE_LIVE
+	if source.Mode == inputv1.InputMode_DEEP_ASSESSMENT {
+		analysisMode = workspacev1.AnalysisMode_DEEP_ASSESSMENT
+	}
+	enableML := true
+	if request.EnableML != nil {
+		enableML = *request.EnableML
+	}
+	analysisRecord, err := analysis.Start(r.Context(), source.ID, analysisMode, "", &analysisv1.AnalysisOptions{EnableSecurity: true, EnableFusion: true, EnableMetadataExposure: true, EnableMl: enableML})
+	if err != nil {
+		_, _ = input.StopLive(r.Context(), source.ID)
+		writeWorkflowError(w, err)
+		return
+	}
+	writeLiveCapture(w, r, record, source.ID, analysisRecord, sessions, captures, flows, viciService, xfrmService)
 }
 
-func getLiveCapture(w http.ResponseWriter, r *http.Request, input *coreinput.Service, sessions *session.Service, captures *capture.Service, viciService *vici.Service, xfrmService *xfrm.Service) {
+func getLiveCapture(w http.ResponseWriter, r *http.Request, input *coreinput.Service, analysis *coreanalysis.Service, sessions *session.Service, captures *capture.Service, flows *flow.Service, viciService *vici.Service, xfrmService *xfrm.Service) {
 	if captures == nil {
 		writeWorkflowError(w, shared.NewError(shared.Unavailable, "", "live capture service is unavailable"))
 		return
@@ -239,7 +254,8 @@ func getLiveCapture(w http.ResponseWriter, r *http.Request, input *coreinput.Ser
 		writeWorkflowError(w, err)
 		return
 	}
-	writeLiveCapture(w, r, record, source.ID, sessions, captures, viciService, xfrmService)
+	analysisRecord, _ := analysis.LatestForSource(r.Context(), source.ID)
+	writeLiveCapture(w, r, record, source.ID, analysisRecord, sessions, captures, flows, viciService, xfrmService)
 }
 
 func stopLiveCapture(w http.ResponseWriter, r *http.Request, input *coreinput.Service, analysis *coreanalysis.Service) {
@@ -252,11 +268,7 @@ func stopLiveCapture(w http.ResponseWriter, r *http.Request, input *coreinput.Se
 		writeWorkflowError(w, err)
 		return
 	}
-	mode := workspacev1.AnalysisMode_PASSIVE_LIVE
-	if source.Mode == inputv1.InputMode_DEEP_ASSESSMENT {
-		mode = workspacev1.AnalysisMode_DEEP_ASSESSMENT
-	}
-	record, err := analysis.Start(r.Context(), source.ID, mode, "", &analysisv1.AnalysisOptions{EnableSecurity: true, EnableFusion: true, EnableMetadataExposure: true, EnableMl: true})
+	record, err := analysis.LatestForSource(r.Context(), source.ID)
 	if err != nil {
 		writeWorkflowError(w, err)
 		return
@@ -269,13 +281,19 @@ func writeLiveCapture(w http.ResponseWriter, r *http.Request, record interface {
 	SessionID() string
 	InterfaceName() string
 	State() string
-}, sourceID string, sessions *session.Service, captures *capture.Service, viciService *vici.Service, xfrmService *xfrm.Service) {
-	counters, flows, vpnSessions, elapsed, err := captures.Stats(r.Context(), record.CaptureID())
+}, sourceID string, analysisRecord coreanalysis.Record, sessions *session.Service, captures *capture.Service, flows *flow.Service, viciService *vici.Service, xfrmService *xfrm.Service) {
+	counters, activeFlows, vpnSessions, elapsed, err := captures.Stats(r.Context(), record.CaptureID())
 	if err != nil {
 		writeWorkflowError(w, err)
 		return
 	}
-	result := map[string]any{"source_id": sourceID, "capture_id": record.CaptureID(), "session_id": record.SessionID(), "interface_name": record.InterfaceName(), "state": record.State(), "duration_seconds": uint64(elapsed.Seconds()), "packets_total": counters.PacketsTotal, "bytes_total": counters.BytesTotal, "ike_packets": counters.IKEPackets, "esp_packets": counters.ESPPackets, "ah_packets": counters.AHPackets, "nat_t_packets": counters.NATTPackets, "packet_drops": counters.PacketDrops, "active_flows": flows, "active_vpn_sessions": vpnSessions}
+	result := map[string]any{"source_id": sourceID, "capture_id": record.CaptureID(), "session_id": record.SessionID(), "interface_name": record.InterfaceName(), "state": record.State(), "duration_seconds": uint64(elapsed.Seconds()), "packets_total": counters.PacketsTotal, "bytes_total": counters.BytesTotal, "ike_packets": counters.IKEPackets, "esp_packets": counters.ESPPackets, "ah_packets": counters.AHPackets, "nat_t_packets": counters.NATTPackets, "packet_drops": counters.PacketDrops, "active_flows": activeFlows, "active_vpn_sessions": vpnSessions}
+	if analysisRecord.ID != "" {
+		result["analysis_id"], result["analysis_state"], result["stage"], result["snapshot_version"] = analysisRecord.ID, analysisRecord.State.String(), analysisRecord.Stage.String(), analysisRecord.SnapshotVersion
+	}
+	if flows != nil {
+		result["feature_stream"] = flows.StreamStats(record.SessionID())
+	}
 	if elapsed > 0 {
 		result["packets_per_second"] = float64(counters.PacketsTotal) / elapsed.Seconds()
 	}
@@ -354,7 +372,7 @@ func getAnalysisInsights(w http.ResponseWriter, r *http.Request, input *coreinpu
 	summary, _ := analysis.SummaryDetails(r.Context(), analysisID)
 
 	result := map[string]any{
-		"analysis": map[string]any{"analysis_id": record.ID, "source_id": record.SourceID, "state": record.State.String(), "stage": record.Stage.String(), "failure_reason": record.Failure, "created_at": record.CreatedAt, "updated_at": record.UpdatedAt},
+		"analysis": map[string]any{"analysis_id": record.ID, "source_id": record.SourceID, "state": record.State.String(), "stage": record.Stage.String(), "failure_reason": record.Failure, "snapshot_version": record.SnapshotVersion, "created_at": record.CreatedAt, "updated_at": record.UpdatedAt},
 		"progress": progress,
 		"summary":  summary,
 	}
@@ -453,6 +471,7 @@ func getAnalysisInsights(w http.ResponseWriter, r *http.Request, input *coreinpu
 				}
 				section["items"], section["next_page_token"] = items, next
 			}
+			section["feature_stream"] = flows.StreamStats(source.SessionID)
 		}
 		result["flows"] = section
 	}

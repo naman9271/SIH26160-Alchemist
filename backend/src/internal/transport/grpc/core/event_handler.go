@@ -77,7 +77,8 @@ func (h *EventHandler) Subscribe(request *eventv1.SubscribeRequest, stream event
 			if item.AnalysisID != analysisID || !matchesCategory(request.GetCategories(), item.Category) {
 				continue
 			}
-			if err := stream.Send(&eventv1.CoreEvent{EventId: item.ID, Sequence: item.Sequence, Category: item.Category, WorkspaceId: current.ID, AnalysisId: analysisID, OccurredAt: timestamppb.New(item.OccurredAt)}); err != nil {
+			payload, _ := structpb.NewStruct(item.Payload)
+			if err := stream.Send(&eventv1.CoreEvent{EventId: item.ID, Sequence: item.Sequence, Category: item.Category, WorkspaceId: current.ID, AnalysisId: analysisID, OccurredAt: timestamppb.New(item.OccurredAt), Payload: payload}); err != nil {
 				return err
 			}
 		case <-ctx.Done():

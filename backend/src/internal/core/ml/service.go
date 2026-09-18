@@ -205,13 +205,98 @@ func (s *Service) Start(ctx context.Context, analysisID string, sequence, shap b
 	return &mlv1.RunInferenceResponse{InferenceId: id, State: "COMPLETED"}, nil
 }
 
+// BeginLive creates a bounded, analysis-scoped inference result set. Windows
+// are supplied one at a time by the live pipeline, avoiding a full re-scan of
+// every retained flow whenever a ten-second window closes.
+func (s *Service) BeginLive(ctx context.Context, analysisID string) (string, error) {
+	if strings.TrimSpace(analysisID) == "" {
+		return "", shared.NewError(shared.InvalidArgument, "", "analysis_id is required")
+	}
+	s.mu.RLock()
+	predictor := s.predictor
+	s.mu.RUnlock()
+	if predictor == nil {
+		return "", shared.NewError(shared.FailedPrecondition, "", "ML worker is unavailable")
+	}
+	id := uuid.NewString()
+	s.mu.Lock()
+	s.jobs[id] = &job{id: id, analysisID: analysisID, state: "RUNNING", created: time.Now().UTC(), predictions: map[string]*mlv1.TrafficPrediction{}, explanations: map[string]*mlv1.PredictionExplanation{}}
+	s.mu.Unlock()
+	return id, nil
+}
+
+// PredictLiveWindow classifies one already-finalized ESP/NAT-T feature window.
+// It deliberately accepts only the shared metadata feature representation; no
+// endpoint addresses, capture labels, crypto settings, or payloads reach ML.
+func (s *Service) PredictLiveWindow(ctx context.Context, inferenceID string, feature *flowv1.FeatureWindow, shap bool) (*mlv1.TrafficPrediction, *mlv1.PredictionExplanation, error) {
+	if feature == nil || strings.TrimSpace(feature.GetWindowId()) == "" || !feature.GetFinalized() {
+		return nil, nil, shared.NewError(shared.InvalidArgument, "", "a finalized feature window is required")
+	}
+	item, err := s.get(inferenceID)
+	if err != nil {
+		return nil, nil, err
+	}
+	s.mu.RLock()
+	predictor := s.predictor
+	state := item.state
+	s.mu.RUnlock()
+	if predictor == nil || state != "RUNNING" {
+		return nil, nil, shared.NewError(shared.FailedPrecondition, "", "ML worker is unavailable")
+	}
+	var result *worker.PredictionResult
+	if shap {
+		result, err = predictor.PredictWithExplanations(ctx, proto.Clone(feature).(*flowv1.FeatureWindow))
+	} else {
+		result, err = predictor.Predict(ctx, proto.Clone(feature).(*flowv1.FeatureWindow))
+	}
+	if err != nil {
+		return nil, nil, err
+	}
+	prediction, explanation := predictionResult(inferenceID, result, shap)
+	if prediction == nil {
+		return nil, nil, shared.NewError(shared.Internal, "", "ML worker returned an empty prediction")
+	}
+	s.mu.Lock()
+	if current := s.jobs[inferenceID]; current != nil && current.state == "RUNNING" {
+		current.predictions[prediction.PredictionId] = prediction
+		current.explanations[prediction.PredictionId] = explanation
+	}
+	s.mu.Unlock()
+	return proto.Clone(prediction).(*mlv1.TrafficPrediction), proto.Clone(explanation).(*mlv1.PredictionExplanation), nil
+}
+
+func (s *Service) CompleteLive(_ context.Context, inferenceID string) error {
+	if _, err := s.get(inferenceID); err != nil {
+		return err
+	}
+	s.mu.Lock()
+	if current := s.jobs[inferenceID]; current != nil && current.state == "RUNNING" {
+		current.state = "COMPLETED"
+	}
+	s.mu.Unlock()
+	return nil
+}
+
 func isClassifierTraffic(protocol flowv1.FlowProtocol) bool {
 	return protocol == flowv1.FlowProtocol_ESP || protocol == flowv1.FlowProtocol_NAT_T
 }
 
 func (s *Service) storeResult(id string, result *worker.PredictionResult, shap bool) {
-	if result == nil {
+	p, explanation := predictionResult(id, result, shap)
+	if p == nil {
 		return
+	}
+	s.mu.Lock()
+	if item := s.jobs[id]; item != nil && item.state == "RUNNING" {
+		item.predictions[p.PredictionId] = p
+		item.explanations[p.PredictionId] = explanation
+	}
+	s.mu.Unlock()
+}
+
+func predictionResult(id string, result *worker.PredictionResult, shap bool) (*mlv1.TrafficPrediction, *mlv1.PredictionExplanation) {
+	if result == nil {
+		return nil, nil
 	}
 	windowID := result.GetWindowId()
 	if windowID == "" {
@@ -232,12 +317,7 @@ func (s *Service) storeResult(id string, result *worker.PredictionResult, shap b
 	} else {
 		explanation.UnavailableReason = "SHAP was disabled or the ML worker returned no explanation"
 	}
-	s.mu.Lock()
-	if item := s.jobs[id]; item != nil && item.state == "RUNNING" {
-		item.predictions[p.PredictionId] = p
-		item.explanations[p.PredictionId] = explanation
-	}
-	s.mu.Unlock()
+	return p, explanation
 }
 
 func trafficClassName(class worker.TrafficClass) string {
@@ -349,7 +429,8 @@ func (s *Service) get(id string) (*job, error) {
 	return item, nil
 }
 
-// LatestForAnalysis returns a stable snapshot of the newest completed ML job.
+// LatestForAnalysis returns a stable snapshot of the newest usable ML job.
+// A running live job is usable as soon as it has one finalized-window result.
 func (s *Service) LatestForAnalysis(_ context.Context, analysisID string) (string, []*mlv1.TrafficPrediction, map[string]*mlv1.PredictionExplanation, error) {
 	if s == nil || strings.TrimSpace(analysisID) == "" {
 		return "", nil, nil, shared.NewError(shared.InvalidArgument, "", "analysis_id is required")
@@ -357,7 +438,8 @@ func (s *Service) LatestForAnalysis(_ context.Context, analysisID string) (strin
 	s.mu.RLock()
 	var selected *job
 	for _, candidate := range s.jobs {
-		if candidate.analysisID == analysisID && candidate.state == "COMPLETED" && (selected == nil || candidate.created.After(selected.created)) {
+		usable := candidate.state == "COMPLETED" || candidate.state == "RUNNING" && len(candidate.predictions) > 0
+		if candidate.analysisID == analysisID && usable && (selected == nil || candidate.created.After(selected.created)) {
 			selected = candidate
 		}
 	}

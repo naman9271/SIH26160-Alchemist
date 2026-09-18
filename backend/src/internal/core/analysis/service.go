@@ -29,7 +29,7 @@ type FusionRuns interface {
 	Cancel(context.Context, string) (fusionsession.CancelResponse, error)
 }
 type PipelineRunner interface {
-	Run(context.Context, Record, func(analysisv1.AnalysisStage)) error
+	Run(context.Context, Record, func(analysisv1.AnalysisStage), func() uint64) error
 }
 type Record struct {
 	ID, SourceID, PolicyID, FusionRunID string
@@ -38,6 +38,7 @@ type Record struct {
 	State                               analysisv1.AnalysisState
 	Stage                               analysisv1.AnalysisStage
 	Failure                             string
+	SnapshotVersion                     uint64
 	EnableVICI, EnableXFRM              bool
 	CreatedAt, UpdatedAt                time.Time
 }
@@ -135,6 +136,29 @@ func (s *Service) Get(ctx context.Context, id string) (Record, error) {
 	return *record, nil
 }
 
+// LatestForSource resolves the analysis created when a live capture began.
+// The stop path uses it instead of starting a second, post-capture analysis.
+func (s *Service) LatestForSource(ctx context.Context, sourceID string) (Record, error) {
+	if strings.TrimSpace(sourceID) == "" {
+		return Record{}, shared.NewError(shared.InvalidArgument, "", "source_id is required")
+	}
+	s.mu.RLock()
+	var selected *Record
+	for _, candidate := range s.records {
+		if candidate.SourceID != sourceID || selected != nil && !candidate.CreatedAt.After(selected.CreatedAt) {
+			continue
+		}
+		copy := *candidate
+		copy.Options = cloneOptions(candidate.Options)
+		selected = &copy
+	}
+	s.mu.RUnlock()
+	if selected == nil {
+		return Record{}, shared.NewError(shared.NotFound, "", "analysis was not found for source")
+	}
+	return *selected, nil
+}
+
 // Source returns the immutable input metadata associated with an analysis.
 // Report generation uses this to describe the real capture without exposing
 // packet payloads or reaching into the input service directly.
@@ -174,7 +198,7 @@ func (s *Service) Cancel(ctx context.Context, id string) (Record, error) {
 	return out, nil
 }
 func (s *Service) execute(ctx context.Context, pipeline PipelineRunner, record Record) {
-	err := pipeline.Run(ctx, record, func(stage analysisv1.AnalysisStage) { s.advance(record.ID, stage) })
+	err := pipeline.Run(ctx, record, func(stage analysisv1.AnalysisStage) { s.advance(record.ID, stage) }, func() uint64 { return s.snapshot(record.ID) })
 	if err != nil {
 		if ctx.Err() != nil {
 			return
@@ -188,6 +212,20 @@ func (s *Service) execute(ctx context.Context, pipeline PipelineRunner, record R
 	}
 	delete(s.cancels, record.ID)
 	s.mu.Unlock()
+}
+
+// snapshot increments the monotonic version published with live results.
+// Browser clients can safely distinguish a fresh assessment from an earlier
+// polling response without treating capture timestamps as ordering data.
+func (s *Service) snapshot(id string) uint64 {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if current := s.records[id]; current != nil && current.State == analysisv1.AnalysisState_ANALYSIS_STATE_RUNNING {
+		current.SnapshotVersion++
+		current.UpdatedAt = time.Now().UTC()
+		return current.SnapshotVersion
+	}
+	return 0
 }
 func (s *Service) publish(analysisID string, category eventv1.CoreEventCategory) {
 	s.mu.RLock()

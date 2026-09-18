@@ -12,7 +12,7 @@ type Upload = { source_id: string; filename: string; packets: number; esp_packet
 type Analysis = { analysis_id: string; state: string; stage: string; failure_reason?: string };
 type WorkspaceMode = "pcap" | "live" | "deep";
 type CaptureInterface = { name: string; addresses: string[]; up: boolean; loopback: boolean; capture_supported: boolean };
-type LiveCapture = { source_id: string; capture_id: string; state: string; interface_name: string; packets_total: number; esp_packets: number; packets_per_second?: number; active_flows: number; packet_drops: number; gateway?: { authorized: boolean; vici_error?: string; xfrm_error?: string } };
+type LiveCapture = { source_id: string; capture_id: string; state: string; interface_name: string; packets_total: number; esp_packets: number; packets_per_second?: number; active_flows: number; packet_drops: number; analysis_id?: string; analysis_state?: string; stage?: string; snapshot_version?: number; feature_stream?: { dropped_feature_windows?: number; dropped_retained_windows?: number }; gateway?: { authorized: boolean; vici_error?: string; xfrm_error?: string } };
 
 const workspaceSteps = [
   ["01", "MODE", "Choose PCAP, live, or deep assessment."],
@@ -121,8 +121,9 @@ export default function WorkspacePage() {
     setAnalysis(undefined);
     setPhase("starting");
     try {
-      const started = await coreRequest<LiveCapture>("/api/v1/live-captures", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ interface_name: interfaceName, mode, consent: true, authorized: deepAuthorized, enable_vici: mode === "deep", enable_xfrm: mode === "deep", save_pcap: true }) });
+      const started = await coreRequest<LiveCapture>("/api/v1/live-captures", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ interface_name: interfaceName, mode, consent: true, authorized: deepAuthorized, enable_vici: mode === "deep", enable_xfrm: mode === "deep", enable_ml: enableMl, save_pcap: true }) });
       setLiveCapture(started);
+      if (started.analysis_id) setAnalysis({ analysis_id: started.analysis_id, state: started.analysis_state ?? "ANALYSIS_STATE_RUNNING", stage: started.stage ?? "ACQUIRING" });
       setPhase("running");
     } catch (requestError) {
       setPhase("failed");
@@ -282,7 +283,9 @@ export default function WorkspacePage() {
               <div className="mt-4 flex items-center justify-between border-y border-white/10 py-3 text-[10px]"><span className="text-white/55">INTERFACE</span><span className={liveCapture ? "text-teal-100" : "text-white/35"}>{liveCapture?.interface_name ?? "NOT STARTED"}</span></div>
               <div className="mt-3 flex items-center justify-between text-[10px]"><span className="text-white/55">PACKETS / RATE</span><span className={liveCapture ? "text-teal-100" : "text-white/35"}>{liveCapture ? `${liveCapture.packets_total.toLocaleString()} · ${(liveCapture.packets_per_second ?? 0).toFixed(1)} PKTS/S` : "— PKTS/S"}</span></div>
               <div className="mt-3 flex items-center justify-between text-[10px]"><span className="text-white/55">ESP / FLOWS</span><span className={liveCapture ? "text-teal-100" : "text-white/35"}>{liveCapture ? `${liveCapture.esp_packets.toLocaleString()} · ${liveCapture.active_flows}` : "—"}</span></div>
+              <div className="mt-3 flex items-center justify-between text-[10px]"><span className="text-white/55">CAPTURE / WINDOW DROPS</span><span className={liveCapture ? "text-teal-100" : "text-white/35"}>{liveCapture ? `${liveCapture.packet_drops} · ${(liveCapture.feature_stream?.dropped_feature_windows ?? 0) + (liveCapture.feature_stream?.dropped_retained_windows ?? 0)}` : "—"}</span></div>
               {liveCapture?.state === "CAPTURING" ? <button className="mt-5 w-full border border-red-200/60 px-3 py-2 text-[10px] tracking-[.12em] text-red-100 transition hover:bg-red-300/10" type="button" onClick={() => void stopCapture()}>STOP & ANALYSE</button> : <p className="mt-5 border border-teal-200/20 px-3 py-2 text-[10px] leading-5 text-white/50">Select PASSIVE LIVE or DEEP ASSESSMENT, choose an interface, then start the capture.</p>}
+              {liveCapture?.state === "CAPTURING" && analysis && <Link href={`/dashboard?analysis=${encodeURIComponent(analysis.analysis_id)}`} className="mt-3 block border border-teal-200/45 px-3 py-2 text-center text-[10px] tracking-[.12em] text-teal-100 transition hover:bg-teal-200/10">OPEN LIVE RESULTS · SNAPSHOT {liveCapture.snapshot_version ?? 0}</Link>}
               {liveCapture?.gateway && <p className="mt-3 text-[10px] leading-5 text-white/45">{liveCapture.gateway.vici_error ? `VICI: ${liveCapture.gateway.vici_error}` : "VICI telemetry available when configured."}{liveCapture.gateway.xfrm_error ? ` XFRM: ${liveCapture.gateway.xfrm_error}` : ""}</p>}
             </div>
             </aside>

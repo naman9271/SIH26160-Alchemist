@@ -16,6 +16,7 @@ type Event struct {
 	AnalysisID string
 	Category   eventv1.CoreEventCategory
 	OccurredAt time.Time
+	Payload    map[string]any
 }
 type Service struct {
 	mu             sync.Mutex
@@ -35,13 +36,20 @@ func (s *Service) SetBufferSize(size uint32) {
 	s.mu.Unlock()
 }
 func (s *Service) Publish(ctx context.Context, analysisID string, category eventv1.CoreEventCategory) {
+	s.PublishPayload(ctx, analysisID, category, nil)
+}
+
+// PublishPayload uses the established Core event stream for small, sanitized
+// result metadata such as a monotonic snapshot version. It never carries packet
+// bodies, XFRM key material, or gateway credentials.
+func (s *Service) PublishPayload(_ context.Context, analysisID string, category eventv1.CoreEventCategory, payload map[string]any) {
 	if s == nil {
 		return
 	}
 	id, _ := uuid.NewV7()
 	s.mu.Lock()
 	s.next++
-	event := Event{ID: id.String(), Sequence: s.next, AnalysisID: analysisID, Category: category, OccurredAt: time.Now().UTC()}
+	event := Event{ID: id.String(), Sequence: s.next, AnalysisID: analysisID, Category: category, OccurredAt: time.Now().UTC(), Payload: clonePayload(payload)}
 	for _, ch := range s.subscribers {
 		select {
 		case ch <- event:
@@ -49,6 +57,17 @@ func (s *Service) Publish(ctx context.Context, analysisID string, category event
 		}
 	}
 	s.mu.Unlock()
+}
+
+func clonePayload(value map[string]any) map[string]any {
+	if len(value) == 0 {
+		return nil
+	}
+	result := make(map[string]any, len(value))
+	for key, item := range value {
+		result[key] = item
+	}
+	return result
 }
 func (s *Service) Subscribe(ctx context.Context) (<-chan Event, func()) {
 	s.mu.Lock()

@@ -66,7 +66,9 @@ func (h *TelemetryHandler) StreamFeatureWindows(r *telemetryv1.StreamSensorFeatu
 	if e := h.v(r); e != nil {
 		return shared.ToGRPC(e)
 	}
-	ch, cancel, e := h.flows.Subscribe(st.Context(), r.GetSensorSessionId(), flowv1.FeatureBackpressurePolicy_BLOCK_CAPTURE, r.GetBufferSize())
+	// Feature delivery must never stall packet acquisition. Consumers receive a
+	// bounded stream and can observe loss through the session's stream counters.
+	ch, cancel, e := h.flows.Subscribe(st.Context(), r.GetSensorSessionId(), flowv1.FeatureBackpressurePolicy_DROP_FEATURE_WINDOW, r.GetBufferSize())
 	if e != nil {
 		return shared.ToGRPC(e)
 	}

@@ -10,6 +10,8 @@ import (
 	commonv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/common/v1"
 	analysisv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/analysis"
 	eventv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/event"
+	inputv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/input"
+	mlv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/ml"
 	workspacev1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/core/v1/workspace"
 	flowv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/sensor/v1/flow"
 	viciv1 "github.com/naman9271/SIH26160---Team-Alchemist/gen/go/api/proto/sensor/v1/vici"
@@ -52,11 +54,17 @@ type Pipeline struct {
 	TelemetrySnapshotCount    int
 	TelemetrySnapshotInterval time.Duration
 	TelemetryStaleAfter       time.Duration
+	LiveRefreshInterval       time.Duration
 }
 
-func (p *Pipeline) Run(ctx context.Context, record Record, advance func(analysisv1.AnalysisStage)) error {
+func (p *Pipeline) Run(ctx context.Context, record Record, advance func(analysisv1.AnalysisStage), snapshot func() uint64) error {
 	if p == nil || p.Ingest == nil || p.Fusion == nil {
 		return fmt.Errorf("analysis pipeline is not configured")
+	}
+	if p.Input != nil {
+		if source, err := p.Input.Get(ctx, record.SourceID); err == nil && source.State == inputv1.InputState_CAPTURING {
+			return p.runLive(ctx, record, source.SessionID, advance, snapshot)
+		}
 	}
 	p.publish(ctx, record.ID, eventv1.CoreEventCategory_ANALYSIS_STARTED)
 	advance(analysisv1.AnalysisStage_PROTOCOL_PROCESSING)
@@ -116,6 +124,233 @@ func (p *Pipeline) Run(ctx context.Context, record Record, advance func(analysis
 		}
 	}
 	p.publish(ctx, record.ID, eventv1.CoreEventCategory_ANALYSIS_COMPLETED)
+	p.publishSnapshot(ctx, record.ID, snapshot, "completed")
+	return nil
+}
+
+// runLive consumes only finalized feature windows and newly observed packet
+// metadata while capture continues. It never blocks acquisition: backpressure
+// is accounted for by Sensor and exposed with each dashboard snapshot.
+func (p *Pipeline) runLive(ctx context.Context, record Record, sessionID string, advance func(analysisv1.AnalysisStage), snapshot func() uint64) error {
+	if p.Sensor.Observations == nil || p.Sensor.Flows == nil || p.Input == nil {
+		return fmt.Errorf("live sensor observation services are not configured")
+	}
+	if strings.TrimSpace(sessionID) == "" {
+		return fmt.Errorf("live source has no sensor session")
+	}
+	p.publish(ctx, record.ID, eventv1.CoreEventCategory_ANALYSIS_STARTED)
+	advance(analysisv1.AnalysisStage_ACQUIRING)
+	p.publishSnapshot(ctx, record.ID, snapshot, "acquiring")
+	windows, cancel, err := p.Sensor.Flows.Subscribe(ctx, sessionID, flowv1.FeatureBackpressurePolicy_DROP_FEATURE_WINDOW, 64)
+	if err != nil {
+		return err
+	}
+	defer cancel()
+
+	var observationCursor uint64
+	mlID, mlUnavailable := "", !record.Options.GetEnableMl() || p.ML == nil
+	if !mlUnavailable {
+		if mlID, err = p.ML.BeginLive(ctx, record.ID); err != nil {
+			mlUnavailable = true
+			p.publish(ctx, record.ID, eventv1.CoreEventCategory_ML_UNAVAILABLE)
+		}
+	}
+	if mlUnavailable {
+		reason := "DISABLED_BY_REQUEST"
+		if record.Options.GetEnableMl() {
+			reason = "ML_UNAVAILABLE"
+		}
+		if _, err := p.Ingest.MarkSourceUnavailable(ctx, ingest.MarkSourceUnavailableRequest{FusionRunID: record.FusionRunID, Source: model.SourceMLClassifier, ReasonCode: reason}); err != nil {
+			return err
+		}
+		_, _ = p.Ingest.MarkSourceUnavailable(ctx, ingest.MarkSourceUnavailableRequest{FusionRunID: record.FusionRunID, Source: model.SourceSHAP, ReasonCode: reason})
+	}
+
+	viciSamples, xfrmSamples := 0, 0
+	dirty, ended := true, false
+	refresh := time.NewTicker(p.liveRefreshInterval())
+	defer refresh.Stop()
+	for !ended {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case windowID, ok := <-windows:
+			if !ok {
+				ended = true
+				continue
+			}
+			if err := p.classifyLiveWindow(ctx, record, mlID, mlUnavailable, windowID); err != nil {
+				// ML failure is a degraded result, never a reason to discard
+				// protocol or deterministic security updates.
+				if mlID != "" {
+					mlUnavailable = true
+					p.publish(ctx, record.ID, eventv1.CoreEventCategory_ML_UNAVAILABLE)
+					_, _ = p.Ingest.MarkSourceUnavailable(ctx, ingest.MarkSourceUnavailableRequest{FusionRunID: record.FusionRunID, Source: model.SourceMLClassifier, ReasonCode: "ML_UNAVAILABLE"})
+					_, _ = p.Ingest.MarkSourceUnavailable(ctx, ingest.MarkSourceUnavailableRequest{FusionRunID: record.FusionRunID, Source: model.SourceSHAP, ReasonCode: "ML_UNAVAILABLE"})
+					continue
+				}
+				return err
+			}
+			dirty = true
+		case <-refresh.C:
+			changed, missed, next, exportErr := p.exportLivePacketDelta(ctx, record, sessionID, observationCursor)
+			if exportErr != nil {
+				return exportErr
+			}
+			observationCursor = next
+			dirty = dirty || changed || missed > 0
+			vici, xfrm, telemetryErr := p.collectLiveTelemetry(ctx, record)
+			if telemetryErr != nil {
+				return telemetryErr
+			}
+			viciSamples += vici
+			xfrmSamples += xfrm
+			if dirty {
+				if err := p.refreshLiveAssessment(ctx, record, advance); err != nil {
+					return err
+				}
+				p.publishSnapshot(ctx, record.ID, snapshot, "live_update")
+				dirty = false
+			}
+		}
+	}
+
+	changed, missed, next, err := p.exportLivePacketDelta(ctx, record, sessionID, observationCursor)
+	if err != nil {
+		return err
+	}
+	_ = changed
+	_ = missed
+	observationCursor = next
+	_ = observationCursor
+	vici, xfrm, err := p.collectLiveTelemetry(ctx, record)
+	if err != nil {
+		return err
+	}
+	viciSamples += vici
+	xfrmSamples += xfrm
+	if err := p.exportLiveFlowCounters(ctx, record, sessionID); err != nil {
+		return err
+	}
+	if err := p.completeLiveSources(ctx, record, mlID, mlUnavailable, viciSamples, xfrmSamples); err != nil {
+		return err
+	}
+	advance(analysisv1.AnalysisStage_FINALIZING)
+	if err := p.refreshLiveAssessment(ctx, record, advance); err != nil {
+		return err
+	}
+	p.publish(ctx, record.ID, eventv1.CoreEventCategory_ANALYSIS_COMPLETED)
+	p.publishSnapshot(ctx, record.ID, snapshot, "final")
+	return nil
+}
+
+func (p *Pipeline) liveRefreshInterval() time.Duration {
+	if p.LiveRefreshInterval > 0 {
+		return p.LiveRefreshInterval
+	}
+	return 10 * time.Second
+}
+
+func (p *Pipeline) exportLivePacketDelta(ctx context.Context, record Record, sessionID string, after uint64) (bool, uint64, uint64, error) {
+	packets, next, missed := p.Sensor.Observations.ListSince(ctx, sessionID, after)
+	items := make([]ingest.EvidenceInput, 0, len(packets)*2+1)
+	for _, packet := range packets {
+		if packet.IKE {
+			p.publish(ctx, record.ID, eventv1.CoreEventCategory_IKE_DETECTED)
+			p.publish(ctx, record.ID, eventv1.CoreEventCategory_IPSEC_DETECTED)
+		}
+		if packet.Protocol == 50 || packet.EncapsulatedESP {
+			p.publish(ctx, record.ID, eventv1.CoreEventCategory_ESP_DETECTED)
+			p.publish(ctx, record.ID, eventv1.CoreEventCategory_SA_DISCOVERED)
+		}
+		items = append(items, packetEvidence(packet)...)
+	}
+	if missed > 0 {
+		meta := map[string]string{"sensor_session_id": sessionID, "uncertainty_reason": "PACKET_METADATA_RETENTION_LIMIT", "dropped_packet_metadata": fmt.Sprint(missed)}
+		unknown := stringEvidence("protocol.capture_retention", "INCOMPLETE", "SENSOR_SESSION", sessionID, time.Now().UTC(), meta)
+		unknown.Status, unknown.Confidence = commonv1.EvidenceStatus_UNKNOWN, 0
+		items = append(items, unknown)
+	}
+	if len(items) > 0 {
+		if _, err := p.Ingest.AddBatch(ctx, ingest.AddBatchRequest{FusionRunID: record.FusionRunID, Evidence: items}); err != nil {
+			return false, missed, next, err
+		}
+	}
+	return len(packets) > 0, missed, next, nil
+}
+
+func (p *Pipeline) exportLiveFlowCounters(ctx context.Context, record Record, sessionID string) error {
+	flows, _, err := p.Sensor.Flows.List(ctx, &flowv1.ListFlowsRequest{SensorSessionId: sessionID, PageSize: 1000})
+	if err != nil {
+		return err
+	}
+	items := make([]ingest.EvidenceInput, 0, len(flows)*2)
+	for _, item := range flows {
+		value := flow.ToProto(item)
+		items = append(items, numberEvidence("traffic.packet_count", float64(value.GetPacketCount()), "FLOW", value.GetFlowId(), value.GetLastSeen().AsTime()), numberEvidence("traffic.bytes", float64(value.GetByteCount()), "FLOW", value.GetFlowId(), value.GetLastSeen().AsTime()))
+	}
+	if len(items) == 0 {
+		return nil
+	}
+	_, err = p.Ingest.AddBatch(ctx, ingest.AddBatchRequest{FusionRunID: record.FusionRunID, Evidence: items})
+	return err
+}
+
+func (p *Pipeline) classifyLiveWindow(ctx context.Context, record Record, inferenceID string, unavailable bool, windowID string) error {
+	if unavailable {
+		return nil
+	}
+	window, err := p.Sensor.Flows.Window(ctx, windowID)
+	if err != nil || !window.IsMLReady() {
+		return nil
+	}
+	flowRecord, err := p.Sensor.Flows.Flow(ctx, flow.ToFeature(window).GetFlowId())
+	if err != nil || !isClassifierProtocol(flow.ToProto(flowRecord).GetProtocol()) {
+		return nil
+	}
+	p.publish(ctx, record.ID, eventv1.CoreEventCategory_ML_INFERENCE_STARTED)
+	prediction, explanation, err := p.ML.PredictLiveWindow(ctx, inferenceID, flow.ToFeature(window), record.Options.GetEnableShap())
+	if err != nil {
+		return err
+	}
+	return p.ingestLivePrediction(ctx, record, inferenceID, prediction, explanation)
+}
+
+func isClassifierProtocol(protocol flowv1.FlowProtocol) bool {
+	return protocol == flowv1.FlowProtocol_ESP || protocol == flowv1.FlowProtocol_NAT_T
+}
+
+func (p *Pipeline) ingestLivePrediction(ctx context.Context, record Record, inferenceID string, prediction interface {
+	GetPredictionId() string
+	GetFlowId() string
+	GetWindowId() string
+	GetAggregationScope() string
+	GetTrafficClass() string
+	GetConfidence() float64
+	GetModelVersion() string
+	GetFeatureSchemaVersion() string
+}, explanation interface {
+	GetFeatures() []*mlv1.FeatureAttribution
+}) error {
+	if prediction == nil {
+		return nil
+	}
+	at := time.Now().UTC()
+	reference := fmt.Sprintf("ml:%s/%s", inferenceID, prediction.GetPredictionId())
+	metadata := map[string]string{"inference_id": inferenceID, "model_version": prediction.GetModelVersion(), "feature_schema_version": prediction.GetFeatureSchemaVersion(), "window_id": prediction.GetWindowId(), "aggregation_scope": prediction.GetAggregationScope(), "classification_semantics": "DOMINANT_WINDOW_BEHAVIOR", "evidence_reference": reference, "uncertainty_reason": "MODEL_INFERENCE"}
+	items := []ingest.EvidenceInput{
+		{PropertyKey: "traffic.class", Value: structpb.NewStringValue(prediction.GetTrafficClass()), Source: model.SourceMLClassifier, Status: commonv1.EvidenceStatus_INFERRED, Confidence: prediction.GetConfidence(), ObservedAt: at, ResourceType: "FLOW", ResourceID: prediction.GetFlowId(), SourceReference: reference, SchemaVersion: model.EvidenceSchemaVersion, Metadata: metadata},
+		{PropertyKey: "traffic.confidence", Value: structpb.NewNumberValue(prediction.GetConfidence()), Source: model.SourceMLClassifier, Status: commonv1.EvidenceStatus_INFERRED, Confidence: prediction.GetConfidence(), ObservedAt: at, ResourceType: "FLOW", ResourceID: prediction.GetFlowId(), SourceReference: reference, SchemaVersion: model.EvidenceSchemaVersion, Metadata: metadata},
+	}
+	if explanation != nil {
+		for _, feature := range explanation.GetFeatures() {
+			items = append(items, ingest.EvidenceInput{PropertyKey: "shap." + feature.GetFeatureName(), Value: structpb.NewNumberValue(feature.GetAttribution()), Source: model.SourceSHAP, Status: commonv1.EvidenceStatus_INFERRED, Confidence: prediction.GetConfidence(), ObservedAt: at, ResourceType: "FLOW", ResourceID: prediction.GetFlowId(), SourceReference: reference, SchemaVersion: model.EvidenceSchemaVersion, Metadata: metadata})
+		}
+	}
+	if _, err := p.Ingest.AddBatch(ctx, ingest.AddBatchRequest{FusionRunID: record.FusionRunID, Evidence: items}); err != nil {
+		return err
+	}
+	p.publish(ctx, record.ID, eventv1.CoreEventCategory_ML_PREDICTION_UPDATED)
 	return nil
 }
 
@@ -169,6 +404,112 @@ func (p *Pipeline) collectDeepTelemetry(ctx context.Context, record Record) erro
 	}
 	p.publish(ctx, record.ID, eventv1.CoreEventCategory_VICI_COLLECTION_COMPLETED)
 	p.publish(ctx, record.ID, eventv1.CoreEventCategory_XFRM_COLLECTION_COMPLETED)
+	return nil
+}
+
+// collectLiveTelemetry records one time-bounded gateway/kernel sample. Source
+// coverage is finalized only when the capture closes, so a transient outage is
+// not mislabeled as a completed or healthy telemetry source.
+func (p *Pipeline) collectLiveTelemetry(ctx context.Context, record Record) (int, int, error) {
+	if record.Mode != workspacev1.AnalysisMode_DEEP_ASSESSMENT {
+		return 0, 0, nil
+	}
+	viciSamples, xfrmSamples := 0, 0
+	if record.EnableVICI && p.VICI != nil {
+		p.publish(ctx, record.ID, eventv1.CoreEventCategory_VICI_COLLECTION_STARTED)
+		if snapshot, err := p.VICI.Snapshot(ctx, p.VICIURI); err == nil {
+			items := decorateTelemetry(VICIEvidence(snapshot), viciSamples, snapshotTime(snapshot.GetSnapshotTimestamp(), time.Now().UTC()), p.telemetryStaleAfter())
+			if len(items) > 0 {
+				if _, err = p.Ingest.AddBatch(ctx, ingest.AddBatchRequest{FusionRunID: record.FusionRunID, Evidence: items}); err != nil {
+					return 0, 0, err
+				}
+			}
+			viciSamples++
+		}
+		p.publish(ctx, record.ID, eventv1.CoreEventCategory_VICI_COLLECTION_COMPLETED)
+	}
+	if record.EnableXFRM && p.XFRM != nil {
+		p.publish(ctx, record.ID, eventv1.CoreEventCategory_XFRM_COLLECTION_STARTED)
+		if snapshot, err := p.XFRM.Snapshot(ctx); err == nil {
+			items := decorateTelemetry(XFRMEvidence(snapshot), xfrmSamples, snapshotTime(snapshot.GetSnapshotTimestamp(), time.Now().UTC()), p.telemetryStaleAfter())
+			if len(items) > 0 {
+				if _, err = p.Ingest.AddBatch(ctx, ingest.AddBatchRequest{FusionRunID: record.FusionRunID, Evidence: items}); err != nil {
+					return 0, 0, err
+				}
+			}
+			xfrmSamples++
+		}
+		p.publish(ctx, record.ID, eventv1.CoreEventCategory_XFRM_COLLECTION_COMPLETED)
+	}
+	return viciSamples, xfrmSamples, nil
+}
+
+func (p *Pipeline) completeLiveSources(ctx context.Context, record Record, inferenceID string, mlUnavailable bool, viciSamples, xfrmSamples int) error {
+	for _, source := range []model.Source{model.SourcePacketParser, model.SourceFlowAnalyzer} {
+		if _, err := p.Ingest.MarkSourceComplete(ctx, ingest.MarkSourceRequest{FusionRunID: record.FusionRunID, Source: source}); err != nil {
+			return err
+		}
+	}
+	if !mlUnavailable && inferenceID != "" {
+		if err := p.ML.CompleteLive(ctx, inferenceID); err != nil {
+			return err
+		}
+		if _, err := p.Ingest.MarkSourceComplete(ctx, ingest.MarkSourceRequest{FusionRunID: record.FusionRunID, Source: model.SourceMLClassifier}); err != nil {
+			return err
+		}
+		if _, err := p.Ingest.MarkSourceComplete(ctx, ingest.MarkSourceRequest{FusionRunID: record.FusionRunID, Source: model.SourceSHAP}); err != nil {
+			return err
+		}
+	}
+	for _, source := range []struct {
+		name      model.Source
+		enabled   bool
+		collected int
+		reason    string
+	}{{model.SourceVICI, record.EnableVICI, viciSamples, "VICI_UNAVAILABLE"}, {model.SourceXFRM, record.EnableXFRM, xfrmSamples, "XFRM_UNAVAILABLE"}} {
+		if record.Mode != workspacev1.AnalysisMode_DEEP_ASSESSMENT {
+			_, _ = p.Ingest.MarkSourceUnavailable(ctx, ingest.MarkSourceUnavailableRequest{FusionRunID: record.FusionRunID, Source: source.name, ReasonCode: "PASSIVE_MODE"})
+			continue
+		}
+		if !source.enabled {
+			_, _ = p.Ingest.MarkSourceUnavailable(ctx, ingest.MarkSourceUnavailableRequest{FusionRunID: record.FusionRunID, Source: source.name, ReasonCode: "DISABLED_BY_AUTHORIZED_REQUEST"})
+			continue
+		}
+		if source.collected == 0 {
+			if _, err := p.Ingest.MarkSourceUnavailable(ctx, ingest.MarkSourceUnavailableRequest{FusionRunID: record.FusionRunID, Source: source.name, ReasonCode: source.reason}); err != nil {
+				return err
+			}
+			continue
+		}
+		if _, err := p.Ingest.MarkSourceComplete(ctx, ingest.MarkSourceRequest{FusionRunID: record.FusionRunID, Source: source.name}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (p *Pipeline) refreshLiveAssessment(ctx context.Context, record Record, advance func(analysisv1.AnalysisStage)) error {
+	advance(analysisv1.AnalysisStage_FUSION)
+	p.publish(ctx, record.ID, eventv1.CoreEventCategory_FUSION_STARTED)
+	if _, err := p.Fusion.Run(ctx, engine.RunRequest{FusionRunID: record.FusionRunID, Incremental: true}); err != nil {
+		return err
+	}
+	p.publish(ctx, record.ID, eventv1.CoreEventCategory_FUSION_COMPLETED)
+	if !record.Options.GetEnableSecurity() || p.Security == nil {
+		return nil
+	}
+	advance(analysisv1.AnalysisStage_SECURITY_ANALYSIS)
+	assessment, err := p.Security.Run(ctx, record.ID, record.PolicyID)
+	if err != nil {
+		return err
+	}
+	if p.Risk != nil {
+		_, _ = p.Risk.Score(ctx, assessment.ID)
+	}
+	p.publish(ctx, record.ID, eventv1.CoreEventCategory_SECURITY_SCORE_UPDATED)
+	for range assessment.Result.Findings {
+		p.publish(ctx, record.ID, eventv1.CoreEventCategory_SECURITY_FINDING_CREATED)
+	}
 	return nil
 }
 
@@ -313,6 +654,17 @@ func (p *Pipeline) publish(ctx context.Context, analysisID string, category even
 	if p.Events != nil {
 		p.Events.Publish(ctx, analysisID, category)
 	}
+}
+
+func (p *Pipeline) publishSnapshot(ctx context.Context, analysisID string, next func() uint64, state string) {
+	if p.Events == nil || next == nil {
+		return
+	}
+	version := next()
+	if version == 0 {
+		return
+	}
+	p.Events.PublishPayload(ctx, analysisID, eventv1.CoreEventCategory_ANALYSIS_PROGRESS, map[string]any{"snapshot_version": version, "snapshot_state": state})
 }
 
 func (p *Pipeline) exportSensor(ctx context.Context, record Record) error {
