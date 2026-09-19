@@ -120,6 +120,23 @@ func TestAssessmentKeepsSecurityAssociationsSeparate(t *testing.T) {
 	}
 }
 
+func TestMetadataDoesNotMaskAnIncompleteObservedSA(t *testing.T) {
+	service := coresecurity.New(conclusionFixture{
+		{ID: "sa", ResourceType: "CHILD_SA", ResourceID: "esp-only", PropertyKey: model.PropertyChildProtocol, Value: structpb.NewStringValue("ESP"), Status: commonv1.EvidenceStatus_OBSERVED, Confidence: .95},
+		{ID: "metadata", ResourceType: "CHILD_SA", ResourceID: "esp-only", PropertyKey: model.PropertyMetadataExposure, Value: structpb.NewStringValue("outer endpoints, timing, direction and volume"), Status: commonv1.EvidenceStatus_OBSERVED, Confidence: .95},
+	})
+	record, err := service.Run(context.Background(), "analysis-esp-only", rules.SIHBaselinePolicyID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if record.Result.ScoreAvailable || len(record.IncompleteSAResourceIDs) != 1 {
+		t.Fatalf("metadata-only score masked an incomplete SA: %+v", record)
+	}
+	if len(record.Result.ThreatEntries) != 1 {
+		t.Fatalf("metadata threat entries were lost or duplicated: %+v", record.Result.ThreatEntries)
+	}
+}
+
 func TestAssessmentDefaultsToSeparateBaselineAndRetainsProvenance(t *testing.T) {
 	service := coresecurity.New(conclusionFixture{{ID: "conclusion-1", PropertyKey: model.PropertyIKEDHGroup, ResourceType: "VICI_IKE_SA", ResourceID: "ike-7", Value: structpb.NewStringValue("DH_2"), Status: commonv1.EvidenceStatus_VERIFIED_GATEWAY, Confidence: 1, EvidenceIDs: []string{"evidence-9"}, WinningSources: []model.Source{model.SourceVICI}}})
 	record, err := service.Run(context.Background(), "analysis-policy", "")

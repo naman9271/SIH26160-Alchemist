@@ -410,7 +410,11 @@ func deploymentAssessment(items []rules.Assessment) (rules.Assessment, []string)
 	}
 	candidates := make([]rules.Assessment, 0, len(items))
 	incomplete := make([]string, 0)
+	hasSAResource := false
 	for _, item := range items {
+		if isSAResource(item.ResourceType) {
+			hasSAResource = true
+		}
 		if isSAResource(item.ResourceType) && (item.Provisional || !item.ScoreAvailable) {
 			incomplete = append(incomplete, item.ResourceType+"/"+item.ResourceID)
 		}
@@ -418,7 +422,10 @@ func deploymentAssessment(items []rules.Assessment) (rules.Assessment, []string)
 			candidates = append(candidates, item)
 		}
 	}
-	if len(candidates) == 0 {
+	// Once an SA has been observed, the deployment headline must come from an
+	// SA. A metadata-only control cannot turn an otherwise unevaluated tunnel
+	// into a 100/100 result.
+	if len(candidates) == 0 && !hasSAResource {
 		for _, item := range items {
 			if item.ScoreAvailable {
 				candidates = append(candidates, item)
@@ -428,6 +435,7 @@ func deploymentAssessment(items []rules.Assessment) (rules.Assessment, []string)
 	if len(candidates) == 0 {
 		out := rules.Assess(rules.Facts{})
 		out.Controls = nil
+		out.ThreatEntries = nil
 		for _, item := range items {
 			out.Controls = append(out.Controls, item.Controls...)
 			out.Findings = append(out.Findings, item.Findings...)
@@ -439,6 +447,7 @@ func deploymentAssessment(items []rules.Assessment) (rules.Assessment, []string)
 	out := candidates[0]
 	out.Findings = nil
 	out.Controls = nil
+	out.ThreatEntries = nil
 	out.ThreatMatrix = map[rules.Severity]int{}
 	for _, item := range items {
 		out.Controls = append(out.Controls, item.Controls...)

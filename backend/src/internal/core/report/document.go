@@ -230,7 +230,7 @@ func buildReportDocumentForType(record coreanalysis.Record, source *coreinput.So
 		return document
 	}
 	document.Subtitle = "IPSEC VPN Executive Security Assessment"
-	allowed := map[string]bool{"Executive Summary": true, "Analysis Overview": true, "Traffic Analysis": true, "Security Findings": true, "Recommendations": true, "Risk & Fixes": true, "System Health": true, "Conclusion": true}
+	allowed := map[string]bool{"Executive Summary": true, "Analysis Overview": true, "Traffic Analysis": true, "Passive Analysis": true, "Traffic Classification": true, "Security Findings": true, "Recommendations": true, "Risk & Fixes": true, "System Health": true, "Conclusion": true}
 	sections := make([]reportSection, 0, len(document.Sections))
 	for _, section := range document.Sections {
 		if allowed[section.Title] {
@@ -399,7 +399,7 @@ func bounds(lower, upper float64, available bool) string {
 	if !available {
 		return "unavailable"
 	}
-	return fmt.Sprintf("%.1f–%.1f/100", lower, upper)
+	return fmt.Sprintf("%.1f-%.1f/100", lower, upper)
 }
 
 func systemHealthSection(payload map[string]interface{}) reportSection {

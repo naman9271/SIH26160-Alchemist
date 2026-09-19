@@ -82,6 +82,15 @@ func TestExecutiveReportExcludesTechnicalEvidenceSections(t *testing.T) {
 			t.Fatalf("executive report retained technical section %q", section.Title)
 		}
 	}
+	titles := map[string]bool{}
+	for _, section := range document.Sections {
+		titles[section.Title] = true
+	}
+	for _, expected := range []string{"Passive Analysis", "Traffic Classification"} {
+		if !titles[expected] {
+			t.Fatalf("executive report omitted analyst-facing section %q", expected)
+		}
+	}
 }
 
 func TestFindingResourceKeepsConcurrentSAsDistinguishable(t *testing.T) {

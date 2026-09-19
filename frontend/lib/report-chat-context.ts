@@ -54,7 +54,7 @@ export function compactReportForChat(report: unknown): JsonRecord | undefined {
       conclusions: fusion.conclusions,
     },
     security: security && {
-      assessment: assessment && pick(assessment, ["state", "score", "grade", "findings", "recommendations", "threat_matrix", "rules_evaluated", "unknown_evidence_count", "metadata_exposure"]),
+      assessment: assessment && pick(assessment, ["state", "observed_security_score", "score_available", "evidence_coverage_percent", "security_bounds", "provisional", "grade", "findings", "recommendations", "threat_entries", "threat_matrix", "rules_evaluated", "rules_unknown", "unknown_evidence_count", "configuration_facts", "metadata_exposure"]),
       risk_score: security.risk_score,
       risk_breakdown: security.risk_breakdown,
       critical_overrides: security.critical_overrides,
