@@ -160,13 +160,13 @@ func validate(v Settings) error {
 	if strings.TrimSpace(v.Name) == "" || len(v.Name) > 120 {
 		return fmt.Errorf("experiment name must contain 1–120 characters")
 	}
-	if len(v.Profiles) == 0 || len(v.Profiles) > 5 {
+	if len(v.Profiles) == 0 || len(v.Profiles) > 8 {
 		return fmt.Errorf("choose one or more profiles")
 	}
 	seen := map[int]bool{}
 	for _, p := range v.Profiles {
-		if p < 1 || p > 5 || seen[p] {
-			return fmt.Errorf("profiles must be unique values from 1 to 5")
+		if p < 1 || p > 8 || seen[p] {
+			return fmt.Errorf("profiles must be unique values from 1 to 8")
 		}
 		seen[p] = true
 	}

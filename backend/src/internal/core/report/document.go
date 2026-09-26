@@ -112,6 +112,13 @@ func buildReportDocument(record coreanalysis.Record, source *coreinput.Source, c
 			overviewRows = append(overviewRows, []string{"Input size", formatBytes(source.Size)})
 		}
 	}
+	if hasAssessment {
+		overviewRows = append(overviewRows,
+			[]string{"Assessment policy", assessment.PolicyLabel},
+			[]string{"Policy identifier", assessment.PolicyID},
+			[]string{"Policy references", assessment.PolicyReference},
+		)
+	}
 	document.Sections = append(document.Sections, reportSection{Title: "Analysis Overview", Tables: []reportTable{{Headers: []string{"Metric", "Value"}, Rows: overviewRows, Widths: []int{28, 66}}}})
 
 	if progress, ok := payload["analysis_progress"].(*analysisv1.AnalysisProgress); ok && progress != nil {

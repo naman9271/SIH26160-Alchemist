@@ -3,14 +3,15 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CLASS="${1:?Usage: $0 CLASS PROFILE RUN}"; PROFILE="${2:?}"; RUN="${3:?Run must be R01-R05}"
 case "$CLASS" in web|video|file_transfer|icmp|email|messaging|voip) ;; *) echo 'Invalid known class' >&2; exit 2;; esac
-[[ "$PROFILE" =~ ^[1-5]$ && "$RUN" =~ ^R0[1-5]$ ]] || { echo 'profile 1-5 and run R01-R05 required' >&2; exit 2; }
+[[ "$PROFILE" =~ ^[1-8]$ && "$RUN" =~ ^R0[1-5]$ ]] || { echo 'profile 1-8 and run R01-R05 required' >&2; exit 2; }
 DEST="$ROOT/pcaps/known/$CLASS/${CLASS}_p$(printf '%02d' "$PROFILE")_${RUN}.pcap"; TMP="${DEST}.partial"; mkdir -p "$(dirname "$DEST")"
 [[ ! -e "$DEST" ]] || { echo "Refusing to overwrite $DEST" >&2; exit 3; }
 rm -f "$TMP"  # An interrupted prior attempt is never a usable sample.
 seed=$((10#$PROFILE * 100 + 10#${RUN#R} + $(date +%s) % 100000)); duration=45; generator=''; remote_start=''
 case "$PROFILE" in
   5) src=fd10::1; dst=fd20::1; outer_filter='ip6'; base='http://[fd20::1]:8081'; ping_flag='-6' ;;
-  4) src=172.31.0.2; dst=172.31.0.3; outer_filter='ip'; base='http://172.31.0.3:8080'; ping_flag='' ;;
+  7) src=fd00:31::2; dst=fd00:31::3; outer_filter='ip6'; base='http://[fd00:31::3]:8081'; ping_flag='-6' ;;
+  4|6) src=172.31.0.2; dst=172.31.0.3; outer_filter='ip'; base='http://172.31.0.3:8080'; ping_flag='' ;;
   *) src=10.10.0.1; dst=10.20.0.1; outer_filter='ip'; base='http://10.20.0.1:8080'; ping_flag='' ;;
 esac
 case "$CLASS" in
@@ -20,13 +21,13 @@ case "$CLASS" in
  icmp) generator=randomized-icmp-echo; count=$((30+seed%100)); duration=$((15+seed%20)); traffic="ping $ping_flag -I '$src' -c $count -i 0.15 -s $((32+seed%1200)) '$dst' >/dev/null";;
  email) generator=smtp-message-transfer; count=$((20+seed%31)); duration=45; remote_start="exec python3 /lab/generators/smtp_server.py --host '$dst' --port 2525"; traffic="python3 /lab/generators/smtp_send.py '$dst' --count $count --seed $seed";;
  messaging) generator=bidirectional-websocket-chat; count=$((100+seed%201)); duration=$((45+seed%46)); remote_start="exec python3 /lab/generators/chat.py server --host '$dst'"; traffic="python3 /lab/generators/chat.py client --host '$dst' --count $count --duration $duration --seed $seed";;
- voip) generator=rtp-audio-call; duration=$((30+seed%61)); rtp_src="rtp://$src:5006"; rtp_dst="rtp://$dst:5004"; [[ "$PROFILE" == 5 ]] && { rtp_src="rtp://[$src]:5006"; rtp_dst="rtp://[$dst]:5004"; }; remote_start="exec ffmpeg -hide_banner -loglevel error -re -f lavfi -i sine=frequency=700:sample_rate=8000 -t $duration -ac 1 -ar 8000 -c:a pcm_mulaw -f rtp $rtp_src"; traffic="ffmpeg -hide_banner -loglevel error -re -f lavfi -i sine=frequency=900:sample_rate=8000 -t $duration -ac 1 -ar 8000 -c:a pcm_mulaw -f rtp $rtp_dst";;
+ voip) generator=rtp-audio-call; duration=$((30+seed%61)); rtp_src="rtp://$src:5006"; rtp_dst="rtp://$dst:5004"; [[ "$PROFILE" == 5 || "$PROFILE" == 7 ]] && { rtp_src="rtp://[$src]:5006"; rtp_dst="rtp://[$dst]:5004"; }; remote_start="exec ffmpeg -hide_banner -loglevel error -re -f lavfi -i sine=frequency=700:sample_rate=8000 -t $duration -ac 1 -ar 8000 -c:a pcm_mulaw -f rtp $rtp_src"; traffic="ffmpeg -hide_banner -loglevel error -re -f lavfi -i sine=frequency=900:sample_rate=8000 -t $duration -ac 1 -ar 8000 -c:a pcm_mulaw -f rtp $rtp_dst";;
 esac
 completed=false
 cleanup(){ docker exec managed-ipsec-left pkill -INT tcpdump >/dev/null 2>&1 || true; [[ -n "${cap_pid:-}" ]] && kill "$cap_pid" >/dev/null 2>&1 || true; docker exec managed-ipsec-right pkill -f 'aiosmtpd|smtp_server.py|chat.py|ffmpeg.*rtp' >/dev/null 2>&1 || true; [[ "$completed" == true ]] || rm -f "$TMP" "$DEST"; }
 trap cleanup EXIT INT TERM
 "$ROOT/lab/scripts/apply_profile.sh" "$PROFILE" >/dev/null
-if [[ "$PROFILE" == 5 ]]; then ping_check='ping -6 -c 2 -W 3 -I fd10::1 fd20::1'; elif [[ "$PROFILE" == 4 ]]; then ping_check='ping -c 2 -W 3 -I 172.31.0.2 172.31.0.3'; else ping_check='ping -c 2 -W 3 -I 10.10.0.1 10.20.0.1'; fi
+if [[ "$PROFILE" == 5 ]]; then ping_check='ping -6 -c 2 -W 3 -I fd10::1 fd20::1'; elif [[ "$PROFILE" == 7 ]]; then ping_check='ping -6 -c 2 -W 3 -I fd00:31::2 fd00:31::3'; elif [[ "$PROFILE" == 4 || "$PROFILE" == 6 ]]; then ping_check='ping -c 2 -W 3 -I 172.31.0.2 172.31.0.3'; else ping_check='ping -c 2 -W 3 -I 10.10.0.1 10.20.0.1'; fi
 if ! docker exec managed-ipsec-left sh -c "$ping_check" >/dev/null; then
   echo "Tunnel preflight failed for P$(printf '%02d' "$PROFILE")." >&2
   docker exec managed-ipsec-left ipsec statusall >&2 || true

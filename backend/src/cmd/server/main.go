@@ -201,7 +201,11 @@ func main() {
 	registerWorkflowAPI(mux, inputService, analysisService, reportService, workspaceService, protocolService, fusionService, securityService, riskService, mlService, sensorServices.Flows, systemService, localSensorService, sensorServices.Sessions, sensorServices.Interfaces, sensorServices.Captures, viciService, xfrmService, labs)
 	httpAddress := envOrDefault("CORE_HTTP_ADDRESS", "127.0.0.1:8080")
 	httpServer := &http.Server{
-		Addr: httpAddress, Handler: withCORS(mux, corsConfigFromEnv()),
+		Addr: httpAddress,
+		Handler: withCORS(
+			withLabAuthorization(mux, os.Getenv("LAB_API_TOKEN")),
+			corsConfigFromEnv(),
+		),
 		ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second,
 		WriteTimeout: 10 * time.Second, IdleTimeout: 60 * time.Second,
 	}

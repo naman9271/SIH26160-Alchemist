@@ -6,7 +6,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 class ManagedLayoutTests(unittest.TestCase):
     def test_profiles_have_strict_proposals(self):
-        for profile in range(1, 6):
+        for profile in range(1, 9):
             config = (ROOT / 'configs' / f'p{profile}.conf').read_text()
             for key in ('ike=', 'esp='):
                 lines = [line.strip() for line in config.splitlines() if line.strip().startswith(key)]
@@ -33,3 +33,14 @@ class ManagedLayoutTests(unittest.TestCase):
             self.assertIn('tcpdump -Z root', script)
             self.assertIn('kill -0', script)
             self.assertNotRegex(script, r'wait .*\|\| true')
+
+    def test_required_configuration_axes_are_active(self):
+        profiles = [(ROOT / 'configs' / f'p{profile}.conf').read_text() for profile in range(1, 9)]
+        combined = '\n'.join(profiles)
+        self.assertIn('type=tunnel', combined)
+        self.assertIn('type=transport', combined)
+        self.assertIn('aes128-', combined)
+        self.assertIn('aes256', combined)
+        self.assertIn('gcm16', combined)
+        self.assertIn('rekey=yes', combined)
+        self.assertTrue(any('left=fd00:31::2' in profile for profile in profiles))

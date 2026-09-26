@@ -81,6 +81,22 @@ func TestRunPersistsDatasetsAndHistory(t *testing.T) {
 	}
 }
 
+func TestValidateAcceptsAllEightManagedProfiles(t *testing.T) {
+	settings := Settings{
+		Name:        "full profile matrix",
+		Profiles:    []int{1, 2, 3, 4, 5, 6, 7, 8},
+		Labels:      []string{"icmp"},
+		Repetitions: 1,
+	}
+	if err := validate(settings); err != nil {
+		t.Fatalf("eight-profile matrix rejected: %v", err)
+	}
+	settings.Profiles = []int{9}
+	if err := validate(settings); err == nil || !strings.Contains(err.Error(), "1 to 8") {
+		t.Fatalf("profile 9 error = %v, want 1 to 8 validation", err)
+	}
+}
+
 func TestActivationReportsActualRunnerFailure(t *testing.T) {
 	service, err := New(filepath.Join(t.TempDir(), "app.db"), func(ctx context.Context, args []string, log func(string)) error {
 		log("Docker socket permission denied")

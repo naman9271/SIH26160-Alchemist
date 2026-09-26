@@ -17,6 +17,14 @@ async function forward(request: Request, { params }: RouteContext) {
   const headers = new Headers(request.headers);
   headers.delete("host");
   headers.delete("connection");
+  headers.delete("x-alchemist-lab-token");
+  if (path[0] === "api" && path[1] === "v1" && path[2] === "labs") {
+    const labToken = process.env.LAB_API_TOKEN?.trim();
+    if (!labToken) {
+      return NextResponse.json({ error: "Lab controls are disabled." }, { status: 503 });
+    }
+    headers.set("x-alchemist-lab-token", labToken);
+  }
 
   try {
     const response = await fetch(target, {

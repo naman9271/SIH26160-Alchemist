@@ -7,7 +7,7 @@ func TestUnknownEvidenceNeverPasses(t *testing.T) {
 	if result.ScoreAvailable || len(result.Findings) != 0 {
 		t.Fatalf("unknown facts created credit or findings: %+v", result)
 	}
-	if result.PolicyID != SIHBaselinePolicyID || result.PolicyLabel != "SIH baseline compliance" {
+	if result.PolicyID != SIHBaselinePolicyID || result.PolicyLabel != "Alchemist SIH submission baseline" {
 		t.Fatalf("wrong policy identity: %+v", result)
 	}
 }

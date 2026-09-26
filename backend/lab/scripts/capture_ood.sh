@@ -3,10 +3,11 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 LABEL=${1:?}; PROFILE=${2:?}; RUN=${3:?}; DURATION=${4:-20}
 case "$LABEL" in dns) port=5353;udp=1;;ssh)port=2222;udp=0;;gaming_udp)port=27015;udp=1;;database)port=5432;udp=0;;remote_desktop)port=3389;udp=1;;*)exit 2;;esac
-[[ "$PROFILE" =~ ^[1-5]$ && "$RUN" =~ ^R0[1-5]$ && "$DURATION" =~ ^[0-9]+$ ]] || exit 2
+[[ "$PROFILE" =~ ^[1-8]$ && "$RUN" =~ ^R0[1-5]$ && "$DURATION" =~ ^[0-9]+$ ]] || exit 2
 src=10.10.0.1;dst=10.20.0.1; flags=""
-[[ "$PROFILE" == 4 ]] && { src=172.31.0.2;dst=172.31.0.3; }
+[[ "$PROFILE" == 4 || "$PROFILE" == 6 ]] && { src=172.31.0.2;dst=172.31.0.3; }
 [[ "$PROFILE" == 5 ]] && { src=fd10::1;dst=fd20::1;flags="-6"; }
+[[ "$PROFILE" == 7 ]] && { src=fd00:31::2;dst=fd00:31::3;flags="-6"; }
 [[ "$udp" == 1 ]] && flags="$flags -u"
 out="$ROOT/pcaps/ood/${LABEL}_p$(printf '%02d' "$PROFILE")_${RUN}.pcap"
 mkdir -p "$(dirname "$out")";[[ ! -e "$out" ]] || exit 3

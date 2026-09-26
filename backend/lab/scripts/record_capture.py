@@ -9,6 +9,9 @@ PROFILE={
  3:('tunnel','IKEv1','aes256-sha256-modp2048','aes256-sha256-modp2048','AES-256-CBC','HMAC-SHA256','14-MODP2048','on','IPv4','off','no','172.31.0.2','172.31.0.3'),
  4:('transport','IKEv1','aes128-sha256-modp3072','aes128-sha256-modp3072','AES-128-CBC','HMAC-SHA256','15-MODP3072','on','IPv4','on','yes','172.31.0.2','172.31.0.3'),
  5:('tunnel','IKEv2','aes256-sha384-ecp384','aes256-sha384','AES-256-CBC','HMAC-SHA384','20-ECP384','off','IPv6','off','no','fd00:31::2','fd00:31::3'),
+ 6:('transport','IKEv2','aes256gcm16-prfsha256-ecp256','aes256gcm16-ecp256','AES-256-GCM-16','AEAD-GCM-128-bit-ICV','19-ECP256','on','IPv4','off','no','172.31.0.2','172.31.0.3'),
+ 7:('transport','IKEv2','aes128-sha256-modp2048','aes128-sha256-modp2048','AES-128-CBC','HMAC-SHA256','14-MODP2048','on','IPv6','off','no','fd00:31::2','fd00:31::3'),
+ 8:('tunnel','IKEv2','aes256gcm16-prfsha256-ecp256','aes256gcm16-ecp256','AES-256-GCM-16','AEAD-GCM-128-bit-ICV','19-ECP256','on','IPv4','off','no','172.31.0.2','172.31.0.3'),
 }
 def version(cmd):
  try: return subprocess.check_output(cmd, text=True, stderr=subprocess.STDOUT).splitlines()[0]

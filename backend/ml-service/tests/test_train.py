@@ -26,7 +26,7 @@ def training_rows() -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
     class_offsets = {"web": 1.0, "video": 10.0, "voip": 20.0}
     for label, offset in class_offsets.items():
-        for group_number in range(4):
+        for group_number in range(8):
             group = f"{label}-capture-{group_number}"
             for record_number in range(2):
                 rows.append(
@@ -69,11 +69,15 @@ def test_group_split_has_no_overlap_and_keeps_all_classes_in_train(tmp_path: Pat
     splits = split_group_safe(data, config)
     train_groups = set(data.groups[splits.train])
     validation_groups = set(data.groups[splits.validation])
+    calibration_groups = set(data.groups[splits.calibration])
     test_groups = set(data.groups[splits.test])
 
     assert not train_groups & validation_groups
     assert not train_groups & test_groups
+    assert not train_groups & calibration_groups
     assert not validation_groups & test_groups
+    assert not validation_groups & calibration_groups
+    assert not calibration_groups & test_groups
     assert set(data.labels) == set(data.labels[splits.train])
     assert "StratifiedGroupKFold" in splits.strategy
 
@@ -150,16 +154,17 @@ def test_group_split_rejects_class_without_train_group(tmp_path: Path) -> None:
 
 
 def test_group_split_preserves_complete_source_declared_partitions(tmp_path: Path) -> None:
-    labels = np.asarray(["web", "video"] * 3)
+    labels = np.asarray(["web", "video"] * 5)
     data = DatasetData(
-        features=np.arange(6, dtype=float).reshape(-1, 1),
+        features=np.arange(10, dtype=float).reshape(-1, 1),
         labels=labels,
-        groups=np.asarray([f"group-{index}" for index in range(6)]),
+        groups=np.asarray([f"group-{index}" for index in range(10)]),
         feature_order=["packet_count"],
         dataset_sha256="fixture",
-        declared_splits=np.asarray(
-            ["train", "train", "validation", "validation", "test", "test"]
-        ),
+        declared_splits=np.asarray([
+            "train", "train", "train", "train", "train", "train",
+            "validation", "validation", "test", "test",
+        ]),
     )
     config = TrainingConfig(
         dataset_path=tmp_path / "unused.parquet",
@@ -169,7 +174,8 @@ def test_group_split_preserves_complete_source_declared_partitions(tmp_path: Pat
 
     splits = split_group_safe(data, config)
 
-    assert splits.strategy == "source-declared group split"
-    assert splits.train.tolist() == [0, 1]
-    assert splits.validation.tolist() == [2, 3]
-    assert splits.test.tolist() == [4, 5]
+    assert splits.strategy.startswith("source-declared validation/test retained")
+    assert set(splits.train) | set(splits.calibration) == {0, 1, 2, 3, 4, 5}
+    assert not set(splits.train) & set(splits.calibration)
+    assert splits.validation.tolist() == [6, 7]
+    assert splits.test.tolist() == [8, 9]

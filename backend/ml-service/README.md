@@ -16,7 +16,7 @@ Predictions return `UNKNOWN` when confidence is below the configured threshold. 
 
 ## Current IPsec-lab training run
 
-The checked-in corpus metadata defines 175 known-class captures with source-declared train/validation/locked-test partitions (105/35/35), plus 25 OOD and 30 anomaly captures. Raw captures are immutable. Build reproducible local artifacts with:
+The checked-in corpus metadata defines 175 known-class captures with source-declared train/validation/locked-test partitions (105/35/35), plus 25 OOD and 30 anomaly captures. During training, one group-safe third of the source training partition becomes a dedicated UNKNOWN-calibration split; the source validation and locked-test partitions retain their model-selection and final-evaluation roles. Raw captures are immutable. Build reproducible local artifacts with:
 
 The large PCAP files are kept in the dedicated `ipsec-pcap-lab` dataset repository, not this deployable application repository. Restore its `pcaps/` tree under `data/external/ipsec-pcap-lab/` only for retraining.
 
@@ -44,7 +44,7 @@ UNKNOWN detection uses maximum model class probability as a rejection baseline. 
 python -m src.calibrate_unknown
 ```
 
-The command evaluates several thresholds against the group-safe known validation partition and the OOD calibration partition. OOD capture groups assigned to final evaluation never participate in threshold selection; their rejection rate is reported after the threshold is fixed. It writes calibration metrics to `artifacts/unknown_calibration.json`, then stores the selected threshold in both `config/model.yaml` and model metadata. It never retrains the classifier.
+The command evaluates several thresholds against the dedicated, group-safe known calibration partition and the OOD calibration partition. Neither known calibration captures nor OOD groups assigned to final evaluation participate in model fitting or model selection. Final OOD rejection is reported only after the threshold is fixed. The command writes calibration metrics to `artifacts/unknown_calibration.json`, then stores the selected threshold in both `config/model.yaml` and model metadata. It never retrains the classifier.
 
 This confidence-threshold approach is a baseline open-set method, not perfect unknown detection. Unseen traffic can still receive high confidence, and known traffic can be rejected. Recalibrate with representative deployment OOD captures before production use.
 

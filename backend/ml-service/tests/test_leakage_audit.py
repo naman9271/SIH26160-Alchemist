@@ -22,7 +22,7 @@ def write_leaky_training_fixture(path: Path) -> None:
     rows: list[dict[str, object]] = []
     offsets = {"web": 1.0, "video": 10.0, "voip": 20.0}
     for label, class_offset in offsets.items():
-        for group_number in range(4):
+        for group_number in range(8):
             source = "source-a" if group_number % 2 == 0 else "source-b"
             group = f"{source}:{label}:{group_number}"
             for record_number in range(2):

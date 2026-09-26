@@ -128,17 +128,11 @@ Core listener addresses to `0.0.0.0` inside the container.
 
 The dashboard uses these HTTP endpoints:
 
-1. `POST /api/v1/pcap` — upload a classic `.pcap` or `.cap` file.
+1. `POST /api/v1/pcap` — upload a `.pcap`, `.cap`, or `.pcapng` file.
 2. `POST /api/v1/analyses` — start analysis for the returned source ID.
 3. `GET /api/v1/analyses/{analysisID}` — poll for completion.
 4. `POST /api/v1/analyses/{analysisID}/report` — generate a report.
-5. `GET /api/v1/reports/{reportID}/download` — download the PDF.
-
-PCAPNG is not accepted by the browser workflow. Convert it first:
-
-```bash
-editcap -F libpcap input.pcapng output.pcap
-```
+5. `GET /api/v1/reports/{reportID}/download` — download the generated PDF or JSON artifact.
 
 Uploaded captures are analyzed passively; the system does not decrypt ESP
 payloads. Live capture and VICI/XFRM deep assessment need an authorised

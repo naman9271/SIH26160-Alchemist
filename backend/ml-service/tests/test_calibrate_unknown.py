@@ -98,7 +98,7 @@ def test_calibration_evaluates_thresholds_and_persists_choice(tmp_path: Path) ->
     assert report["status"] == "complete"
     assert len(report["threshold_results"]) == 4
     assert report["known_samples"] > 0
-    assert report["known_calibration_partition"] == "validation"
+    assert report["known_calibration_partition"] == "calibration"
     assert report["locked_test_samples_untouched"] > 0
     assert report["unknown_samples"] + report["final_ood_samples"] == 8
     assert 0 <= report["final_ood_rejection_rate"] <= 1

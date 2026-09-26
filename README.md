@@ -14,11 +14,11 @@ Reviewing the security posture of an IPsec VPN can require packet-level expertis
 
 - **Demo Video:** [https://youtu.be/NNhGEnqu5p4](https://youtu.be/NNhGEnqu5p4)
 
-The application accepts a classic PCAP capture and runs a passive analysis workflow. The Go backend extracts IPsec/IKE evidence and calculates security findings; a Python ML worker optionally classifies observable encrypted-flow metadata; and a Next.js dashboard presents the results and generates an executive PDF report. The ML model is trained using the team's [IPsec PCAP Lab dataset](https://github.com/naman9271/ipsec-pcap-lab).
+The application accepts PCAP, PCAPNG, and CAP captures and runs a passive analysis workflow. The Go backend extracts IPsec/IKE evidence and calculates security findings; a Python ML worker optionally classifies observable encrypted-flow metadata; and a Next.js dashboard presents the results and generates executive, technical, and JSON reports. The ML model is trained using the team's [IPsec PCAP Lab dataset](https://github.com/naman9271/ipsec-pcap-lab).
 
 ## Key Features
 
-- Upload and analyse classic `.pcap` and `.cap` files
+- Upload and analyse `.pcap`, `.pcapng`, and `.cap` files
 - Passive observation of IKE, ESP, AH, NAT-T, SPI, and metadata; it does not prove encrypted Child-SA settings
 - Evidence-backed posture findings with a separate configuration-evidence coverage score
 - Optional ML classification of observable flow metadata with confidence and `UNKNOWN` abstention
@@ -33,15 +33,22 @@ The application accepts a classic PCAP capture and runs a passive analysis workf
 | Frontend | Next.js, TypeScript, React, CSS |
 | Core backend | Go, HTTP API, gRPC, Protocol Buffers |
 | ML service | Python 3.11+, scikit-learn, NumPy, gRPC |
-| Deployment | Azure Container Apps, managed HTTPS ingress, Azure Files; Docker Compose for local development |
-| Report assistant | Qwen LLM deployment for plain-language explanations of saved report snapshots |
+| Deployment | Vercel frontend; containerized Go and Python services on an Azure Linux host; Docker Compose for local development |
+| Report assistant | Server-side Gemini integration for plain-language explanations of saved report snapshots |
 | Input | PCAP packet captures; optional StrongSwan/Linux lab telemetry |
 
 ## Architecture
 
 See [docs/architecture.md](docs/architecture.md) for the detailed architecture.
 
-![alt text](assets/screenshots/architechure.png)
+```mermaid
+flowchart LR
+    A[Analyst browser] -->|HTTPS| V[Vercel Next.js dashboard]
+    V -->|Server-side proxy| G[Go Core on Azure Linux]
+    G -->|Private gRPC metadata| M[Python ML worker]
+    G --> R[(Report volume)]
+    G -. Authorized only .-> L[StrongSwan lab and VICI/XFRM]
+```
 
 ## Repository Structure
 
@@ -55,7 +62,9 @@ SIH26160/
 ├── backend/                      # Go API, protocol/security logic, and ML service
 │   └── ml-service/               # Python gRPC ML worker
 ├── docs/
-│   └── architecture.md
+│   ├── architecture.md
+│   ├── EVIDENCE_SCHEMA_V1.md
+│   └── requirements-mapping.md
 ├── assets/
 │   ├── alchemist-ipsec-analysis-report.pdf
 │   └── screenshots/              # Product screenshots
@@ -147,16 +156,10 @@ The API listens on `http://127.0.0.1:8080`; the ML worker defaults to `127.0.0.1
 
 ## Usage
 
-1. Open the dashboard and upload a classic `.pcap` or `.cap` file.
+1. Open the dashboard and upload a `.pcap`, `.pcapng`, or `.cap` file.
 2. Start analysis; enable ML classification when the worker is available.
 3. Review protocol evidence, security findings, risk information, and ML output.
-4. Generate and download the executive PDF report.
-
-PCAPNG is not accepted by the browser workflow. Convert it first:
-
-```bash
-editcap -F libpcap input.pcapng output.pcap
-```
+4. Generate and download an executive or technical PDF report.
 
 ## Limitations and Responsible Use
 
@@ -167,6 +170,15 @@ editcap -F libpcap input.pcapng output.pcap
 - ML traffic labels describe candidate traffic classes from flow metadata and are not proof of a user's activity.
 - Live capture and VICI/XFRM assessment require an authorised Linux/StrongSwan lab and appropriate host permissions.
 - See [the evidence schema](docs/EVIDENCE_SCHEMA_V1.md) for the source-status taxonomy and score interpretation.
+- The checked-in 35-capture locked test result is internal prototype evidence from one generator environment. See the [model card](backend/ml-service/MODEL_CARD.md) before quoting it.
+
+## Evaluation and requirement traceability
+
+- [Problem-statement requirement mapping](docs/requirements-mapping.md)
+- [Evidence and score semantics](docs/EVIDENCE_SCHEMA_V1.md)
+- [Traffic-classifier model card](backend/ml-service/MODEL_CARD.md)
+- [Reproducible evaluator walkthrough](SUBMISSION_GUIDE.md)
+- [Managed testbed operation](backend/lab/MANAGED_LAB.md)
 
 ## Future Scope
 

@@ -9,13 +9,15 @@ RUN="${3:?Usage: $0 TYPE PROFILE RUN [DURATION_SECONDS]}"
 DURATION="${4:-30}"
 
 case "$TYPE" in icmp_flood|udp_flood|beacon_burst) ;; *) echo 'TYPE must be icmp_flood, udp_flood, or beacon_burst' >&2; exit 2;; esac
-case "$PROFILE" in 1|2|3|4|5) ;; *) echo 'PROFILE must be 1 through 5' >&2; exit 2;; esac
+case "$PROFILE" in 1|2|3|4|5|6|7|8) ;; *) echo 'PROFILE must be 1 through 8' >&2; exit 2;; esac
 [[ "$RUN" =~ ^R0[1-5]$ ]] || { echo 'RUN must be R01 through R05' >&2; exit 2; }
 [[ "$DURATION" =~ ^[1-9][0-9]*$ ]] || { echo 'DURATION_SECONDS must be a positive integer' >&2; exit 2; }
 
 if [[ "$PROFILE" == 5 ]]; then
   src='fd10::1'; dst='fd20::1'; ping_cmd='ping -6'; nc_flags='-6'; outer='esp'
-elif [[ "$PROFILE" == 4 ]]; then
+elif [[ "$PROFILE" == 7 ]]; then
+  src='fd00:31::2'; dst='fd00:31::3'; ping_cmd='ping -6'; nc_flags='-6'; outer='esp'
+elif [[ "$PROFILE" == 4 || "$PROFILE" == 6 ]]; then
   src='172.31.0.2'; dst='172.31.0.3'; ping_cmd='ping'; nc_flags=''; outer='udp4500'
 else
   src='10.10.0.1'; dst='10.20.0.1'; ping_cmd='ping'; nc_flags=''; outer='esp'

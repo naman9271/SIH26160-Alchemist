@@ -589,15 +589,19 @@ func generateReport(w http.ResponseWriter, r *http.Request, reports *corereport.
 		}
 	}
 	reportType := reportv1.ReportType_EXECUTIVE
+	reportFormat := reportv1.ReportFormat_PDF
 	switch strings.ToUpper(strings.TrimSpace(request.Type)) {
 	case "", "EXECUTIVE":
 	case "TECHNICAL":
 		reportType = reportv1.ReportType_TECHNICAL
+	case "JSON":
+		reportType = reportv1.ReportType_JSON
+		reportFormat = reportv1.ReportFormat_JSON_FORMAT
 	default:
-		writeWorkflowError(w, shared.NewError(shared.InvalidArgument, "", "type must be EXECUTIVE or TECHNICAL"))
+		writeWorkflowError(w, shared.NewError(shared.InvalidArgument, "", "type must be EXECUTIVE, TECHNICAL, or JSON"))
 		return
 	}
-	record, err := reports.Generate(r.Context(), &reportv1.GenerateReportRequest{AnalysisId: r.PathValue("analysisID"), Type: reportType, Format: reportv1.ReportFormat_PDF, IncludeTimeline: true, IncludeThreatMatrix: true, IncludeShap: true, IncludeEvidenceChain: true})
+	record, err := reports.Generate(r.Context(), &reportv1.GenerateReportRequest{AnalysisId: r.PathValue("analysisID"), Type: reportType, Format: reportFormat, IncludeTimeline: true, IncludeThreatMatrix: true, IncludeShap: true, IncludeEvidenceChain: true})
 	if err != nil {
 		writeWorkflowError(w, err)
 		return

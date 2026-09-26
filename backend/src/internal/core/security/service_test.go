@@ -143,7 +143,7 @@ func TestAssessmentDefaultsToSeparateBaselineAndRetainsProvenance(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	if record.PolicyID != rules.SIHBaselinePolicyID || record.Result.PolicyLabel != "SIH baseline compliance" {
+	if record.PolicyID != rules.SIHBaselinePolicyID || record.Result.PolicyLabel != "Alchemist SIH submission baseline" {
 		t.Fatalf("assessment reused the fusion policy: %+v", record)
 	}
 	var matched bool

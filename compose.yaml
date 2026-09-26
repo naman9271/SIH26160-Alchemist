@@ -40,6 +40,9 @@ services:
       LAB_DATABASE_PATH: /var/lib/alchemist/labs/app.db
       # This is fixed by deployment configuration, never supplied by a browser.
       LAB_RUNNER_SCRIPT: /opt/alchemist/lab/scripts/managed.sh
+      # Required for every /api/v1/labs route. Use the same server-only value
+      # in the frontend deployment; never expose it as NEXT_PUBLIC_*.
+      LAB_API_TOKEN: ${LAB_API_TOKEN}
       HOME: /tmp
       DOCKER_CONFIG: /tmp/.docker
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}

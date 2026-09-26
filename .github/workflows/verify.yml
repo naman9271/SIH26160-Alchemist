@@ -27,6 +27,7 @@ jobs:
       - run: git diff --exit-code -- gen
       - run: go vet ./...
       - run: go test -race ./...
+      - run: python3 -m unittest discover -s lab/tests -p 'test_*.py'
 
   ml:
     runs-on: ubuntu-latest
@@ -59,4 +60,5 @@ jobs:
           cache-dependency-path: frontend/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
+      - run: pnpm exec node --test tests/*.test.mjs
       - run: pnpm build

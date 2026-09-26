@@ -1,4 +1,6 @@
-# IPsec Analyzer Requirement Gap Report
+# Historical IPsec Analyzer Gap Report
+
+> **Superseded:** This audit describes the repository as it existed on 17 September 2026. Several listed gaps have since been implemented, including the managed lab, PCAPNG ingestion, named transforms, technical/JSON reports, and coverage-aware scoring. Use [requirements-mapping.md](requirements-mapping.md) for the current implementation status. This file remains only as an engineering history record.
 
 **Audit date:** 17 September 2026  
 **Scope:** Current repository implementation, not marketing claims or screenshots.  

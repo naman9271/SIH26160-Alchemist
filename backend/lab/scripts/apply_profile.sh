@@ -26,7 +26,9 @@ sleep 2
 for _ in $(seq 1 10); do
   docker exec managed-ipsec-left ipsec up lab >/dev/null 2>&1 || true
   if docker exec managed-ipsec-left ipsec statusall | grep -q 'INSTALLED'; then
-    docker exec managed-ipsec-left ipsec statusall
+    status="$(docker exec managed-ipsec-left ipsec statusall)"
+    printf '%s\n' "$status" | python3 "$ROOT/lab/scripts/verify_installed_profile.py" "$CONF"
+    printf '%s\n' "$status"
     exit 0
   fi
   sleep 1

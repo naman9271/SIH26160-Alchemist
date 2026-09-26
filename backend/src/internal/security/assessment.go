@@ -9,7 +9,7 @@ import (
 
 const (
 	SIHBaselinePolicyID    = "sih-baseline-v1"
-	SIHBaselinePolicyLabel = "SIH baseline compliance"
+	SIHBaselinePolicyLabel = "Alchemist SIH submission baseline"
 	SIHBaselineReference   = "RFC 8221; RFC 8247; RFC 9395; SIH project lifecycle limits"
 )
 

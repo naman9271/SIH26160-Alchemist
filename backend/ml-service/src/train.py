@@ -100,6 +100,7 @@ class DatasetData:
 class GroupSplits:
     train: np.ndarray
     validation: np.ndarray
+    calibration: np.ndarray
     test: np.ndarray
     strategy: str
 
@@ -222,13 +223,29 @@ def _stratified_group_split(
 
 
 def _assert_group_separation(groups: np.ndarray, splits: GroupSplits) -> None:
-    split_groups = [set(groups[index]) for index in (splits.train, splits.validation, splits.test)]
+    split_groups = [
+        set(groups[index])
+        for index in (splits.train, splits.validation, splits.calibration, splits.test)
+    ]
     if any(left & right for position, left in enumerate(split_groups) for right in split_groups[position + 1 :]):
         raise TrainingError("A split_group_id appears in more than one split")
 
 
+def _split_calibration_pool(
+    indices: np.ndarray, data: DatasetData, seed: int, desired_fraction: float = 0.5
+) -> tuple[np.ndarray, np.ndarray, str]:
+    if len(set(data.groups[indices])) < 2:
+        raise TrainingError(
+            "The source pool needs at least two groups so model fitting and "
+            "UNKNOWN calibration remain independent"
+        )
+    return _stratified_group_split(
+        indices, data.labels, data.groups, desired_fraction=desired_fraction, seed=seed
+    )
+
+
 def split_group_safe(data: DatasetData, config: TrainingConfig) -> GroupSplits:
-    """Create train/validation/test partitions without ever splitting a group."""
+    """Create four group-disjoint partitions for fit, selection, calibration, and test."""
 
     if len(set(data.groups)) < 3:
         raise TrainingError("At least three distinct split_group_id values are required")
@@ -237,11 +254,21 @@ def split_group_safe(data: DatasetData, config: TrainingConfig) -> GroupSplits:
         "validation",
         "test",
     }:
+        train, calibration, calibration_strategy = _split_calibration_pool(
+            np.flatnonzero(data.declared_splits == "train"),
+            data,
+            config.random_seed + 2,
+            desired_fraction=1 / 3,
+        )
         splits = GroupSplits(
-            train=np.flatnonzero(data.declared_splits == "train"),
+            train=train,
             validation=np.flatnonzero(data.declared_splits == "validation"),
+            calibration=calibration,
             test=np.flatnonzero(data.declared_splits == "test"),
-            strategy="source-declared group split",
+            strategy=(
+                "source-declared validation/test retained; source train divided into "
+                f"model-fitting and UNKNOWN-calibration groups with {calibration_strategy}"
+            ),
         )
         _assert_group_separation(data.groups, splits)
         missing_train_classes = sorted(set(data.labels) - set(data.labels[splits.train]))
@@ -251,23 +278,35 @@ def split_group_safe(data: DatasetData, config: TrainingConfig) -> GroupSplits:
                 + ", ".join(missing_train_classes)
             )
         return splits
+    if len(set(data.groups)) < 4:
+        raise TrainingError("At least four distinct groups are required for independent partitions")
     all_indices = np.arange(len(data.labels))
-    train_validation, test, outer_strategy = _stratified_group_split(
+    train_validation_calibration, test, test_strategy = _stratified_group_split(
         all_indices, data.labels, data.groups, config.test_fraction, config.random_seed
     )
-    validation_share = config.validation_fraction / (1 - config.test_fraction)
-    train, validation, inner_strategy = _stratified_group_split(
-        train_validation,
+    held_out_fraction = min(
+        0.5,
+        (config.validation_fraction * 2) / (1 - config.test_fraction),
+    )
+    train, selection_calibration, selection_strategy = _stratified_group_split(
+        train_validation_calibration,
         data.labels,
         data.groups,
-        validation_share,
+        held_out_fraction,
         config.random_seed + 1,
+    )
+    validation, calibration, calibration_strategy = _split_calibration_pool(
+        selection_calibration, data, config.random_seed + 2
     )
     splits = GroupSplits(
         train=train,
         validation=validation,
+        calibration=calibration,
         test=test,
-        strategy=f"test: {outer_strategy}; validation: {inner_strategy}",
+        strategy=(
+            f"test: {test_strategy}; selection pool: {selection_strategy}; "
+            f"calibration: {calibration_strategy}"
+        ),
     )
     _assert_group_separation(data.groups, splits)
     missing_train_classes = sorted(set(data.labels) - set(data.labels[splits.train]))
@@ -631,6 +670,7 @@ def train_models(config: TrainingConfig) -> dict[str, Any]:
         for name, indices in (
             ("train", splits.train),
             ("validation", splits.validation),
+            ("calibration", splits.calibration),
             ("test", splits.test),
         )
     }
@@ -638,6 +678,7 @@ def train_models(config: TrainingConfig) -> dict[str, Any]:
         "generated_at": datetime.now(UTC).isoformat(),
         "selection_metric": "macro_f1",
         "selection_split": "validation",
+        "unknown_calibration_split": "calibration (excluded from model fitting)",
         "selection_policy": "random_forest_baseline_unless_xgboost_strictly_improves_validation_macro_f1",
         "probability_calibration": "sigmoid_with_stratified_group_folds_on_train_and_validation_only",
         "selected_model": better_model,

@@ -14,6 +14,9 @@ const profiles = [
   [3,"P03 · IKEv1 / IPv4 / tunnel","AES-256-CBC · SHA256 · DH14 · native ESP · PFS on"],
   [4,"P04 · IKEv1 / IPv4 / transport","AES-128-CBC · SHA256 · DH15 · forced UDP/4500 · PFS on"],
   [5,"P05 · IKEv2 / IPv6 / tunnel","AES-256-CBC · SHA384 · DH20 · native ESP · PFS off"],
+  [6,"P06 · IKEv2 / IPv4 / transport","AES-256-GCM · ECP256 · native ESP · PFS on"],
+  [7,"P07 · IKEv2 / IPv6 / transport","AES-128-CBC · SHA256 · DH14 · native ESP · PFS on"],
+  [8,"P08 · IKEv2 / IPv4 / tunnel","AES-256-GCM · ECP256 · 30 s rekey · PFS on"],
 ] as const;
 const labels = ["web","video","voip","email","file_transfer","messaging","icmp"];
 const evaluations=["dns","ssh","gaming_udp","database","remote_desktop","icmp_flood","udp_flood","beacon_burst"];
