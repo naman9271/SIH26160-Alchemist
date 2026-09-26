@@ -7,6 +7,12 @@ services:
     build:
       context: ./backend/ml-service
       dockerfile: Dockerfile
+      # Docker bridge cannot reach the host's DNS resolver. Permit host
+      # networking only for BuildKit dependency downloads; the running service
+      # remains on Compose's private network.
+      network: host
+      entitlements:
+        - network.host
     init: true
     environment:
       ML_GRPC_HOST: ${ML_GRPC_HOST:-0.0.0.0}
@@ -19,6 +25,9 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      network: host
+      entitlements:
+        - network.host
     depends_on:
       ml:
         condition: service_started
