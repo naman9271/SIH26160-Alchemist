@@ -4,6 +4,7 @@ export type SecurityScorePresentation = {
   isProvisional: boolean;
   unknownEvidence?: number;
   configurationFacts?: number;
+  evaluatedConfigurationFacts?: number;
 };
 
 export type SecurityScoreUnavailableCopy = {
@@ -48,6 +49,7 @@ export function securityScorePresentation(value: unknown): SecurityScorePresenta
     evidence_coverage_percent?: unknown;
     provisional?: unknown;
     configuration_facts?: unknown;
+    configuration_facts_evaluated?: unknown;
     score?: unknown;
     coverage_percent?: unknown;
     unknown_evidence_count?: unknown;
@@ -63,6 +65,12 @@ export function securityScorePresentation(value: unknown): SecurityScorePresenta
   const configurationFacts = typeof assessment.configuration_facts === "number" && Number.isFinite(assessment.configuration_facts)
     ? Math.max(0, Math.floor(assessment.configuration_facts))
     : undefined;
+  const suppliedEvaluatedFacts = typeof assessment.configuration_facts_evaluated === "number" && Number.isFinite(assessment.configuration_facts_evaluated)
+    ? Math.max(0, Math.floor(assessment.configuration_facts_evaluated))
+    : undefined;
+  const evaluatedConfigurationFacts = configurationFacts === undefined
+    ? undefined
+    : Math.min(configurationFacts, suppliedEvaluatedFacts ?? Math.max(0, configurationFacts - (unknownEvidence ?? configurationFacts)));
   const currentCoverage = typeof assessment.evidence_coverage_percent === "number" && Number.isFinite(assessment.evidence_coverage_percent)
     ? assessment.evidence_coverage_percent
     : undefined;
@@ -83,5 +91,6 @@ export function securityScorePresentation(value: unknown): SecurityScorePresenta
     isProvisional: assessment.provisional === true || (assessedScore !== undefined && (coveragePercent === undefined || coveragePercent < 100)),
     unknownEvidence,
     configurationFacts,
+    evaluatedConfigurationFacts,
   };
 }

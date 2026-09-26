@@ -43,13 +43,15 @@ export function RiskCards({ value, summary }: { value: unknown; summary?: unknow
         <p className="mt-3 text-3xl">{assessment.findings?.length ?? 0}</p>
       </article>
       <article className="relative border border-white/15 p-5">
-        <span className="absolute right-4 top-4"><InfoHint label="About evidence coverage">Coverage counts every scored control that available evidence could establish, including lifecycle and metadata checks. Gateway-only facts such as replay protection may remain not evaluated in passive captures.</InfoHint></span>
-        <p className="pr-7 text-xs text-white/50">Assessment evidence coverage</p>
+        <span className="absolute right-4 top-4"><InfoHint label="About evidence coverage">This percentage is the policy-weighted share of applicable security controls with enough evidence to evaluate. The configuration-fact count below is a separate unweighted count, so the two values need not be the same percentage.</InfoHint></span>
+        <p className="pr-7 text-xs text-white/50">Weighted control coverage</p>
         <p className="mt-3 text-3xl">{presentation.coveragePercent === undefined ? "Unavailable" : `${presentation.coveragePercent}%`}</p>
-        <p className="mt-3 text-xs text-white/50">{presentation.unknownEvidence ?? "Unknown"} of {presentation.configurationFacts ?? "the reported"} critical configuration facts not evaluated</p>
+        <p className="mt-3 text-xs text-white/50">{presentation.evaluatedConfigurationFacts !== undefined && presentation.configurationFacts !== undefined
+          ? `${presentation.evaluatedConfigurationFacts} of ${presentation.configurationFacts} critical configuration facts observed${presentation.unknownEvidence !== undefined ? ` · ${presentation.unknownEvidence} unavailable` : ""}`
+          : `${presentation.unknownEvidence ?? "Unknown"} critical configuration facts unavailable`}</p>
       </article>
     </div>
-    <p className="text-xs leading-6 text-white/50">The score reflects deterministic findings; coverage shows how much of the assessment could be verified. A passive capture cannot prove every gateway setting.</p>
+    <p className="text-xs leading-6 text-white/50">The score reflects deterministic findings. Weighted coverage uses the policy weights of all applicable controls; the configuration count reports key facts without weighting. A passive capture cannot prove every gateway setting.</p>
     {!assessment.findings?.length && <p className="text-sm text-white/60">No findings were raised from the available evidence; unavailable controls still require verification.</p>}
     {assessment.findings?.map((finding, index) => <article key={`${finding.ResourceType ?? "SA"}:${finding.ResourceID ?? "unknown"}:${finding.RuleID ?? index}`} className="relative border border-amber-200/25 p-5">
       <span className="absolute right-4 top-4"><InfoHint label={`About ${finding.Title ?? "this finding"}`}>This finding is based on the evidence properties shown at the bottom of the card. Follow the remediation after confirming the affected gateway configuration.</InfoHint></span>
