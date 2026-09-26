@@ -10,6 +10,7 @@ import { ResultCards } from "./result-cards";
 import { ClassificationCards } from "./classification-cards";
 import { RiskCards } from "./risk-cards";
 import { InfoHint } from "@/components/ui/info-hint";
+import { analysisServiceState, type AnalysisServiceState } from "./service-state";
 
 type RecordValue = Record<string, unknown>;
 type Insight = RecordValue & { analysis?: { state?: string; stage?: string; source_id?: string } };
@@ -59,7 +60,7 @@ function DataBlock({ title, value }: { title: string; value: unknown }) {
 export function LiveAnalysisPanel({ view = "overview" }: { view?: string }) {
   const search = useSearchParams();
   const analysisId = search.get("analysis");
-  const [health, setHealth] = useState<"CHECKING" | "READY" | "UNAVAILABLE">("CHECKING");
+  const [health, setHealth] = useState<"CHECKING" | AnalysisServiceState>("CHECKING");
   const [insights, setInsights] = useState<Insight>();
   const [system, setSystem] = useState<RecordValue>();
   const [error, setError] = useState<string>();
@@ -68,27 +69,38 @@ export function LiveAnalysisPanel({ view = "overview" }: { view?: string }) {
 
   const refresh = useCallback(async () => {
     setError(undefined);
-    try {
-      const [, systemData, analysisData] = await Promise.all([
-        request("/health"),
-        request<RecordValue>("/api/v1/system/overview"),
-        analysisId ? request<Insight>(`/api/v1/analyses/${encodeURIComponent(analysisId)}/insights`) : Promise.resolve(undefined),
-      ]);
-      setHealth("READY");
-      setSystem(systemData);
-      if (analysisData) {
-        setArchived(false);
-        setInsights(analysisData);
-        if (analysisData.analysis?.state === "ANALYSIS_STATE_COMPLETED" && analysisId) {
-          try { saveSnapshot(analysisId, analysisData); } catch { setError("Browser history is full or unavailable. Results are still available."); }
-        }
+    const [healthResult, systemResult, analysisResult] = await Promise.allSettled([
+      request<RecordValue>("/health"),
+      request<RecordValue>("/api/v1/system/overview"),
+      analysisId ? request<Insight>(`/api/v1/analyses/${encodeURIComponent(analysisId)}/insights`) : Promise.resolve(undefined),
+    ]);
+    const nextHealth = analysisServiceState({
+      health: healthResult.status === "fulfilled",
+      system: systemResult.status === "fulfilled",
+      analysis: analysisId ? analysisResult.status === "fulfilled" : undefined,
+    });
+    setHealth(nextHealth);
+
+    const errors: string[] = [];
+    if (systemResult.status === "fulfilled") setSystem(systemResult.value);
+    else errors.push("System overview could not be refreshed.");
+
+    if (analysisId && analysisResult.status === "fulfilled" && analysisResult.value) {
+      const analysisData = analysisResult.value;
+      setArchived(false);
+      setInsights(analysisData);
+      if (analysisData.analysis?.state === "ANALYSIS_STATE_COMPLETED") {
+        try { saveSnapshot(analysisId, analysisData); } catch { errors.push("Browser history is full or unavailable. Results are still available."); }
       }
-    } catch (requestError) {
-      setHealth("UNAVAILABLE");
+    } else if (analysisId && analysisResult.status === "rejected") {
       const saved = readHistory().find(item => item.id === analysisId);
       if (saved) { setInsights(saved.data as Insight); setArchived(true); }
-      setError(requestError instanceof Error ? requestError.message : "Unable to reach Go Server.");
+      errors.push(analysisResult.reason instanceof Error ? analysisResult.reason.message : "Analysis results could not be refreshed.");
     }
+
+    if (nextHealth === "UNAVAILABLE") errors.unshift("Unable to reach the analysis service.");
+    else if (nextHealth === "DEGRADED") errors.unshift("The analysis service is reachable, but its readiness check failed.");
+    setError(errors.length > 0 ? errors.join(" ") : undefined);
   }, [analysisId]);
 
   useEffect(() => {
@@ -132,7 +144,7 @@ export function LiveAnalysisPanel({ view = "overview" }: { view?: string }) {
     {view === "classification" && <div className="mb-8"><ClassificationCards value={atPath(insights, ["ml", "predictions"])}/></div>}
     {view === "overview" && analysisId && <div className="mb-4 flex justify-end"><button onClick={() => void generateReport("TECHNICAL")} disabled={archived || analysis?.state !== "ANALYSIS_STATE_COMPLETED" || report?.state === "GENERATING"} className="border border-white/40 px-3 py-2 text-[9px] font-bold tracking-[.12em] text-white transition-colors hover:border-teal-200 hover:text-teal-100 disabled:cursor-not-allowed disabled:opacity-40">GENERATE TECHNICAL PDF</button></div>}
     <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] font-bold tracking-[.14em] text-sky-200">ANALYSIS RESULTS</p><p className="mt-2 text-xs text-white/55">Results retain their source and status. ESP payloads are not decrypted; unavailable gateway facts remain not evaluated.</p></div><button onClick={() => void refresh()} className="border border-white/30 px-3 py-2 text-[9px] font-bold tracking-[.12em] transition hover:bg-white hover:text-black">REFRESH</button></div>
-    {!analysisId && !["health", "gateway", "upload"].includes(view) ? <div className="mt-5 border-t border-white/10 pt-5 text-sm leading-7 text-white/60">No analysis is selected. <Link className="text-teal-200 underline underline-offset-4" href="/workspace">Analyze a capture</Link>, then open the completed dashboard.</div> : <><div className="mt-5 grid gap-2 border-t border-white/10 pt-5 sm:grid-cols-4"><div><p className="text-[9px] text-white/40">ANALYSIS SERVICE</p><p className={`mt-2 text-xs font-bold ${health === "READY" ? "text-teal-200" : "text-red-200"}`}>{health}</p></div><div><p className="text-[9px] text-white/40">ANALYSIS STATE</p><p className="mt-2 text-xs font-bold text-white">{analysis?.state ?? "NOT SELECTED"}</p></div><div><p className="text-[9px] text-white/40">OPERATIONAL STAGE</p><p className="mt-2 text-xs font-bold text-white">{analysis?.stage ?? "—"}</p></div><div><p className="text-[9px] text-white/40">AVAILABLE RECORD GROUPS</p><p className="mt-2 text-xs font-bold text-white">{availableSections}</p></div></div>{view === "overview" && <div className="relative z-10 mt-5 flex flex-wrap items-center gap-3"><button onClick={() => void generateReport()} disabled={archived || analysis?.state !== "ANALYSIS_STATE_COMPLETED" || report?.state === "GENERATING"} className="border border-teal-200 bg-teal-200 px-3 py-2 text-[9px] font-bold tracking-[.12em] text-slate-950 transition-colors duration-200 hover:bg-transparent hover:text-teal-100 active:translate-y-px active:bg-teal-100 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40">{report?.state === "GENERATING" ? "GENERATING PDF…" : "GENERATE EXECUTIVE PDF"}</button><span className="relative"><InfoHint label="About the executive report">The executive PDF summarizes the evidence available in this analysis. It distinguishes passive observations, authorized gateway verification, and unavailable facts; it does not decrypt ESP or prove unavailable settings.</InfoHint></span>{report && <span className="text-[10px] text-white/55" role="status" aria-live="polite">REPORT: {report.state}{report.failure_reason ? ` · ${report.failure_reason}` : ""}</span>}{report?.state === "GENERATING" && <button type="button" disabled className="pointer-events-none inline-flex min-w-32 items-center justify-center border border-white/20 bg-white/[.03] px-3 py-2 text-[9px] font-bold tracking-[.12em] text-white/35">PREPARING PDF…</button>}{report?.state === "READY" && report.download_url && <a href={`/api/core${report.download_url}`} download className="group relative isolate inline-flex min-w-32 cursor-pointer overflow-hidden border border-white/50 bg-transparent px-3 py-2 text-[9px] font-bold tracking-[.12em] text-white shadow-[0_0_28px_rgba(255,255,255,.12)] transition-all duration-300 hover:border-teal-200 hover:bg-teal-200/15 hover:text-teal-100 hover:shadow-[0_0_38px_rgba(94,234,212,.28)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-200 active:translate-y-px active:bg-teal-100 active:shadow-none"><span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-teal-100/25 to-transparent transition-transform duration-700 group-hover:translate-x-full" /><span className="absolute -left-1 -top-1 hidden h-3 w-3 border-l border-t border-white/70 group-hover:border-teal-100 lg:block" /><span className="absolute -bottom-1 -right-1 hidden h-3 w-3 border-b border-r border-white/70 group-hover:border-teal-100 lg:block" /><span className="relative">DOWNLOAD PDF</span></a>}{report?.state === "FAILED" && <button type="button" disabled className="inline-flex min-w-32 items-center justify-center border border-red-200/25 px-3 py-2 text-[9px] font-bold tracking-[.12em] text-red-100/45">PDF UNAVAILABLE</button>}</div>}<div className="mt-5 grid gap-3">{dataBlocks.map(([title, value]) => <DataBlock key={title} title={title} value={value} />)}{dataBlocks.every(([, value]) => value === undefined || value === null || (Array.isArray(value) && value.length === 0) || (typeof value === "object" && !Array.isArray(value) && Object.keys(value).length === 0)) && <p className="border border-dashed border-white/20 p-4 text-xs leading-6 text-white/55">This section has no records yet. The analysis may still be running, the capture may not contain this protocol data, or the optional service may be unavailable.</p>}</div></>}
+    {!analysisId && !["health", "gateway", "upload"].includes(view) ? <div className="mt-5 border-t border-white/10 pt-5 text-sm leading-7 text-white/60">No analysis is selected. <Link className="text-teal-200 underline underline-offset-4" href="/workspace">Analyze a capture</Link>, then open the completed dashboard.</div> : <><div className="mt-5 grid gap-2 border-t border-white/10 pt-5 sm:grid-cols-4"><div><p className="text-[9px] text-white/40">ANALYSIS SERVICE</p><p className={`mt-2 text-xs font-bold ${health === "READY" ? "text-teal-200" : health === "DEGRADED" || health === "CHECKING" ? "text-amber-100" : "text-red-200"}`}>{health}</p></div><div><p className="text-[9px] text-white/40">ANALYSIS STATE</p><p className="mt-2 text-xs font-bold text-white">{analysis?.state ?? "NOT SELECTED"}</p></div><div><p className="text-[9px] text-white/40">OPERATIONAL STAGE</p><p className="mt-2 text-xs font-bold text-white">{analysis?.stage ?? "—"}</p></div><div><p className="text-[9px] text-white/40">AVAILABLE RECORD GROUPS</p><p className="mt-2 text-xs font-bold text-white">{availableSections}</p></div></div>{view === "overview" && <div className="relative z-10 mt-5 flex flex-wrap items-center gap-3"><button onClick={() => void generateReport()} disabled={archived || analysis?.state !== "ANALYSIS_STATE_COMPLETED" || report?.state === "GENERATING"} className="border border-teal-200 bg-teal-200 px-3 py-2 text-[9px] font-bold tracking-[.12em] text-slate-950 transition-colors duration-200 hover:bg-transparent hover:text-teal-100 active:translate-y-px active:bg-teal-100 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40">{report?.state === "GENERATING" ? "GENERATING PDF…" : "GENERATE EXECUTIVE PDF"}</button><span className="relative"><InfoHint label="About the executive report">The executive PDF summarizes the evidence available in this analysis. It distinguishes passive observations, authorized gateway verification, and unavailable facts; it does not decrypt ESP or prove unavailable settings.</InfoHint></span>{report && <span className="text-[10px] text-white/55" role="status" aria-live="polite">REPORT: {report.state}{report.failure_reason ? ` · ${report.failure_reason}` : ""}</span>}{report?.state === "GENERATING" && <button type="button" disabled className="pointer-events-none inline-flex min-w-32 items-center justify-center border border-white/20 bg-white/[.03] px-3 py-2 text-[9px] font-bold tracking-[.12em] text-white/35">PREPARING PDF…</button>}{report?.state === "READY" && report.download_url && <a href={`/api/core${report.download_url}`} download className="group relative isolate inline-flex min-w-32 cursor-pointer overflow-hidden border border-white/50 bg-transparent px-3 py-2 text-[9px] font-bold tracking-[.12em] text-white shadow-[0_0_28px_rgba(255,255,255,.12)] transition-all duration-300 hover:border-teal-200 hover:bg-teal-200/15 hover:text-teal-100 hover:shadow-[0_0_38px_rgba(94,234,212,.28)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-200 active:translate-y-px active:bg-teal-100 active:shadow-none"><span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-teal-100/25 to-transparent transition-transform duration-700 group-hover:translate-x-full" /><span className="absolute -left-1 -top-1 hidden h-3 w-3 border-l border-t border-white/70 group-hover:border-teal-100 lg:block" /><span className="absolute -bottom-1 -right-1 hidden h-3 w-3 border-b border-r border-white/70 group-hover:border-teal-100 lg:block" /><span className="relative">DOWNLOAD PDF</span></a>}{report?.state === "FAILED" && <button type="button" disabled className="inline-flex min-w-32 items-center justify-center border border-red-200/25 px-3 py-2 text-[9px] font-bold tracking-[.12em] text-red-100/45">PDF UNAVAILABLE</button>}</div>}<div className="mt-5 grid gap-3">{dataBlocks.map(([title, value]) => <DataBlock key={title} title={title} value={value} />)}{dataBlocks.every(([, value]) => value === undefined || value === null || (Array.isArray(value) && value.length === 0) || (typeof value === "object" && !Array.isArray(value) && Object.keys(value).length === 0)) && <p className="border border-dashed border-white/20 p-4 text-xs leading-6 text-white/55">This section has no records yet. The analysis may still be running, the capture may not contain this protocol data, or the optional service may be unavailable.</p>}</div></>}
     {error && <p className="mt-5 border border-red-300/50 bg-red-300/10 p-3 text-xs text-red-100">{error}</p>}
   </section>;
 }
