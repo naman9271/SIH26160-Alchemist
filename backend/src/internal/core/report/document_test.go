@@ -1,6 +1,7 @@
 package report
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -67,10 +68,13 @@ func TestReportDocumentKeepsDashboardSectionsWhenDataIsUnavailable(t *testing.T)
 			t.Fatalf("unsupported optional section %q should be omitted", section.Title)
 		}
 	}
-	for _, expected := range []string{"Progress Flow", "VPN Sessions", "Flows", "Traffic Classification", "Evidence", "Security Findings", "Risk & Fixes", "System Health"} {
+	for _, expected := range []string{"Progress Flow", "VPN Sessions", "Flows", "Traffic Classification", "Evidence", "Security Findings", "Risk & Fixes"} {
 		if !titles[expected] {
 			t.Fatalf("dashboard section %q should explain unavailable data", expected)
 		}
+	}
+	if titles["System Health"] {
+		t.Fatal("empty system health section should be omitted")
 	}
 }
 
@@ -78,7 +82,7 @@ func TestExecutiveReportExcludesTechnicalEvidenceSections(t *testing.T) {
 	now := time.Unix(100, 0).UTC()
 	document := buildReportDocumentForType(coreanalysis.Record{ID: "analysis", CreatedAt: now, UpdatedAt: now}, nil, nil, map[string]interface{}{}, reportv1.ReportType_EXECUTIVE, now)
 	for _, section := range document.Sections {
-		if section.Title == "Appendix: Evidence Conclusions" || section.Title == "Actionable Threat Entries" || section.Title == "Evidence" {
+		if section.Title == "Appendix: Evidence Conclusions" || section.Title == "Actionable Threat Entries" || section.Title == "Evidence" || section.Title == "System Health" {
 			t.Fatalf("executive report retained technical section %q", section.Title)
 		}
 	}
@@ -89,6 +93,51 @@ func TestExecutiveReportExcludesTechnicalEvidenceSections(t *testing.T) {
 	for _, expected := range []string{"Passive Analysis", "Traffic Classification"} {
 		if !titles[expected] {
 			t.Fatalf("executive report omitted analyst-facing section %q", expected)
+		}
+	}
+}
+
+func TestUnavailableScoreExplainsESPOnlyEvidenceWithoutZeroTables(t *testing.T) {
+	source := &coreinput.Source{Counters: capture.Counters{PacketsTotal: 97, ESPPackets: 97}}
+	score := &riskv1.SecurityScore{ScoreAvailable: false, CoverageAvailable: true, UnknownEvidenceCount: 6}
+	breakdown := &riskv1.RiskBreakdown{Cryptography: &riskv1.RiskCategory{Score: 0, Maximum: 25}}
+	section := riskAndFixesSection(map[string]interface{}{"risk_score": score, "risk_breakdown": breakdown}, rules.Assessment{}, true, source)
+	if len(section.Paragraphs) == 0 || !strings.Contains(section.Paragraphs[0], "no observable IKE negotiation") {
+		t.Fatalf("missing ESP-only explanation: %#v", section.Paragraphs)
+	}
+	if len(section.Tables) != 1 || len(section.Tables[0].Rows) != 4 {
+		t.Fatalf("unavailable score should produce one evidence table: %#v", section.Tables)
+	}
+	for _, row := range section.Tables[0].Rows {
+		if strings.Contains(strings.Join(row, " "), "unavailable") || strings.Contains(strings.Join(row, " "), "0.0/25.0") {
+			t.Fatalf("unavailable score rendered misleading score data: %#v", row)
+		}
+	}
+}
+
+func TestRiskAssessmentStateAndApplicableCategories(t *testing.T) {
+	score := &riskv1.SecurityScore{ScoreAvailable: true, ObservedSecurityScore: 88, RiskScore: 12, RiskLevel: "LOW", CoverageAvailable: true, EvidenceCoverage: 100}
+	breakdown := &riskv1.RiskBreakdown{Cryptography: &riskv1.RiskCategory{Score: 20, Maximum: 25}, Authentication: &riskv1.RiskCategory{}}
+	section := riskAndFixesSection(map[string]interface{}{"risk_score": score, "risk_breakdown": breakdown}, rules.Assessment{}, true, nil)
+	if got := section.Tables[0].Rows[5][1]; got != "final" {
+		t.Fatalf("non-provisional assessment state = %q, want final", got)
+	}
+	if len(section.Tables[1].Rows) != 1 || section.Tables[1].Rows[0][0] != "Cryptography" {
+		t.Fatalf("not-applicable 0/0 category was retained: %#v", section.Tables[1].Rows)
+	}
+}
+
+func TestOfflineSystemHealthOmitsIrrelevantSensorCapabilities(t *testing.T) {
+	section := systemHealthSection(map[string]interface{}{
+		"system_readiness":    coresystem.Dependencies{},
+		"system_capabilities": coresystem.Capabilities{PassivePCAP: true, SecurityAssessment: true, RiskScoring: true},
+	}, "OFFLINE_PCAP")
+	for _, table := range section.Tables {
+		for _, row := range table.Rows {
+			joined := strings.Join(row, " ")
+			if strings.Contains(joined, "Sensor") || strings.Contains(joined, "live capture") || strings.Contains(joined, "Deep assessment") || strings.Contains(joined, "false") {
+				t.Fatalf("offline report retained irrelevant capability row: %#v", row)
+			}
 		}
 	}
 }

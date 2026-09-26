@@ -79,7 +79,7 @@ func buildReportDocument(record coreanalysis.Record, source *coreinput.Source, c
 		if assessment.ScoreAvailable {
 			executive.Paragraphs = append(executive.Paragraphs, fmt.Sprintf("The worst observed SA security score is %.1f out of 100 (grade %s), with %s risk and %s evidence coverage. %d evidence items remained unknown.", assessment.Score, assessment.Grade, riskLevel, coverage, unknown))
 		} else {
-			executive.Paragraphs = append(executive.Paragraphs, fmt.Sprintf("No security score was assigned because no controls were evaluated. Evidence coverage is %s and %d evidence items remained unknown.", coverage, unknown))
+			executive.Paragraphs = append(executive.Paragraphs, scoreUnavailableExplanation(source), fmt.Sprintf("Evidence coverage is %s and %d evidence items remained unknown.", coverage, unknown))
 		}
 		executive.Paragraphs = append(executive.Paragraphs, "The observed score, evidence coverage, and ML confidence are separate concepts. A provisional assessment contains unresolved controls and is not a claim that unavailable gateway settings are secure.")
 		if len(assessment.Findings) == 0 {
@@ -115,7 +115,7 @@ func buildReportDocument(record coreanalysis.Record, source *coreinput.Source, c
 	document.Sections = append(document.Sections, reportSection{Title: "Analysis Overview", Tables: []reportTable{{Headers: []string{"Metric", "Value"}, Rows: overviewRows, Widths: []int{28, 66}}}})
 
 	if progress, ok := payload["analysis_progress"].(*analysisv1.AnalysisProgress); ok && progress != nil {
-		document.Sections = append(document.Sections, progressSection(progress))
+		document.Sections = append(document.Sections, progressSection(progress, record.Mode.String()))
 	} else {
 		document.Sections = append(document.Sections, reportSection{Title: "Progress Flow", Paragraphs: []string{fmt.Sprintf("Detailed pipeline counters were unavailable. The final recorded stage was %s.", humanValue(record.Stage.String()))}})
 	}
@@ -200,15 +200,17 @@ func buildReportDocument(record coreanalysis.Record, source *coreinput.Source, c
 	} else {
 		document.Sections = append(document.Sections, reportSection{Title: "Security Findings", Paragraphs: []string{"A completed deterministic security assessment was unavailable, so no supported findings or remediation actions can be reported."}})
 	}
-	document.Sections = append(document.Sections, riskAndFixesSection(payload, assessment, hasAssessment))
-	document.Sections = append(document.Sections, systemHealthSection(payload))
+	document.Sections = append(document.Sections, riskAndFixesSection(payload, assessment, hasAssessment, source))
+	if health := systemHealthSection(payload, record.Mode.String()); len(health.Tables) > 0 {
+		document.Sections = append(document.Sections, health)
+	}
 
 	conclusion := reportSection{Title: "Conclusion"}
 	if hasAssessment {
 		if assessment.ScoreAvailable {
 			conclusion.Paragraphs = []string{fmt.Sprintf("This analysis completed with a worst observed SA security score of %.1f/100 and %d supported finding(s). Use the recommendations as the next actions, while treating all unknown or unavailable evidence as unresolved rather than safe.", assessment.Score, len(assessment.Findings))}
 		} else {
-			conclusion.Paragraphs = []string{"This analysis completed without a numeric security score because no controls were evaluated. Treat unknown or unavailable evidence as unresolved rather than safe."}
+			conclusion.Paragraphs = []string{scoreUnavailableExplanation(source), "The protocol and traffic observations remain valid, but unknown configuration evidence must be resolved before making a security decision."}
 		}
 	} else {
 		conclusion.Paragraphs = []string{"The analysis completed, but no security assessment was available. Review collection coverage and repeat the analysis before making a security decision."}
@@ -230,7 +232,7 @@ func buildReportDocumentForType(record coreanalysis.Record, source *coreinput.So
 		return document
 	}
 	document.Subtitle = "IPSEC VPN Executive Security Assessment"
-	allowed := map[string]bool{"Executive Summary": true, "Analysis Overview": true, "Traffic Analysis": true, "Passive Analysis": true, "Traffic Classification": true, "Security Findings": true, "Recommendations": true, "Risk & Fixes": true, "System Health": true, "Conclusion": true}
+	allowed := map[string]bool{"Executive Summary": true, "Analysis Overview": true, "Traffic Analysis": true, "Passive Analysis": true, "Traffic Classification": true, "Security Findings": true, "Recommendations": true, "Risk & Fixes": true, "Conclusion": true}
 	sections := make([]reportSection, 0, len(document.Sections))
 	for _, section := range document.Sections {
 		if allowed[section.Title] {
@@ -265,7 +267,7 @@ func threatEntriesSection(entries []rules.ThreatEntry) reportSection {
 	return reportSection{Title: "Actionable Threat Entries", Paragraphs: []string{"Each row records a supported configuration or metadata exposure. It is not evidence that exploitation occurred."}, Tables: []reportTable{{Headers: []string{"Threat", "Affected SA", "Evidence", "Status", "Severity", "Impact", "Recommendation"}, Rows: rows, Widths: []int{15, 13, 16, 9, 9, 19, 19}}}}
 }
 
-func progressSection(progress *analysisv1.AnalysisProgress) reportSection {
+func progressSection(progress *analysisv1.AnalysisProgress, mode string) reportSection {
 	rows := [][]string{
 		{"Pipeline stage", humanValue(progress.GetStage().String())},
 		{"Packets processed", formatUint(progress.GetPacketsProcessed())},
@@ -276,8 +278,9 @@ func progressSection(progress *analysisv1.AnalysisProgress) reportSection {
 		{"Evidence records", formatUint(progress.GetEvidenceCount())},
 		{"Findings generated", formatUint(progress.GetFindingsGenerated())},
 		{"ML predictions", formatUint(progress.GetMlPredictions())},
-		{"VICI availability", humanValue(progress.GetViciState().String())},
-		{"XFRM availability", humanValue(progress.GetXfrmState().String())},
+	}
+	if mode == "DEEP_ASSESSMENT" {
+		rows = append(rows, []string{"VICI gateway telemetry", humanValue(progress.GetViciState().String())}, []string{"XFRM kernel telemetry", humanValue(progress.GetXfrmState().String())})
 	}
 	return reportSection{Title: "Progress Flow", Paragraphs: []string{"The completed pipeline counters below mirror the dashboard progress view."}, Tables: []reportTable{{Headers: []string{"Pipeline metric", "Final value"}, Rows: rows, Widths: []int{42, 52}}}}
 }
@@ -324,7 +327,10 @@ func vpnSessionsSection(payload map[string]interface{}) reportSection {
 		section.Tables = append(section.Tables, reportTable{Headers: []string{"Security association", "Protocol", "Mode", "State", "SPI values"}, Rows: rows, Widths: []int{30, 14, 14, 14, 22}})
 	}
 	if nat, ok := payload["nat_traversal"].(*protocolv1.NatTraversalSummary); ok && nat != nil {
-		rows := [][]string{{"NAT-T observed", strconv.FormatBool(nat.GetObserved())}, {"NAT-T packets", formatUint(nat.GetNatTPackets())}, {"Evidence status", evidenceStatus(nat.GetEvidenceStatus())}, {"Unavailable reason", fallback(nat.GetUnavailableReason(), "None")}}
+		rows := [][]string{{"NAT-T observed", yesNo(nat.GetObserved())}, {"NAT-T packets", formatUint(nat.GetNatTPackets())}, {"Evidence status", evidenceStatus(nat.GetEvidenceStatus())}}
+		if reason := strings.TrimSpace(nat.GetUnavailableReason()); reason != "" {
+			rows = append(rows, []string{"Collection limitation", reason})
+		}
 		section.Tables = append(section.Tables, reportTable{Headers: []string{"NAT traversal", "Value"}, Rows: rows, Widths: []int{32, 62}})
 	}
 	if len(section.Tables) == 0 {
@@ -354,31 +360,41 @@ func evidenceSection(payload map[string]interface{}) reportSection {
 	return section
 }
 
-func riskAndFixesSection(payload map[string]interface{}, assessment rules.Assessment, hasAssessment bool) reportSection {
+func riskAndFixesSection(payload map[string]interface{}, assessment rules.Assessment, hasAssessment bool, source *coreinput.Source) reportSection {
 	section := reportSection{Title: "Risk & Fixes"}
 	if score, ok := payload["risk_score"].(*riskv1.SecurityScore); ok && score != nil {
-		observed := "unavailable"
-		if score.GetScoreAvailable() {
-			observed = fmt.Sprintf("%.1f/100", score.GetObservedSecurityScore())
+		if !score.GetScoreAvailable() {
+			section.Paragraphs = append(section.Paragraphs, scoreUnavailableExplanation(source))
+			rows := [][]string{{"Evaluated security controls", "0"}, {"Unknown critical facts", formatUint(score.GetUnknownEvidenceCount())}}
+			if source != nil {
+				rows = append(rows, []string{"IKE packets observed", formatUint(source.Counters.IKEPackets)}, []string{"ESP / AH packets observed", fmt.Sprintf("%s / %s", formatUint(source.Counters.ESPPackets), formatUint(source.Counters.AHPackets))})
+			}
+			section.Tables = append(section.Tables, reportTable{Headers: []string{"Assessment evidence", "Observed value"}, Rows: rows, Widths: []int{46, 48}})
+			return section
 		}
-		coverage := "unavailable"
+		observed := fmt.Sprintf("%.1f/100", score.GetObservedSecurityScore())
+		coverage := "Not reported"
 		if score.GetCoverageAvailable() {
 			coverage = formatPercent(score.GetEvidenceCoverage() / 100)
 		}
-		section.Tables = append(section.Tables, reportTable{Headers: []string{"Risk metric", "Value"}, Rows: [][]string{{"Observed security score", observed}, {"Risk score", valueOrUnavailable(score.GetScoreAvailable(), fmt.Sprintf("%.1f/100", score.GetRiskScore()))}, {"Risk level", humanValue(score.GetRiskLevel())}, {"Evidence coverage", coverage}, {"Security bounds", bounds(score.GetSecurityLowerBound(), score.GetSecurityUpperBound(), score.GetCoverageAvailable())}, {"Assessment state", valueOrUnavailable(score.GetProvisional(), "provisional")}, {"Unknown critical facts", formatUint(score.GetUnknownEvidenceCount())}}, Widths: []int{40, 54}})
+		assessmentState := "final"
+		if score.GetProvisional() {
+			assessmentState = "provisional"
+		}
+		section.Tables = append(section.Tables, reportTable{Headers: []string{"Risk metric", "Value"}, Rows: [][]string{{"Observed security score", observed}, {"Risk score", fmt.Sprintf("%.1f/100", score.GetRiskScore())}, {"Risk level", humanValue(score.GetRiskLevel())}, {"Evidence coverage", coverage}, {"Security bounds", bounds(score.GetSecurityLowerBound(), score.GetSecurityUpperBound(), score.GetCoverageAvailable())}, {"Assessment state", assessmentState}, {"Unknown critical facts", formatUint(score.GetUnknownEvidenceCount())}}, Widths: []int{40, 54}})
 	}
 	if breakdown, ok := payload["risk_breakdown"].(*riskv1.RiskBreakdown); ok && breakdown != nil {
 		categories := []struct {
-			name string
-			item *riskv1.RiskCategory
-		}{{"Cryptography", breakdown.GetCryptography()}, {"Authentication", breakdown.GetAuthentication()}, {"Key exchange", breakdown.GetKeyExchange()}, {"PFS", breakdown.GetPfs()}, {"Replay protection", breakdown.GetReplay()}, {"Lifecycle", breakdown.GetLifecycle()}, {"SA configuration", breakdown.GetSaConfiguration()}, {"Metadata", breakdown.GetMetadata()}}
+			name, controlCategory string
+			item                  *riskv1.RiskCategory
+		}{{"Cryptography", "Cryptography and suite strength", breakdown.GetCryptography()}, {"Authentication", "Peer authentication", breakdown.GetAuthentication()}, {"Key exchange", "IKE version and key exchange", breakdown.GetKeyExchange()}, {"PFS", "Forward secrecy", breakdown.GetPfs()}, {"Replay protection", "Replay protection", breakdown.GetReplay()}, {"Lifecycle", "Lifecycle", breakdown.GetLifecycle()}, {"SA configuration", "SA configuration", breakdown.GetSaConfiguration()}, {"Metadata", "Metadata exposure", breakdown.GetMetadata()}}
 		rows := make([][]string, 0, len(categories))
 		for _, category := range categories {
-			if category.item != nil {
-				rows = append(rows, []string{category.name, fmt.Sprintf("%.1f/%.1f", category.item.GetScore(), category.item.GetMaximum())})
+			if category.item != nil && category.item.GetMaximum() > 0 {
+				rows = append(rows, []string{category.name, categoryEvaluation(assessment, category.controlCategory, category.item.GetMaximum()), fmt.Sprintf("%.1f/%.1f", category.item.GetScore(), category.item.GetMaximum())})
 			}
 		}
-		section.Tables = append(section.Tables, reportTable{Headers: []string{"Risk category", "Supported-evidence score"}, Rows: rows, Widths: []int{48, 46}})
+		section.Tables = append(section.Tables, reportTable{Headers: []string{"Risk category", "Evaluation", "Passed weight"}, Rows: rows, Widths: []int{34, 34, 26}})
 	}
 	if hasAssessment && len(assessment.Findings) == 0 {
 		section.Paragraphs = append(section.Paragraphs, "No remediation was generated because no supported finding failed. Unknown evidence remains unresolved and must not be interpreted as safe.")
@@ -389,37 +405,83 @@ func riskAndFixesSection(payload map[string]interface{}, assessment rules.Assess
 	return section
 }
 
-func valueOrUnavailable(ok bool, value string) string {
-	if ok {
-		return value
-	}
-	return "unavailable"
-}
 func bounds(lower, upper float64, available bool) string {
 	if !available {
-		return "unavailable"
+		return "Not reported"
 	}
 	return fmt.Sprintf("%.1f-%.1f/100", lower, upper)
 }
 
-func systemHealthSection(payload map[string]interface{}) reportSection {
+func systemHealthSection(payload map[string]interface{}, mode string) reportSection {
 	section := reportSection{Title: "System Health", Paragraphs: []string{"This is a point-in-time service and capability snapshot captured when the report was generated."}}
 	if readiness, ok := payload["system_readiness"].(coresystem.Dependencies); ok {
-		rows := [][]string{{"In-memory store", readiness.InMemoryStore.String()}, {"Temporary storage", readiness.TempStorage.String()}, {"Sensor", readiness.Sensor.String()}, {"ML worker", readiness.MLWorker.String()}, {"Fusion engine", readiness.FusionEngine.String()}}
+		rows := [][]string{{"In-memory store", humanValue(readiness.InMemoryStore.String())}, {"Temporary storage", humanValue(readiness.TempStorage.String())}, {"ML worker", humanValue(readiness.MLWorker.String())}, {"Fusion engine", humanValue(readiness.FusionEngine.String())}}
+		if mode == "PASSIVE_LIVE" || mode == "DEEP_ASSESSMENT" {
+			rows = append(rows, []string{"Capture sensor", humanValue(readiness.Sensor.String())})
+		}
 		section.Tables = append(section.Tables, reportTable{Headers: []string{"Dependency", "State"}, Rows: rows, Widths: []int{44, 50}})
 	}
 	if capabilities, ok := payload["system_capabilities"].(coresystem.Capabilities); ok {
-		rows := [][]string{{"Passive PCAP", strconv.FormatBool(capabilities.PassivePCAP)}, {"Passive live capture", strconv.FormatBool(capabilities.PassiveLive)}, {"Deep assessment", strconv.FormatBool(capabilities.DeepAssessment)}, {"Security assessment", strconv.FormatBool(capabilities.SecurityAssessment)}, {"Risk scoring", strconv.FormatBool(capabilities.RiskScoring)}, {"ML classification", strconv.FormatBool(capabilities.MLClassification)}, {"Evidence explanations", strconv.FormatBool(capabilities.SHAP)}, {"PDF reporting", strconv.FormatBool(capabilities.ExecutiveReport)}}
-		section.Tables = append(section.Tables, reportTable{Headers: []string{"Capability", "Available"}, Rows: rows, Widths: []int{44, 50}})
+		rows := [][]string{{"Passive PCAP", availability(capabilities.PassivePCAP)}, {"Security assessment", availability(capabilities.SecurityAssessment)}, {"Risk scoring", availability(capabilities.RiskScoring)}, {"ML classification", availability(capabilities.MLClassification)}, {"Evidence explanations", availability(capabilities.SHAP)}, {"PDF reporting", availability(capabilities.ExecutiveReport)}}
+		if mode == "PASSIVE_LIVE" {
+			rows = append(rows, []string{"Passive live capture", availability(capabilities.PassiveLive)})
+		}
+		if mode == "DEEP_ASSESSMENT" {
+			rows = append(rows, []string{"Passive live capture", availability(capabilities.PassiveLive)}, []string{"Deep assessment", availability(capabilities.DeepAssessment)})
+		}
+		section.Tables = append(section.Tables, reportTable{Headers: []string{"Capability", "Runtime status"}, Rows: rows, Widths: []int{44, 50}})
 	}
 	if worker, ok := payload["ml_worker"].(*mlv1.MLWorkerStatus); ok && worker != nil {
-		rows := [][]string{{"Available", strconv.FormatBool(worker.GetAvailable())}, {"Model loaded", strconv.FormatBool(worker.GetModelLoaded())}, {"Model version", fallback(worker.GetModelVersion(), "Not reported")}, {"Feature schema", fallback(worker.GetFeatureSchemaVersion(), "Not reported")}, {"Status", fallback(worker.GetStatusMessage(), "Not reported")}}
+		rows := [][]string{{"Worker", availability(worker.GetAvailable())}, {"Model", map[bool]string{true: "Loaded", false: "Not loaded"}[worker.GetModelLoaded()]}, {"Model version", fallback(worker.GetModelVersion(), "Not reported")}, {"Feature schema", fallback(worker.GetFeatureSchemaVersion(), "Not reported")}, {"Status", humanValue(fallback(worker.GetStatusMessage(), "Not reported"))}}
 		section.Tables = append(section.Tables, reportTable{Headers: []string{"ML worker", "Value"}, Rows: rows, Widths: []int{36, 58}})
 	}
-	if len(section.Tables) == 0 {
-		section.Paragraphs = append(section.Paragraphs, "The point-in-time dependency, capability, and ML worker health snapshot was unavailable.")
-	}
 	return section
+}
+
+func availability(value bool) string {
+	if value {
+		return "Available"
+	}
+	return "Not available on this host"
+}
+
+func yesNo(value bool) string {
+	if value {
+		return "Yes"
+	}
+	return "No"
+}
+
+func categoryEvaluation(assessment rules.Assessment, category string, maximum float64) string {
+	known := 0.0
+	failed := false
+	for _, control := range assessment.Controls {
+		if control.Category != category {
+			continue
+		}
+		if control.Status == rules.ControlPass || control.Status == rules.ControlFail {
+			known += control.Weight
+			failed = failed || control.Status == rules.ControlFail
+		}
+	}
+	if known == 0 {
+		return "Not evaluated"
+	}
+	state := "Evaluated"
+	if known+0.0001 < maximum {
+		state = "Partially evaluated"
+	}
+	if failed {
+		state += " - finding raised"
+	}
+	return state
+}
+
+func scoreUnavailableExplanation(source *coreinput.Source) string {
+	if source != nil && source.Counters.IKEPackets == 0 && (source.Counters.ESPPackets > 0 || source.Counters.AHPackets > 0) {
+		return fmt.Sprintf("IPsec data traffic was detected (%s ESP and %s AH packets), but the capture contains no observable IKE negotiation. A cryptographic score cannot be calculated from ESP/AH headers without guessing the cipher, authentication, DH/PFS, replay, or lifetime settings. Capture from before tunnel establishment or run an authorized Deep Assessment.", formatUint(source.Counters.ESPPackets), formatUint(source.Counters.AHPackets))
+	}
+	return "No security control had enough supported evidence for a numeric score. Include the IKE negotiation in the capture or run an authorized Deep Assessment; the report will not substitute guessed configuration values."
 }
 
 func classificationSection(predictions []*mlv1.TrafficPrediction) reportSection {
