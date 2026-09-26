@@ -1,4 +1,4 @@
-import { securityScorePresentation } from "./security-score";
+import { securityScorePresentation, securityScoreUnavailableCopy } from "./security-score";
 import { InfoHint } from "@/components/ui/info-hint";
 
 type Finding = {
@@ -12,7 +12,7 @@ type Finding = {
   EvidenceProperties?: string[];
 };
 
-export function RiskCards({ value }: { value: unknown }) {
+export function RiskCards({ value, summary }: { value: unknown; summary?: unknown }) {
   const assessment = (value ?? {}) as {
     findings?: Finding[];
     configuration_facts?: number;
@@ -20,9 +20,11 @@ export function RiskCards({ value }: { value: unknown }) {
   const presentation = securityScorePresentation(assessment);
 
   if (presentation.assessedScore === undefined) {
+    const unavailable = securityScoreUnavailableCopy(summary);
     return <section className="my-6 border border-amber-200/30 bg-amber-200/[.035] p-5">
       <p className="text-sm font-semibold text-amber-100">Security score unavailable</p>
-      <p className="mt-2 text-sm leading-6 text-white/60">No security control could be evaluated from this capture. Use an IPsec capture containing IKE negotiation or ESP/AH traffic; gateway-only controls require authorized Deep Assessment.</p>
+      <p className="mt-2 text-sm leading-6 text-white/60">{unavailable.detail}</p>
+      <p className="mt-2 text-sm leading-6 text-white/75">{unavailable.action}</p>
       {presentation.coveragePercent !== undefined && <p className="mt-3 text-xs text-white/45">Evidence coverage: {presentation.coveragePercent}%.</p>}
     </section>;
   }

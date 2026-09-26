@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { securityScorePresentation } from "../components/dashboard/security-score.ts";
+import { securityScorePresentation, securityScoreUnavailableCopy } from "../components/dashboard/security-score.ts";
 
 test("a score with missing configuration evidence is provisional", () => {
   assert.deepEqual(
@@ -48,4 +48,16 @@ test("legacy snapshots remain readable", () => {
     securityScorePresentation({ score: 75, coverage_percent: 50, unknown_evidence_count: 3, configuration_facts: 6 }),
     { assessedScore: 75, coveragePercent: 50, isProvisional: true, unknownEvidence: 3, configurationFacts: 6 },
   );
+});
+
+test("ESP-only captures explain why cryptographic scoring is unavailable", () => {
+  const copy = securityScoreUnavailableCopy({ ipsec_detected: true, protocol: { data_protocol: "ESP" } });
+  assert.match(copy.detail, /does not contain observable IKE negotiation/);
+  assert.match(copy.detail, /do not disclose the negotiated cipher/);
+  assert.match(copy.action, /before tunnel establishment/);
+});
+
+test("non-IPsec captures receive a distinct unavailable explanation", () => {
+  const copy = securityScoreUnavailableCopy({ ipsec_detected: false });
+  assert.match(copy.detail, /No IKE, ESP, or AH traffic/);
 });

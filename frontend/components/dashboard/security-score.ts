@@ -6,6 +6,41 @@ export type SecurityScorePresentation = {
   configurationFacts?: number;
 };
 
+export type SecurityScoreUnavailableCopy = {
+  detail: string;
+  action: string;
+};
+
+export function securityScoreUnavailableCopy(summary: unknown): SecurityScoreUnavailableCopy {
+  const value = (summary ?? {}) as {
+    ipsec_detected?: unknown;
+    protocol?: { data_protocol?: unknown; ike_version?: unknown };
+  };
+  const dataProtocol = typeof value.protocol?.data_protocol === "string"
+    ? value.protocol.data_protocol.trim().toUpperCase()
+    : "";
+  const ikeVersion = typeof value.protocol?.ike_version === "string"
+    ? value.protocol.ike_version.trim()
+    : "";
+
+  if (value.ipsec_detected === true && (dataProtocol === "ESP" || dataProtocol === "AH") && !ikeVersion) {
+    return {
+      detail: `${dataProtocol} traffic was detected, but this capture does not contain observable IKE negotiation. ${dataProtocol} headers identify the tunnel traffic, but do not disclose the negotiated cipher, key length, authentication, DH group, PFS, replay enforcement, or lifetime.`,
+      action: "Capture from before tunnel establishment so the IKE exchange is included, or run an authorized Deep Assessment on the gateway.",
+    };
+  }
+  if (value.ipsec_detected === false) {
+    return {
+      detail: "No IKE, ESP, or AH traffic was detected in this capture, so no IPsec security control could be evaluated.",
+      action: "Upload a capture taken on the VPN path while the tunnel is negotiating or carrying traffic.",
+    };
+  }
+  return {
+    detail: "The available evidence did not establish any security control strongly enough to calculate a score.",
+    action: "Include the IKE negotiation in the capture, or run an authorized Deep Assessment for gateway-only configuration and runtime evidence.",
+  };
+}
+
 export function securityScorePresentation(value: unknown): SecurityScorePresentation {
   const assessment = (value ?? {}) as {
     observed_security_score?: unknown;

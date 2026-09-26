@@ -97,6 +97,16 @@ func TestDeterministicOfflinePipelineWithFixtureTelemetryAndPDF(t *testing.T) {
 			}
 		}
 	}
+	assessment, err := security.LatestForAnalysis(ctx, record.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !assessment.Result.ScoreAvailable {
+		t.Fatalf("IKE-bearing capture did not produce an observed security score: %#v", assessment.Result)
+	}
+	if assessment.Result.Score != 100 || !assessment.Result.Provisional {
+		t.Fatalf("minimal IKE evidence score = %.1f, provisional = %t; want 100 provisional", assessment.Result.Score, assessment.Result.Provisional)
+	}
 	reportDirectory := t.TempDir()
 	reports := corereport.New(analysis, fusionService, coreartifact.New(func() string { return reportDirectory }), workspace, security, nil, nil, events)
 	report, err := reports.Generate(ctx, &reportv1.GenerateReportRequest{AnalysisId: record.ID, Type: reportv1.ReportType_EXECUTIVE, Format: reportv1.ReportFormat_PDF})

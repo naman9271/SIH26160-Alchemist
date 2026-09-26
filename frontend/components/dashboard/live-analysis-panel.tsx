@@ -123,11 +123,12 @@ export function LiveAnalysisPanel({ view = "overview" }: { view?: string }) {
   const dashboardData = useMemo(() => ({ ...insights, system }), [insights, system]);
   const dataBlocks = useMemo(() => (sectionsForView[view] ?? sectionsForView.overview).map(([title, path]) => [title, atPath(dashboardData, path)] as const), [dashboardData, view]);
   const analysis = insights?.analysis;
+  const securityAssessment = atPath(insights, ["security", "assessment"]);
   const availableSections = ["protocol", "flows", "fusion", "security", "ml"].reduce((total, key) => total + count(insights?.[key]), 0);
 
   return <section className="mt-7 border border-white/15 bg-white/[.025] p-5 sm:p-6">
     {archived && <p className="mb-5 border border-amber-200/25 p-4 text-sm text-amber-100">Showing the saved browser snapshot. The server copy is unavailable; existing downloaded PDFs remain valid.</p>}
-    {["overview", "risk", "findings"].includes(view) && <RiskCards value={atPath(insights, ["security", "assessment"])}/>}
+    {analysisId && securityAssessment !== undefined && ["overview", "risk", "findings"].includes(view) && <RiskCards value={securityAssessment} summary={insights?.summary}/>}
     {view === "classification" && <div className="mb-8"><ClassificationCards value={atPath(insights, ["ml", "predictions"])}/></div>}
     {view === "overview" && analysisId && <div className="mb-4 flex justify-end"><button onClick={() => void generateReport("TECHNICAL")} disabled={archived || analysis?.state !== "ANALYSIS_STATE_COMPLETED" || report?.state === "GENERATING"} className="border border-white/40 px-3 py-2 text-[9px] font-bold tracking-[.12em] text-white transition-colors hover:border-teal-200 hover:text-teal-100 disabled:cursor-not-allowed disabled:opacity-40">GENERATE TECHNICAL PDF</button></div>}
     <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] font-bold tracking-[.14em] text-sky-200">ANALYSIS RESULTS</p><p className="mt-2 text-xs text-white/55">Results retain their source and status. ESP payloads are not decrypted; unavailable gateway facts remain not evaluated.</p></div><button onClick={() => void refresh()} className="border border-white/30 px-3 py-2 text-[9px] font-bold tracking-[.12em] transition hover:bg-white hover:text-black">REFRESH</button></div>
