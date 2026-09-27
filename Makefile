@@ -1,10 +1,7 @@
 .PHONY: up down logs status check-backend lab-up lab-down lab-run lab-verify lab-profile-check lab-test
 
 up:
-	@set -e; build_plan=$$(mktemp); trap 'rm -f "$$build_plan"' EXIT; \
-		docker compose build --print > "$$build_plan"; \
-		docker buildx bake --allow network.host --file "$$build_plan"; \
-		docker compose up --detach --no-build
+	docker compose up --detach --build
 
 down:
 	docker compose down
